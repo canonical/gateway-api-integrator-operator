@@ -477,9 +477,11 @@ class ProviderCertificate:
                 "chain": self.chain,
                 "revoked": self.revoked,
                 "expiry_time": self.expiry_time.isoformat(),
-                "expiry_notification_time": self.expiry_notification_time.isoformat()
-                if self.expiry_notification_time
-                else None,
+                "expiry_notification_time": (
+                    self.expiry_notification_time.isoformat()
+                    if self.expiry_notification_time
+                    else None
+                ),
             }
         )
 
@@ -735,16 +737,16 @@ def calculate_expiry_notification_time(
     """
     if provider_recommended_notification_time is not None:
         provider_recommended_notification_time = abs(provider_recommended_notification_time)
-        provider_recommendation_time_delta = (
-            expiry_time - timedelta(hours=provider_recommended_notification_time)
+        provider_recommendation_time_delta = expiry_time - timedelta(
+            hours=provider_recommended_notification_time
         )
         if validity_start_time < provider_recommendation_time_delta:
             return provider_recommendation_time_delta
 
     if requirer_recommended_notification_time is not None:
         requirer_recommended_notification_time = abs(requirer_recommended_notification_time)
-        requirer_recommendation_time_delta = (
-            expiry_time - timedelta(hours=requirer_recommended_notification_time)
+        requirer_recommendation_time_delta = expiry_time - timedelta(
+            hours=requirer_recommended_notification_time
         )
         if validity_start_time < requirer_recommendation_time_delta:
             return requirer_recommendation_time_delta
@@ -1886,8 +1888,7 @@ class TLSCertificatesRequiresV3(Object):
                             "Removing secret with label %s",
                             f"{LIBID}-{csr_in_sha256_hex}",
                         )
-                        secret = self.model.get_secret(
-                            label=f"{LIBID}-{csr_in_sha256_hex}")
+                        secret = self.model.get_secret(label=f"{LIBID}-{csr_in_sha256_hex}")
                         secret.remove_all_revisions()
                     self.on.certificate_invalidated.emit(
                         reason="revoked",

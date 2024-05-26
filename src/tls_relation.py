@@ -319,5 +319,4 @@ class TLSRelationService:
             secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
             private_key_dict["key"] = secret.get_content()["key"]
             private_key_dict["password"] = secret.get_content()["password"]
-
         return private_key_dict

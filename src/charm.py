@@ -119,7 +119,9 @@ class GatewayAPICharm(CharmBase):
         """
         hostname = event.params["hostname"]
         tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
+        tls_secret_name = get_config(self, "tls-secret-name")
+
+        if not tls_certificates_relation and not tls_secret_name:
             event.fail("Certificates relation not created.")
             return
 

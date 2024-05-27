@@ -62,6 +62,9 @@ class GatewayAPICharm(CharmBase):
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
         )
         self.framework.observe(
+            self.on.certificates_relation_broken, self._on_certificates_relation_broken
+        )
+        self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
         )
         self.framework.observe(
@@ -70,6 +73,7 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(
             self.certificates.on.certificate_invalidated, self._on_certificate_invalidated
         )
+        self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
         self.framework.observe(
             self.certificates.on.all_certificates_invalidated,
             self._on_all_certificates_invalidated,
@@ -103,11 +107,12 @@ class GatewayAPICharm(CharmBase):
         return True
 
     def _reconcile(self) -> None:
-        """Reconcile ingress related resources based on the provided definition."""
+        """Reconcile charm status based on configuration and integrations."""
         tls_certificates_relation = self._tls.get_tls_relation()
         tls_secret_name = get_config(self, "tls-secret-name")
         if not tls_certificates_relation and not tls_secret_name:
             self.unit.status = BlockedStatus("Waiting for TLS.")
+            return
         self.unit.status = ActiveStatus()
 
     def _on_config_changed(self, _: Any) -> None:
@@ -126,11 +131,20 @@ class GatewayAPICharm(CharmBase):
         """
         hostname = event.params["hostname"]
         tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
+        tls_secret_name = get_config(self, "tls-secret-name")
+
+        if not tls_certificates_relation and not tls_secret_name:
             event.fail("Certificates relation not created.")
             return
+
+        if tls_secret_name:
+            event.fail(
+                "Getting certificate from charm configuration is not yet supported",
+            )
+            return
+
         tls_rel_data = tls_certificates_relation.data[self.app]
-        if tls_rel_data[f"certificate-{hostname}"]:
+        if tls_rel_data.get(f"certificate-{hostname}"):
             event.set_results(
                 {
                     f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],
@@ -170,6 +184,10 @@ class GatewayAPICharm(CharmBase):
             event.defer()
             return
         self._tls.certificate_relation_joined(hostname, self.certificates)
+
+    def _on_certificates_relation_broken(self, _: Any) -> None:
+        """Handle the TLS Certificate relation broken event."""
+        self._reconcile()
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event.

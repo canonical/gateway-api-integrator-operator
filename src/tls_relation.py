@@ -16,12 +16,13 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_csr,
     generate_private_key,
 )
-from consts import PEER_RELATION_NAME, TLS_CERT
 from cryptography import x509
 from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 from ops.jujuversion import JujuVersion
 from ops.model import Model, Relation, SecretNotFoundError
+
+from consts import TLS_CERT
 
 
 class TLSRelationService:
@@ -174,9 +175,7 @@ class TLSRelationService:
             certificates: The certificate requirer library instance.
         """
         tls_certificates_relation = self.get_tls_relation()
-        peer_relation = self.charm_model.get_relation(PEER_RELATION_NAME)
         assert isinstance(tls_certificates_relation, Relation)  # nosec
-        assert isinstance(peer_relation, Relation)  # nosec
         private_key_dict = self._get_private_key(hostname)
         csr = generate_csr(
             private_key=private_key_dict["key"].encode(),
@@ -187,7 +186,6 @@ class TLSRelationService:
         self.update_relation_data_fields(
             {f"csr-{hostname}": csr.decode()}, tls_certificates_relation
         )
-        self.update_relation_data_fields({f"csr-{hostname}": csr.decode()}, peer_relation)
         certificates.request_certificate_creation(certificate_signing_request=csr)
 
     def certificate_relation_created(  # type: ignore[no-untyped-def]
@@ -200,9 +198,7 @@ class TLSRelationService:
             hostname: Certificate's hostname.
         """
         tls_certificates_relation = self.get_tls_relation()
-        peer_relation = self.charm_model.get_relation(PEER_RELATION_NAME)
         assert isinstance(tls_certificates_relation, Relation)  # nosec
-        assert isinstance(peer_relation, Relation)  # nosec
         private_key_password = self.generate_password().encode()
         private_key = generate_private_key(password=private_key_password)
         private_key_dict = {
@@ -218,9 +214,6 @@ class TLSRelationService:
                     content=private_key_dict, label=f"private-key-{hostname}"
                 )
                 secret.grant(tls_certificates_relation)
-            self.update_relation_data_fields({f"secret-{hostname}": secret.id}, peer_relation)
-        else:
-            self.update_relation_data_fields(private_key_dict, peer_relation)
 
     def certificate_relation_available(  # type: ignore[no-untyped-def]
         self, event: CertificateAvailableEvent
@@ -241,16 +234,6 @@ class TLSRelationService:
             },
             tls_certificates_relation,
         )
-        peer_relation = self.charm_model.get_relation(PEER_RELATION_NAME)
-        assert isinstance(peer_relation, Relation)  # nosec
-        self.update_relation_data_fields(
-            {
-                f"certificate-{hostname}": event.certificate,
-                f"ca-{hostname}": event.ca,
-                f"chain-{hostname}": str(event.chain_as_pem()),
-            },
-            peer_relation,
-        )
         private_key = self._get_private_key(hostname)
 
         self.certs[hostname] = event.chain_as_pem()
@@ -268,9 +251,7 @@ class TLSRelationService:
             certificates: The certificate requirer library instance.
         """
         tls_certificates_relation = self.get_tls_relation()
-        peer_relation = self.charm_model.get_relation(PEER_RELATION_NAME)
         assert isinstance(tls_certificates_relation, Relation)  # nosec
-        assert isinstance(peer_relation, Relation)  # nosec
         hostname = self.get_hostname_from_cert(event.certificate)
         old_csr = self.get_relation_data_field(f"csr-{hostname}", tls_certificates_relation)
         private_key_dict = self._get_private_key(hostname)
@@ -287,7 +268,6 @@ class TLSRelationService:
         self.update_relation_data_fields(
             {f"csr-{hostname}": new_csr.decode()}, tls_certificates_relation
         )
-        self.update_relation_data_fields({f"csr-{hostname}": new_csr.decode()}, peer_relation)
 
     def get_decrypted_keys(self) -> Dict[str, str]:
         """Return the list of decrypted private keys.
@@ -339,13 +319,5 @@ class TLSRelationService:
             secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
             private_key_dict["key"] = secret.get_content()["key"]
             private_key_dict["password"] = secret.get_content()["password"]
-        else:
-            peer_relation = self.charm_model.get_relation(PEER_RELATION_NAME)
-            assert isinstance(peer_relation, Relation)  # nosec
-            private_key_dict["key"] = self.get_relation_data_field(
-                f"key-{hostname}", peer_relation
-            )
-            private_key_dict["password"] = self.get_relation_data_field(
-                f"password-{hostname}", peer_relation
-            )
+
         return private_key_dict

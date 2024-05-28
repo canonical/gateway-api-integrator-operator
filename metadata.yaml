@@ -7,9 +7,9 @@ description: |
   Kubernetes cluster via a Gateway and a HTTPRoute resource. This requires the Kubernetes
   cluster in question to have an Gateway API controller already deployed into it.
 summary: An operator to configure a kubernetes gateway and HTTPRoute.
-docs: https://discourse.charmhub.io/t/nginx-ingress-integrator-docs-index/4511
-issues: https://github.com/canonical/nginx-ingress-integrator-operator/issues
-source: https://github.com/canonical/nginx-ingress-integrator-operator
+# docs: https://discourse.charmhub.io/t/
+issues: https://github.com/canonical/gateway-api-integrator-operator/issues
+source: https://github.com/canonical/gateway-api-integrator-operator
 maintainers:
   - https://launchpad.net/~canonical-is-devops
 assumes:

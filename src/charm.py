@@ -26,10 +26,10 @@ from ops.model import (
     WaitingStatus,
 )
 
-from consts import TLS_CERT
 from ingress_definition import get_config
 from tls_relation import TLSRelationService
 
+TLS_CERT = "certificates"
 LOGGER = logging.getLogger(__name__)
 
 

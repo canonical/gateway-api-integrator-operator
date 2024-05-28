@@ -22,7 +22,7 @@ from cryptography.x509.oid import NameOID
 from ops.jujuversion import JujuVersion
 from ops.model import Model, Relation, SecretNotFoundError
 
-from consts import TLS_CERT
+TLS_CERT = "certificates"
 
 
 class TLSRelationService:

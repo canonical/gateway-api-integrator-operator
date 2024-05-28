@@ -2,8 +2,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# pylint: disable=protected-access,too-few-public-methods,too-many-lines
-
 """gateway-api-integrator charm file."""
 
 import logging

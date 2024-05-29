@@ -6,7 +6,7 @@ description: |
   A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators) deploying and managing external access to HTTP/HTTPS services in a
   Kubernetes cluster via a Gateway and a HTTPRoute resource. This requires the Kubernetes
   cluster in question to have an Gateway API controller already deployed into it.
-summary: An operator to manage external access using gateway API.
+summary: An operator to manage kubernetes gateway resources.
 docs: https://discourse.charmhub.io/t/
 issues: https://github.com/canonical/gateway-api-integrator-operator/issues
 source: https://github.com/canonical/gateway-api-integrator-operator

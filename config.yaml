@@ -9,7 +9,11 @@ options:
     default: ""
     description: The hostname of the gateway.
     type: string
-  service-hostname:
+  external-hostname:
     default: ""
     description: The hostname of the service to create an ingress for.
+    type: string
+  gateway-class:
+    default: ""
+    description: The gateway class.
     type: string

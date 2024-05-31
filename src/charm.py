@@ -7,7 +7,6 @@
 import logging
 from typing import Any, List, Union, cast
 
-import kubernetes.client
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
     CertificateAvailableEvent,
@@ -15,7 +14,14 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
 )
-from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
+from lightkube import Client, KubeConfig
+from lightkube.generic_resource import (
+    get_generic_resource,
+    load_in_cluster_generic_resources,
+    create_namespaced_resource,
+)
+import typing
+from ops.charm import ActionEvent, CharmBase, EventBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
 from ops.model import (
@@ -26,11 +32,13 @@ from ops.model import (
     WaitingStatus,
 )
 
-from gateway_definition import get_config
+from resource_definition import GatewayResourceDefinition
 from tls_relation import TLSRelationService
+from resource_manager.gateway import GatewayResourceManager, CreateGatewayError
 
 TLS_CERT = "certificates"
 LOGGER = logging.getLogger(__name__)
+CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
 class GatewayAPICharm(CharmBase):
@@ -45,8 +53,9 @@ class GatewayAPICharm(CharmBase):
             args: Variable list of positional arguments passed to the parent constructor.
         """
         super().__init__(*args)
-        kubernetes.config.load_incluster_config()
 
+        self._kubeconfig = KubeConfig.from_service_account()
+        self.client = Client(config=self._kubeconfig)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -77,15 +86,21 @@ class GatewayAPICharm(CharmBase):
             self._on_all_certificates_invalidated,
         )
 
+    @property
+    def _labels(self) -> typing.Dict[str, str]:
+        """Get labels assigned to resources created by this app."""
+        return {CREATED_BY_LABEL: self.app.name}
+
     def get_hostname(self) -> str:
         """Get a list containing all ingress hostnames.
 
         Returns:
             A list containing service and additional hostnames
         """
-        # The relation will always exist when this method is called
-        external_hostname = cast(str, get_config(self, "external-hostname"))
-        return external_hostname
+        gateway_resource_definition = GatewayResourceDefinition(
+            name=self.app.name, config=self.config, model=self.model
+        )
+        return gateway_resource_definition.hostname
 
     def _are_relations_ready(self) -> bool:
         """Check if required relations are ready.
@@ -97,11 +112,41 @@ class GatewayAPICharm(CharmBase):
 
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations."""
+        # Initialize DTO object in event handler
+        gateway_resource_definition = GatewayResourceDefinition(
+            name=self.app.name, config=self.config, model=self.model
+        )
+
         tls_certificates_relation = self._tls.get_tls_relation()
         if not tls_certificates_relation:
             self.unit.status = BlockedStatus("Waiting for TLS.")
             return
+
+        if not gateway_resource_definition.gateway_class:
+            self.unit.status = BlockedStatus("Missing gateway class.")
+
+        if not gateway_resource_definition.hostname:
+            self.unit.status = BlockedStatus("Missing hostname.")
+
+        gateway_resource_manager = GatewayResourceManager(
+            namespace=gateway_resource_definition.namespace,
+            labels=self._labels,
+            client=self.client,
+        )
+
+        LOGGER.info(
+            "Created resource definition %s and resource manager %s",
+            gateway_resource_definition.__dict__,
+            gateway_resource_manager.__dict__,
+        )
+
+        try:
+            gateway = gateway_resource_manager.define_resource(gateway_resource_definition)
+        except CreateGatewayError as exc:
+            LOGGER.error("Error creating the gateway resource %s", exc)
+            raise RuntimeError("Cannot create gateway.") from exc
         self.unit.status = ActiveStatus()
+        gateway_resource_manager.cleanup_resources(exclude=gateway)
 
     def _on_config_changed(self, _: Any) -> None:
         """Handle the config-changed event."""
@@ -119,9 +164,7 @@ class GatewayAPICharm(CharmBase):
         """
         hostname = event.params["hostname"]
         tls_certificates_relation = self._tls.get_tls_relation()
-        tls_secret_name = get_config(self, "tls-secret-name")
-
-        if not tls_certificates_relation and not tls_secret_name:
+        if not tls_certificates_relation:
             event.fail("Certificates relation not created.")
             return
 
@@ -191,6 +234,7 @@ class GatewayAPICharm(CharmBase):
             event.defer()
             return
         self._tls.certificate_relation_available(event)
+        LOGGER.info("TLS configured, creating kubernetes resources.")
         self._reconcile()
 
     def _on_certificate_expiring(

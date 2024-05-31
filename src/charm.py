@@ -31,6 +31,7 @@ from resource_definition import GatewayResourceDefinition, InvalidCharmConfigErr
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
 from tls_relation import TLSRelationService
+from resource_manager.gateway import GatewayResourceManager, CreateGatewayError
 
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
@@ -50,6 +51,8 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
+        self._kubeconfig = KubeConfig.from_service_account()
+        self.client = Client(config=self._kubeconfig)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -159,9 +162,7 @@ class GatewayAPICharm(CharmBase):
         """
         hostname = event.params["hostname"]
         tls_certificates_relation = self._tls.get_tls_relation()
-        tls_secret_name = get_config(self, "tls-secret-name")
-
-        if not tls_certificates_relation and not tls_secret_name:
+        if not tls_certificates_relation:
             event.fail("Certificates relation not created.")
             return
 

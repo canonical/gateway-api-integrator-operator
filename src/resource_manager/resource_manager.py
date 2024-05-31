@@ -7,20 +7,28 @@ import functools
 import logging
 import typing
 
-import kubernetes.client
+import lightkube
+import lightkube.generic_resource
+import lightkube.resources.apiextensions_v1
+import lightkube.resources.apps_v1
+import lightkube.resources.core_v1
+import lightkube.resources.discovery_v1
+
+from lightkube import ApiError
 
 from exceptions import InvalidIngressError
-from ingress_definition import IngressDefinition
+import lightkube.resources
+from resource_definition import ResourceDefinition
 
 logger = logging.getLogger(__name__)
 
 AnyResource = typing.TypeVar(
     "AnyResource",
-    kubernetes.client.V1Endpoints,
-    kubernetes.client.V1EndpointSlice,
-    kubernetes.client.V1Service,
-    kubernetes.client.V1Secret,
-    kubernetes.client.V1Ingress,
+    lightkube.resources.core_v1.Endpoints,
+    lightkube.resources.discovery_v1.EndpointSlice,
+    lightkube.resources.core_v1.Service,
+    lightkube.resources.core_v1.Secret,
+    lightkube.generic_resource.GenericNamespacedResource,
 )
 
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
@@ -53,7 +61,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
         """
         try:
             return func(*args, **kwargs)
-        except kubernetes.client.exceptions.ApiException as exc:
+        except ApiError as exc:
             if exc.status == 403:
                 logger.error(
                     "Insufficient permissions to create the k8s service, "
@@ -90,7 +98,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _gen_resource_from_definition(self, definition: IngressDefinition) -> AnyResource:
+    def _gen_resource_from_definition(self, definition: ResourceDefinition) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
@@ -98,7 +106,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _create_resource(self, body: AnyResource) -> None:
+    def _create_resource(self, resource: AnyResource) -> None:
         """Abstract method to create a new resource in a given namespace.
 
         Args:
@@ -106,7 +114,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _patch_resource(self, name: str, body: AnyResource) -> None:
+    def _patch_resource(self, resource: AnyResource) -> None:
         """Abstract method to patch an existing resource in a given namespace.
 
         Args:
@@ -128,7 +136,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     def define_resource(
         self,
-        definition: IngressDefinition,
+        definition: ResourceDefinition,
     ) -> AnyResource:
         """Create or update a resource in kubernetes.
 
@@ -140,27 +148,24 @@ class ResourceManager(typing.Protocol[AnyResource]):
             modified or created.
         """
         resource_list = self._list_resource()
-        body = self._gen_resource_from_definition(definition)
-        if body.metadata.name in [r.metadata.name for r in resource_list]:
-            self._patch_resource(
-                name=body.metadata.name,
-                body=body,
-            )
+        resource = self._gen_resource_from_definition(definition)
+        if resource.metadata.name in [r.metadata.name for r in resource_list]:
+            self._patch_resource(resource=resource)
             logger.info(
                 "%s updated in namespace %s with name %s",
                 self._name,
                 self._namespace,
-                body.metadata.name,
+                resource.metadata.name,
             )
         else:
-            self._create_resource(body=body)
+            self._create_resource(resource=resource)
             logger.info(
                 "%s created in namespace %s with name %s",
                 self._name,
                 self._namespace,
-                body.metadata.name,
+                resource.metadata.name,
             )
-        return body
+        return resource
 
     def cleanup_resources(
         self,

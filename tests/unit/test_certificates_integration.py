@@ -50,7 +50,7 @@ def test_cert_relation(
     get_secret_mock = MagicMock()
     monkeypatch.setattr(ops.model.Model, "get_secret", get_secret_mock)
 
-    harness.update_config({"service-hostname": "igress-internal"})
+    harness.update_config({"external-hostname": "igress-internal"})
     harness.begin()
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data

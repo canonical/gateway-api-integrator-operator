@@ -22,7 +22,7 @@ async def test_certificates_relation(
 
     Assert on the unit status before any relations/configurations take place.
     """
-    await application.set_config({"service-hostname": TEST_SERVICE_HOSTNAME_CONFIG})
+    await application.set_config({"external-hostname": TEST_SERVICE_HOSTNAME_CONFIG})
     await application.model.add_relation(application.name, certificate_provider_application.name)
     await application.model.wait_for_idle(
         apps=[application.name, certificate_provider_application.name],

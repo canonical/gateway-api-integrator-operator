@@ -9,7 +9,11 @@ options:
     default: ""
     description: The name of the Kubernetes secret used to get the TLS certificate used for HTTPS. This settings overrides any tls-certificate relation defined. If left empty and no tls-certificates relation is defined, the charm will block until TLS is configured.
     type: string
-  service-hostname:
+  external-hostname:
     default: ""
     description: The hostname of the service to create an ingress for.
+    type: string
+  gateway-class:
+    default: ""
+    description: The gateway class.
     type: string

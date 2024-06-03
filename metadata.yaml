@@ -4,7 +4,7 @@ name: gateway-api-integrator
 display-name: Gateway API Integrator
 description: |
   A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators) deploying and managing external access to HTTP/HTTPS services in a
-  Kubernetes cluster via a Gateway and a HTTPRoute resource. This requires the Kubernetes
+  Kubernetes cluster via a Gateway and an HTTPRoute resource. This requires the Kubernetes
   cluster in question to have an Gateway API controller already deployed into it.
 summary: An operator to manage gateway resources.
 docs: https://discourse.charmhub.io/t/

@@ -14,6 +14,5 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-label: "personal"
       juju-channel: 3.1/stable
-      # Build from source to install charmcraft v3.0.0
-      charmcraft-repository: "canonical/charmcraft"
-      charmcraft-ref: "3.0.0"
+      # ubuntu@24.04 requires charmcraft 3
+      charmcraft-channel: "edge"

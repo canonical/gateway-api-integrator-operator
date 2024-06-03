@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
-"""NGINX Ingress TLS relation business logic."""
+"""Gateway API TLS relation business logic."""
 import secrets
 import string
 from typing import Dict, List, Union

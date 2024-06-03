@@ -21,7 +21,7 @@ from lightkube.generic_resource import (
     create_namespaced_resource,
 )
 import typing
-from ops.charm import ActionEvent, CharmBase, EventBase, RelationCreatedEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
 from ops.model import (

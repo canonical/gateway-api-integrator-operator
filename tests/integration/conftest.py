@@ -38,7 +38,7 @@ async def charm_fixture(pytestconfig: pytest.Config) -> str:
 async def application_fixture(charm: str, model: Model) -> AsyncGenerator[Application, None]:
     """Deploy the charm."""
     # Deploy the charm and wait for active/idle status
-    application = await model.deploy(f"./{charm}")
+    application = await model.deploy(f"./{charm}", base="ubuntu@24.04")
     await model.wait_for_idle(
         apps=[application.name],
         status="blocked",

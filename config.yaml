@@ -5,11 +5,7 @@
 #
 # See https://juju.is/docs/config for guidance.
 options:
-  tls-secret-name:
+  external-hostname:
     default: ""
-    description: The name of the Kubernetes secret used to get the TLS certificate used for HTTPS. This settings overrides any tls-certificate relation defined. If left empty and no tls-certificates relation is defined, the charm will block until TLS is configured.
-    type: string
-  service-hostname:
-    default: ""
-    description: The hostname of the service to create an ingress for.
+    description: The hostname of the ingress.
     type: string

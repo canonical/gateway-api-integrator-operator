@@ -15,7 +15,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
 )
-from ops.charm import ActionEvent, CharmBase, EventBase, RelationCreatedEvent, RelationJoinedEvent
+from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
 from ops.model import (

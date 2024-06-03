@@ -12,7 +12,7 @@ jobs:
       use-canonical-k8s: true
       load-test-enabled: false
       self-hosted-runner: true
-      self-hosted-runner-label: "large"
+      self-hosted-runner-label: "noble-large"
       juju-channel: 3.1/stable
       # ubuntu@24.04 requires charmcraft 3
       charmcraft-channel: "edge"

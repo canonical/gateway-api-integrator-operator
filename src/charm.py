@@ -87,7 +87,7 @@ class GatewayAPICharm(CharmBase):
         external_hostname = cast(str, get_config(self, "external-hostname"))
         return external_hostname
 
-    def _are_relations_ready(self, event: Union[EventBase, None]) -> bool:
+    def _are_relations_ready(self) -> bool:
         """Check if required relations are ready.
 
         Args:
@@ -96,13 +96,7 @@ class GatewayAPICharm(CharmBase):
         Returns:
             Whether required relations are ready and execution should continue.
         """
-        tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            if event:
-                event.defer()
-            return False
-        return True
+        return self._tls.get_tls_relation()
 
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations."""
@@ -150,7 +144,9 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        if not self._are_relations_ready(event):
+        if not self._are_relations_ready():
+            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
+            event.defer()
             return
         hostname = self.get_hostname()
         if not hostname:
@@ -165,7 +161,9 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        if not self._are_relations_ready(event):
+        if not self._are_relations_ready():
+            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
+            event.defer()
             return
         hostname = self.get_hostname()
         if not hostname:
@@ -201,7 +199,9 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        if not self._are_relations_ready(event):
+        if not self._are_relations_ready():
+            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
+            event.defer()
             return
         self._tls.certificate_expiring(event, self.certificates)
 
@@ -212,7 +212,7 @@ class GatewayAPICharm(CharmBase):
         Args:
             revoke_list: TLS Certificates list to revoke
         """
-        if not self._are_relations_ready(None):
+        if not self._are_relations_ready():
             return
         tls_certificates_relation = self._tls.get_tls_relation()
         for hostname in revoke_list:

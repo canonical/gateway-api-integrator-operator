@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""nginx-ingress-integrator ingress definition."""
+"""gateway-api-integrator gateway definition."""
 
 from typing import Union
 

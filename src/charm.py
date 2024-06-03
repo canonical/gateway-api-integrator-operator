@@ -26,7 +26,7 @@ from ops.model import (
     WaitingStatus,
 )
 
-from ingress_definition import get_config
+from gateway_definition import get_config
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
@@ -84,8 +84,8 @@ class GatewayAPICharm(CharmBase):
             A list containing service and additional hostnames
         """
         # The relation will always exist when this method is called
-        service_hostname = cast(str, get_config(self, "service-hostname"))
-        return service_hostname
+        external_hostname = cast(str, get_config(self, "external-hostname"))
+        return external_hostname
 
     def _are_relations_ready(self, event: Union[EventBase, None]) -> bool:
         """Check if required relations are ready.
@@ -107,8 +107,7 @@ class GatewayAPICharm(CharmBase):
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations."""
         tls_certificates_relation = self._tls.get_tls_relation()
-        tls_secret_name = get_config(self, "tls-secret-name")
-        if not tls_certificates_relation and not tls_secret_name:
+        if not tls_certificates_relation:
             self.unit.status = BlockedStatus("Waiting for TLS.")
             return
         self.unit.status = ActiveStatus()
@@ -129,16 +128,8 @@ class GatewayAPICharm(CharmBase):
         """
         hostname = event.params["hostname"]
         tls_certificates_relation = self._tls.get_tls_relation()
-        tls_secret_name = get_config(self, "tls-secret-name")
-
-        if not tls_certificates_relation and not tls_secret_name:
+        if not tls_certificates_relation:
             event.fail("Certificates relation not created.")
-            return
-
-        if tls_secret_name:
-            event.fail(
-                "Getting certificate from charm configuration is not yet supported",
-            )
             return
 
         tls_rel_data = tls_certificates_relation.data[self.app]

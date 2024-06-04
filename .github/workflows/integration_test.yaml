@@ -12,5 +12,4 @@ jobs:
       use-canonical-k8s: true
       self-hosted-runner: true
       self-hosted-runner-label: "large"
-      load-test-enabled: false
       juju-channel: 3.3/stable

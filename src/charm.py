@@ -277,11 +277,6 @@ class GatewayAPICharm(CharmBase):
                     [f"key-{hostname}", f"password-{hostname}"],
                     tls_certificates_relation,  # type: ignore[arg-type]
                 )
-                peer_relation = self.model.get_relation("nginx-peers")  # type: ignore[arg-type]
-                self._tls.pop_relation_data_fields(
-                    [f"key-{hostname}", f"password-{hostname}"],
-                    peer_relation,  # type: ignore[arg-type]
-                )
             except KeyError:
                 LOGGER.warning("Relation data for %s already does not exist", hostname)
             self.certificates.request_certificate_revocation(

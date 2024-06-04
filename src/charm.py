@@ -90,9 +90,6 @@ class GatewayAPICharm(CharmBase):
     def _are_relations_ready(self) -> bool:
         """Check if required relations are ready.
 
-        Args:
-            event: The event that fires this method.
-
         Returns:
             Whether required relations are ready and execution should continue.
         """

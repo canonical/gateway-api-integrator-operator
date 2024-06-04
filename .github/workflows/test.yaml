@@ -9,4 +9,3 @@ jobs:
     secrets: inherit
     with:
       self-hosted-runner: false
-      self-hosted-runner-labels: "edge"

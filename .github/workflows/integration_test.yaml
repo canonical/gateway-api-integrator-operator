@@ -12,6 +12,4 @@ jobs:
       provider: k8s
       use-canonical-k8s: true
       load-test-enabled: false
-      juju-channel: 3.1/stable
-      # ubuntu@24.04 requires charmcraft 3
-      charmcraft-channel: "edge"
+      juju-channel: 3.3/stable

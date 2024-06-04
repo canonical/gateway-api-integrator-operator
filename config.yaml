@@ -7,7 +7,7 @@
 options:
   external-hostname:
     default: ""
-    description: The hostname of the ingress.
+    description: The hostname of the gateway.
     type: string
   gateway-class:
     default: ""

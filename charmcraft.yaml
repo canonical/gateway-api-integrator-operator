@@ -1,15 +1,18 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 type: charm
-
-base: ubuntu@24.04
-build-base: ubuntu@24.04
-
-platforms:
-  amd64:
-    build-on: ["amd64"]
-    build-for: ["amd64"]
-
+bases:
+  - build-on:
+    - name: ubuntu
+      channel: "22.04"
+      architectures: [amd64]
+    run-on:
+    - name: ubuntu
+      channel: "22.04"
+      architectures: [amd64]
+    - name: ubuntu
+      channel: "24.04"
+      architectures: [amd64]
 parts:
   charm:
     build-packages:

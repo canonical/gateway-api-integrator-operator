@@ -14,6 +14,8 @@ maintainers:
   - https://launchpad.net/~canonical-is-devops
 assumes:
   - k8s-api
+  - juju >= 3.3
+
 requires:
   certificates:
     interface: tls-certificates

@@ -7,9 +7,10 @@ jobs:
   integration-tests:
     uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@add_support_for_canonical_k8s
     secrets: inherit
-    runs-on: ['self-hosted', 'x64', 'noble-large']
     with:
       provider: k8s
       use-canonical-k8s: true
+      self-hosted-runner: true
+      self-hosted-runner-labels: "large"
       load-test-enabled: false
       juju-channel: 3.3/stable

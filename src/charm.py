@@ -108,7 +108,7 @@ class GatewayAPICharm(CharmBase):
         Returns:
             Whether required relations are ready and execution should continue.
         """
-        return self._tls.get_tls_relation() != None
+        return self._tls.get_tls_relation() is not None
 
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations."""
@@ -171,7 +171,7 @@ class GatewayAPICharm(CharmBase):
         tls_rel_data = tls_certificates_relation.data[self.app]
         if not tls_rel_data.get(f"certificate-{hostname}"):
             event.fail("Certificate not available")
-        
+
         event.set_results(
             {
                 f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],

@@ -93,7 +93,7 @@ class GatewayAPICharm(CharmBase):
         Returns:
             Whether required relations are ready and execution should continue.
         """
-        return self._tls.get_tls_relation()
+        return self._tls.get_tls_relation() != None
 
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations."""

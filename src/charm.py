@@ -124,16 +124,16 @@ class GatewayAPICharm(CharmBase):
             return
 
         tls_rel_data = tls_certificates_relation.data[self.app]
-        if tls_rel_data.get(f"certificate-{hostname}"):
-            event.set_results(
-                {
-                    f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],
-                    f"ca-{hostname}": tls_rel_data[f"ca-{hostname}"],
-                    f"chain-{hostname}": tls_rel_data[f"chain-{hostname}"],
-                }
-            )
-        else:
+        if not tls_rel_data.get(f"certificate-{hostname}"):
             event.fail("Certificate not available")
+        
+        event.set_results(
+            {
+                f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],
+                f"ca-{hostname}": tls_rel_data[f"ca-{hostname}"],
+                f"chain-{hostname}": tls_rel_data[f"chain-{hostname}"],
+            }
+        )
 
     def _on_certificates_relation_created(self, event: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event.

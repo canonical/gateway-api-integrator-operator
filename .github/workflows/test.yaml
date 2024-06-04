@@ -9,5 +9,5 @@ jobs:
     secrets: inherit
     with:
       self-hosted-runner: false
-      self-hosted-runner-label: "edge"
+      self-hosted-runner-labels: "edge"
       charmcraft-channel: "edge"

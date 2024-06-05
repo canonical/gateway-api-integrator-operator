@@ -4,6 +4,7 @@
 """Fixtures for gateway-api-integrator charm unit tests."""
 
 from typing import Dict
+from unittest.mock import MagicMock
 
 import pytest
 from ops.testing import Harness
@@ -28,3 +29,12 @@ def certificates_relation_data_fixture() -> Dict[str, str]:
         "ca-example.com": "whatever",
         "chain-example.com": "whatever",
     }
+
+
+@pytest.fixture(scope="function", name="patch_lightkube_client")
+def patch_lightkube_client_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Patch lightkube cluster initialization."""
+    monkeypatch.setattr("charm.KubeConfig", MagicMock())
+    monkeypatch.setattr("charm.Client", MagicMock())

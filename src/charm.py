@@ -5,7 +5,8 @@
 """gateway-api-integrator charm file."""
 
 import logging
-from typing import Any, List, Union, cast
+import typing
+from typing import Any, List, Union
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
@@ -15,12 +16,6 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     TLSCertificatesRequiresV3,
 )
 from lightkube import Client, KubeConfig
-from lightkube.generic_resource import (
-    get_generic_resource,
-    load_in_cluster_generic_resources,
-    create_namespaced_resource,
-)
-import typing
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
@@ -33,8 +28,8 @@ from ops.model import (
 )
 
 from resource_definition import GatewayResourceDefinition
+from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from tls_relation import TLSRelationService
-from resource_manager.gateway import GatewayResourceManager, CreateGatewayError
 
 TLS_CERT = "certificates"
 LOGGER = logging.getLogger(__name__)
@@ -111,8 +106,11 @@ class GatewayAPICharm(CharmBase):
         return self._tls.get_tls_relation() is not None
 
     def _reconcile(self) -> None:
-        """Reconcile charm status based on configuration and integrations."""
-        # Initialize DTO object in event handler
+        """Reconcile charm status based on configuration and integrations.
+
+        Raises:
+            RuntimeError: when the creation of the gateway resource failed.
+        """
         gateway_resource_definition = GatewayResourceDefinition(
             name=self.app.name, config=self.config, model=self.model
         )
@@ -132,12 +130,6 @@ class GatewayAPICharm(CharmBase):
             namespace=gateway_resource_definition.namespace,
             labels=self._labels,
             client=self.client,
-        )
-
-        LOGGER.info(
-            "Created resource definition %s and resource manager %s",
-            gateway_resource_definition.__dict__,
-            gateway_resource_manager.__dict__,
         )
 
         try:

@@ -13,14 +13,13 @@ from ops.testing import Harness
 import tls_relation
 
 
-def test_generate_password(harness: Harness, mocker):
+@pytest.mark.usefixtures("patch_lightkube_client")
+def test_generate_password(harness: Harness):
     """
     arrange: given a charm with no connectable container.
     act: when agent relation joined event is fired.
     assert: the event is deferred.
     """
-    mocker.patch("charm.Client")
-    mocker.patch("charm.KubeConfig")
     harness.begin()
 
     tls_rel = tls_relation.TLSRelationService(harness.charm.model)
@@ -30,21 +29,17 @@ def test_generate_password(harness: Harness, mocker):
     assert len(password) == 12
 
 
-@pytest.mark.usefixtures("patch_load_incluster_config")
+@pytest.mark.usefixtures("patch_lightkube_client")
 def test_cert_relation(
     harness: Harness,
     certificates_relation_data: Dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
-    mocker,
 ):
     """
     arrange: given a charm with no connectable container.
     act: when agent relation joined event is fired.
     assert: the event is deferred.
     """
-    mocker.patch("charm.Client")
-    mocker.patch("charm.KubeConfig")
-
     generate_password_mock = MagicMock(return_value="123456789101")
     monkeypatch.setattr(
         tls_relation.TLSRelationService, "generate_password", generate_password_mock

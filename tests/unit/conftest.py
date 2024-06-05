@@ -28,9 +28,3 @@ def certificates_relation_data_fixture() -> Dict[str, str]:
         "ca-example.com": "whatever",
         "chain-example.com": "whatever",
     }
-
-
-@pytest.fixture(scope="function", name="patch_load_incluster_config")
-def patch_load_incluster_config_fixture(monkeypatch: pytest.MonkeyPatch):
-    """Patch kubernetes.config.load_incluster_config."""
-    monkeypatch.setattr("kubernetes.config.load_incluster_config", lambda: None)

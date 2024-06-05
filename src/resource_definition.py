@@ -34,16 +34,24 @@ def is_valid_hostname(hostname: str) -> bool:
 
 
 class ResourceDefinition:
+    """Base class containing kubernetes resource definition.
+
+    Attrs:
+        config: The config data of the charm.
+        name: The name of the resource.
+        model: The model of the charm, used to determine the resource's namespace.
+        namespace: The resource's namespace.
+    """
+
     config: ConfigData
     name: str
     model: Model
 
-    def _get_config(self, field: str) -> Union[str, float, int, bool, None]:
+    def get_config(self, field: str) -> Union[str, float, int, bool, None]:
         """Get data from charm config.
 
         Args:
-            charm: The charm.
-            field: Config field.
+            field: Config field to get.
 
         Returns:
             The field's content.
@@ -52,22 +60,28 @@ class ResourceDefinition:
         config_data = self.config.get(field, None)
         return config_data
 
+    @property
+    def namespace(self) -> str:
+        """The namespace of the resource."""
+        return self.model.name
+
 
 @dataclasses.dataclass
 class GatewayResourceDefinition(ResourceDefinition):
-    """Class containing ingress definition collected from the Charm configuration or relation.
+    """Class containing information about the gateway object.
 
-    See config.yaml for descriptions of each property.
+    Attrs:
+        hostname: The hostname of the gateway's listeners.
+        gateway_class: The gateway class.
     """
 
-    def __init__(  # pylint: disable=too-many-arguments
-        self, name: str, config: ConfigData, model: Model
-    ) -> None:
+    def __init__(self, name: str, config: ConfigData, model: Model) -> None:
         """Create a GatewayResourceDefinition Object.
 
         Args:
             name: The gateway resource name.
             config: The charm's configuration.
+            model: The charm's juju model.
         """
         super().__init__()
         self.name = name
@@ -76,16 +90,14 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     @property
     def hostname(self) -> str:
-        hostname = cast(str, self._get_config("external-hostname"))
+        """The hostname of the gateway's listeners."""
+        hostname = cast(str, self.get_config("external-hostname"))
         if is_valid_hostname(hostname=hostname):
             return hostname
         return ""
 
     @property
     def gateway_class(self) -> str:
-        gateway_class = cast(str, self._get_config("gateway-class"))
+        """The gateway's gateway class defined via config."""
+        gateway_class = cast(str, self.get_config("gateway-class"))
         return gateway_class
-
-    @property
-    def namespace(self) -> str:
-        return self.model.name

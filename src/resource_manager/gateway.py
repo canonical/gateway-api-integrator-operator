@@ -4,21 +4,20 @@
 
 
 import logging
-import time
-from typing import Dict, List, Optional
+from typing import List
 
-import lightkube
 from lightkube import Client
-from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.core.client import LabelSelector
 from lightkube.generic_resource import (
-    get_generic_resource,
     GenericNamespacedResource,
-    create_namespaced_resource,
     create_global_resource,
+    create_namespaced_resource,
 )
-from .resource_manager import ResourceManager, _map_k8s_auth_exception, CREATED_BY_LABEL
+from lightkube.models.meta_v1 import ObjectMeta
+
 from resource_definition import GatewayResourceDefinition
+
+from .resource_manager import ResourceManager, _map_k8s_auth_exception
 
 LOGGER = logging.getLogger(__name__)
 
@@ -41,17 +40,16 @@ class CreateGatewayError(Exception):
         self.msg = msg
 
 
-class GatewayResourceManager(ResourceManager[dict]):  # pylint: disable=inherit-non-class
+class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     """Kubernetes Ingress resource controller."""
 
-    def __init__(self, namespace: str, labels: Dict[str, str], client: Client) -> None:
+    def __init__(self, namespace: str, labels: LabelSelector, client: Client) -> None:
         """Initialize the GatewayResourceManager.
 
         Args:
             namespace: Kubernetes namespace.
             labels: Label to be added to created resources.
-            hostname: Hostname bound to HTTP and HTTPS listeners
-            tls_secret_name: Kubernetes secret name bound to HTTPS listener
+            client: Initialized lightkube client.
         """
         self._ns = namespace
         self._client = client
@@ -87,13 +85,13 @@ class GatewayResourceManager(ResourceManager[dict]):  # pylint: disable=inherit-
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     def _set_gateway_class(
-        self, configured_gateway_class: str, body: GenericNamespacedResource
+        self, configured_gateway_class: str, resource: GenericNamespacedResource
     ) -> None:
         """Set the configured gateway class, otherwise the cluster's default gateway class.
 
         Args:
-            ingress_class: The desired ingress class name.
-            body: The Ingress resource object.
+            configured_gateway_class: The desired gateway class name.
+            resource: The Ingress resource object.
 
         Raises:
             CreateGatewayError: When there's no available gateway classes
@@ -102,21 +100,23 @@ class GatewayResourceManager(ResourceManager[dict]):  # pylint: disable=inherit-
 
         if not gateway_classes:
             LOGGER.error("Cluster has no available gateway class.")
-            raise CreateGatewayError(f"No gateway class available.")
+            raise CreateGatewayError("No gateway class available.")
 
-        gateway_class_names = [gateway_class.metadata.name for gateway_class in gateway_classes]
+        gateway_class_names = [
+            gateway_class.metadata.name
+            for gateway_class in gateway_classes
+            if gateway_class.metadata
+        ]
         if configured_gateway_class not in gateway_class_names:
             LOGGER.error(
                 "Configured gateway class %s not present on the cluster.", configured_gateway_class
             )
             raise CreateGatewayError(f"Gateway class {configured_gateway_class} not found.")
 
-        body.spec["gatewayClassName"] = configured_gateway_class
+        resource.spec["gatewayClassName"] = configured_gateway_class
 
     @_map_k8s_auth_exception
-    def _gen_resource_from_definition(  # noqa: C901
-        self, definition: GatewayResourceDefinition
-    ) -> dict:
+    def _gen_resource_from_definition(self, definition: GatewayResourceDefinition) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
@@ -144,35 +144,36 @@ class GatewayResourceManager(ResourceManager[dict]):  # pylint: disable=inherit-
             },
         )
 
-        self._set_gateway_class(configured_gateway_class=definition.gateway_class, body=gateway)
+        self._set_gateway_class(
+            configured_gateway_class=definition.gateway_class, resource=gateway
+        )
         LOGGER.info("Generated gateway resource: %s", gateway)
         return gateway
 
     @_map_k8s_auth_exception
     def _create_resource(self, resource: GenericNamespacedResource) -> None:
-        """Create a new V1Ingress resource in a given namespace.
+        """Create a new gateway resource in a given namespace.
 
         Args:
-            body: The V1Ingress resource object to create.
+            resource: The gateway resource object to create.
         """
         self._client.create(resource)
 
     @_map_k8s_auth_exception
     def _patch_resource(self, resource: GenericNamespacedResource) -> None:
-        """Replace an existing V1Ingress resource in a given namespace.
+        """Replace an existing gateway resource in a given namespace.
 
         Args:
-            name: The name of the V1Ingress resource to replace.
-            body: The modified V1Ingress resource object.
+            resource: The modified gateway resource object.
         """
         self._client.replace(resource)
 
     @_map_k8s_auth_exception
     def _list_resource(self) -> List[GenericNamespacedResource]:
-        """List V1Ingress resources in a given namespace based on a label selector.
+        """List gateway resources in a given namespace based on a label selector.
 
         Returns:
-            A list of matched V1Ingress resources.
+            A list of matched gateway resources.
         """
         return list(
             self._client.list(
@@ -182,30 +183,11 @@ class GatewayResourceManager(ResourceManager[dict]):  # pylint: disable=inherit-
 
     @_map_k8s_auth_exception
     def _delete_resource(self, name: str) -> None:
-        """Delete a V1Ingress resource from a given namespace.
+        """Delete a gateway resource from a given namespace.
 
         Args:
             name: The name of the V1Ingress resource to delete.
         """
-        self._client.delete(namespace=self._namespace, name=name)
-
-    def get_gateway_ip(self) -> str:
-        """Return IP addresses of the created gateway resource.
-
-        Returns:
-            The assigned IP address.
-        """
-        deadline = time.time() + 100
-        ips = []
-        while time.time() < deadline:
-            ingresses = self._list_resource()
-            try:
-                ips = [x.status.load_balancer.ingress[0].ip for x in ingresses]
-            except TypeError:
-                # We have no IPs yet.
-                pass
-            if ips:
-                break
-            LOGGER.info("Sleeping for %s seconds to wait for ingress IP", 1)
-            time.sleep(1)
-        return ips
+        self._client.delete(
+            res=self._gateway_generic_resource, name=name, namespace=self._namespace
+        )

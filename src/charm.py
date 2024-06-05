@@ -126,6 +126,7 @@ class GatewayAPICharm(CharmBase):
         tls_rel_data = tls_certificates_relation.data[self.app]
         if not tls_rel_data.get(f"certificate-{hostname}"):
             event.fail("Certificate not available")
+            return
 
         event.set_results(
             {

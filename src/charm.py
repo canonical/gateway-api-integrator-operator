@@ -124,15 +124,18 @@ class GatewayAPICharm(CharmBase):
             return
 
         tls_rel_data = tls_certificates_relation.data[self.app]
-        if not tls_rel_data.get(f"certificate-{hostname}"):
-            event.fail("Certificate not available")
+        if any(
+            not tls_rel_data.get(key)
+            for key in [f"certificate-{hostname}", f"ca-{hostname}", f"chain-{hostname}"]
+        ):
+            event.fail("Missing or incomplete certificate data")
             return
 
         event.set_results(
             {
-                f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],
-                f"ca-{hostname}": tls_rel_data[f"ca-{hostname}"],
-                f"chain-{hostname}": tls_rel_data[f"chain-{hostname}"],
+                f"certificate-{hostname}": tls_rel_data.get(f"certificate-{hostname}"),
+                f"ca-{hostname}": tls_rel_data.get(f"ca-{hostname}"),
+                f"chain-{hostname}": tls_rel_data.get(f"chain-{hostname}"),
             }
         )
 

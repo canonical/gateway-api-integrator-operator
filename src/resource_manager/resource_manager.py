@@ -16,7 +16,7 @@ import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
 from lightkube import ApiError
 
-from resource_definition import ResourceDefinition
+from resource_definition import GatewayResourceDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,8 @@ AnyResource = typing.TypeVar(
     lightkube.resources.core_v1.Secret,
     lightkube.generic_resource.GenericNamespacedResource,
 )
+
+ResourceDefinition: typing.TypeAlias = GatewayResourceDefinition
 
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 

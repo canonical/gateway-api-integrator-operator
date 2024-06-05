@@ -27,7 +27,7 @@ from ops.model import (
     WaitingStatus,
 )
 
-from resource_definition import GatewayResourceDefinition
+from resource_definition import GatewayResourceDefinition, InvalidCharmConfigError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from tls_relation import TLSRelationService
 
@@ -86,17 +86,6 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    def get_hostname(self) -> str:
-        """Get a list containing all ingress hostnames.
-
-        Returns:
-            A list containing service and additional hostnames
-        """
-        gateway_resource_definition = GatewayResourceDefinition(
-            name=self.app.name, config=self.config, model=self.model
-        )
-        return gateway_resource_definition.hostname
-
     def _are_relations_ready(self) -> bool:
         """Check if required relations are ready.
 
@@ -111,20 +100,17 @@ class GatewayAPICharm(CharmBase):
         Raises:
             RuntimeError: when the creation of the gateway resource failed.
         """
-        gateway_resource_definition = GatewayResourceDefinition(
-            name=self.app.name, config=self.config, model=self.model
-        )
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError as exc:
+            LOGGER.error("Invalid charm config: %s", exc.msg)
+            self.unit.status = BlockedStatus("Invalid charm configuration")
+            return
 
         tls_certificates_relation = self._tls.get_tls_relation()
         if not tls_certificates_relation:
             self.unit.status = BlockedStatus("Waiting for TLS.")
             return
-
-        if not gateway_resource_definition.gateway_class:
-            self.unit.status = BlockedStatus("Missing gateway class.")
-
-        if not gateway_resource_definition.hostname:
-            self.unit.status = BlockedStatus("Missing hostname.")
 
         gateway_resource_manager = GatewayResourceManager(
             namespace=gateway_resource_definition.namespace,
@@ -186,12 +172,16 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
             event.defer()
             return
-        hostname = self.get_hostname()
-        if not hostname:
-            self.unit.status = BlockedStatus("Waiting for hostname to be configured")
-            event.defer()
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError as exc:
+            LOGGER.error("Invalid charm config: %s", exc.msg)
+            self.unit.status = BlockedStatus("Invalid charm configuration")
             return
-        self._tls.certificate_relation_created(hostname)
+
+        self._tls.certificate_relation_created(
+            gateway_resource_definition.config.external_hostname
+        )
 
     def _on_certificates_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event.
@@ -203,12 +193,15 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
             event.defer()
             return
-        hostname = self.get_hostname()
-        if not hostname:
-            self.unit.status = BlockedStatus("Waiting for hostname to be configured")
-            event.defer()
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError as exc:
+            LOGGER.error("Invalid charm config: %s", exc.msg)
+            self.unit.status = BlockedStatus("Invalid charm configuration")
             return
-        self._tls.certificate_relation_joined(hostname, self.certificates)
+        self._tls.certificate_relation_joined(
+            gateway_resource_definition.config.external_hostname, self.certificates
+        )
 
     def _on_certificates_relation_broken(self, _: Any) -> None:
         """Handle the TLS Certificate relation broken event."""
@@ -306,8 +299,15 @@ class GatewayAPICharm(CharmBase):
         tls_relation = self._tls.get_tls_relation()
         if tls_relation:
             tls_relation.data[self.app].clear()
+
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError as exc:
+            LOGGER.error("Charm config not valid, skipping: %s", exc.msg)
+            return
+
         if JujuVersion.from_environ().has_secrets:
-            hostname = self.get_hostname()
+            hostname = gateway_resource_definition.config.external_hostname
             try:
                 secret = self.model.get_secret(label=f"private-key-{hostname}")
                 secret.remove_all_revisions()

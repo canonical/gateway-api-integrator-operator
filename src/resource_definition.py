@@ -4,100 +4,82 @@
 """gateway-api-integrator resource definition."""
 
 import dataclasses
-import re
-from typing import Union, cast
+import itertools
+import typing
 
-from ops.model import ConfigData, Model
+import ops
+from pydantic import BaseModel, Field, ValidationError
 
 
-def is_valid_hostname(hostname: str) -> bool:
-    """Check if a hostname is valid.
+class InvalidCharmConfigError(Exception):
+    """Exception raised when a charm configuration is found to be invalid.
 
-    Args:
-        hostname: hostname to check.
-
-    Returns:
-        If the hostname is valid.
+    Attrs:
+        msg (str): Explanation of the error.
     """
-    # This regex comes from the error message kubernetes shows when trying to set an
-    # invalid hostname.
-    # See https://github.com/canonical/nginx-ingress-integrator-operator/issues/2
-    # for an example.
-    if not hostname:
-        return False
-    result = re.fullmatch(
-        "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*", hostname
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the InvalidCharmConfigError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
+class CharmConfig(BaseModel):
+    """Charm configuration.
+
+    Attrs:
+        gateway_class (_type_): _description_
+        external_hostname: The configured gateway hostname.
+    """
+
+    gateway_class: str = Field(min_length=1)
+    external_hostname: str = Field(
+        pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )
-    if result:
-        return True
-    return False
 
 
-class ResourceDefinition:
+@dataclasses.dataclass(frozen=True)
+class GatewayResourceDefinition:
     """Base class containing kubernetes resource definition.
 
     Attrs:
         config: The config data of the charm.
-        name: The name of the resource.
-        model: The model of the charm, used to determine the resource's namespace.
-        namespace: The resource's namespace.
+        namespace: The gateway resource's namespace.
+        gateway_name: The gateway resource's name
     """
 
-    config: ConfigData
-    name: str
-    model: Model
+    config: CharmConfig
+    namespace: str
+    gateway_name: str
 
-    def get_config(self, field: str) -> Union[str, float, int, bool, None]:
-        """Get data from charm config.
+    @classmethod
+    def from_charm(cls, charm: ops.CharmBase) -> "GatewayResourceDefinition":
+        """Create a resource definition from charm instance.
 
         Args:
-            field: Config field to get.
+            charm (ops.CharmBase): _description_
+
+        Raises:
+            InvalidCharmConfigError: _description_
 
         Returns:
-            The field's content.
+            ResourceDefinition: _description_
         """
-        # Config fields with a default of None don't appear in the dict
-        config_data = self.config.get(field, None)
-        return config_data
+        try:
+            config = CharmConfig(
+                gateway_class=typing.cast(str, charm.config.get("gateway-class")),
+                external_hostname=typing.cast(str, charm.config.get("external-hostname")),
+            )
+            namespace = charm.model.name
+            gateway_name = charm.app.name
+        except ValidationError as exc:
+            error_fields = set(
+                itertools.chain.from_iterable(error["loc"] for error in exc.errors())
+            )
+            error_field_str = " ".join(f"{f}" for f in error_fields)
+            raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
-    @property
-    def namespace(self) -> str:
-        """The namespace of the resource."""
-        return self.model.name
-
-
-@dataclasses.dataclass
-class GatewayResourceDefinition(ResourceDefinition):
-    """Class containing information about the gateway object.
-
-    Attrs:
-        hostname: The hostname of the gateway's listeners.
-        gateway_class: The gateway class.
-    """
-
-    def __init__(self, name: str, config: ConfigData, model: Model) -> None:
-        """Create a GatewayResourceDefinition Object.
-
-        Args:
-            name: The gateway resource name.
-            config: The charm's configuration.
-            model: The charm's juju model.
-        """
-        super().__init__()
-        self.name = name
-        self.config = config
-        self.model = model
-
-    @property
-    def hostname(self) -> str:
-        """The hostname of the gateway's listeners."""
-        hostname = cast(str, self.get_config("external-hostname"))
-        if is_valid_hostname(hostname=hostname):
-            return hostname
-        return ""
-
-    @property
-    def gateway_class(self) -> str:
-        """The gateway's gateway class defined via config."""
-        gateway_class = cast(str, self.get_config("gateway-class"))
-        return gateway_class
+        return cls(config=config, namespace=namespace, gateway_name=gateway_name)

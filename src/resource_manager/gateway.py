@@ -14,7 +14,7 @@ from lightkube.generic_resource import (
     create_namespaced_resource,
 )
 from lightkube.models.meta_v1 import ObjectMeta
-
+from lightkube.types import PatchType
 from state.gateway import GatewayResourceDefinition
 
 from .resource_manager import ResourceManager, _map_k8s_auth_exception
@@ -129,23 +129,25 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
             metadata=ObjectMeta(
-                name=definition.name, namespace=self._namespace, labels=self._labels
+                name=definition.gateway_name,
+                namespace=self._namespace,
+                labels=self._labels,
             ),
             spec={
                 "listeners": [
                     {
                         "protocol": "HTTP",
                         "port": 80,
-                        "name": f"{definition.name}-http-listener",
-                        "hostname": definition.hostname,
-                        "allowedRoutes": {"namespaces": {"from": "Any"}},
+                        "name": f"{definition.gateway_name}-http-listener",
+                        "hostname": definition.config.external_hostname,
+                        "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                 ]
             },
         )
 
         self._set_gateway_class(
-            configured_gateway_class=definition.gateway_class, resource=gateway
+            configured_gateway_class=definition.config.gateway_class, resource=gateway
         )
         LOGGER.info("Generated gateway resource: %s", gateway)
         return gateway
@@ -160,13 +162,22 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         self._client.create(resource)
 
     @_map_k8s_auth_exception
-    def _patch_resource(self, resource: GenericNamespacedResource) -> None:
+    def _patch_resource(self, name: str, resource: GenericNamespacedResource) -> None:
         """Replace an existing gateway resource in a given namespace.
 
         Args:
+            name: The name of the resource to patch.
             resource: The modified gateway resource object.
         """
-        self._client.replace(resource)
+        # mypy can't detect that this is ok for patching custom resources
+        self._client.patch(  # type: ignore[type-var]
+            self._gateway_generic_resource,
+            name,
+            resource,
+            # we don't use the default strategic merge as it does not have an RFC standard.
+            patch_type=PatchType.APPLY,
+            force=True,
+        )
 
     @_map_k8s_auth_exception
     def _list_resource(self) -> List[GenericNamespacedResource]:

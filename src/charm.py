@@ -53,7 +53,7 @@ class GatewayAPICharm(CharmBase):
         super().__init__(*args)
 
         self._kubeconfig = KubeConfig.from_service_account()
-        self.client = Client(config=self._kubeconfig)
+        self.client = Client(config=self._kubeconfig, field_manager=self.app.name)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)

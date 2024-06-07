@@ -4,41 +4,12 @@
 """gateway-api-integrator resource definition."""
 
 import dataclasses
-import itertools
 import typing
 
 import ops
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import ValidationError
 
-
-class InvalidCharmConfigError(Exception):
-    """Exception raised when a charm configuration is found to be invalid.
-
-    Attrs:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the InvalidCharmConfigError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
-
-
-class CharmConfig(BaseModel):
-    """Charm configuration.
-
-    Attrs:
-        gateway_class (_type_): _description_
-        external_hostname: The configured gateway hostname.
-    """
-
-    gateway_class: str = Field(min_length=1)
-    external_hostname: str = Field(
-        pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
-    )
+from .config import CharmConfig, InvalidCharmConfigError, get_invalid_config_fields
 
 
 @dataclasses.dataclass(frozen=True)
@@ -76,10 +47,7 @@ class GatewayResourceDefinition:
             namespace = charm.model.name
             gateway_name = charm.app.name
         except ValidationError as exc:
-            error_fields = set(
-                itertools.chain.from_iterable(error["loc"] for error in exc.errors())
-            )
-            error_field_str = " ".join(f"{f}" for f in error_fields)
+            error_field_str = ",".join(f"{f}" for f in get_invalid_config_fields(exc))
             raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
         return cls(config=config, namespace=namespace, gateway_name=gateway_name)

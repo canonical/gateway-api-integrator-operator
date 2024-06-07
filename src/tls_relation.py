@@ -33,22 +33,8 @@ class TLSRelationService:
         Args:
             model: The charm model used to get the relations and secrets.
         """
-        self.certs: Dict[Union[str, None], Union[str, None]] = {}
-        self.keys: Dict[Union[str, None], Union[str, None]] = {}
         self.charm_model = model
         self.charm_app = model.app
-        self._init_certs_and_keys()
-
-    def _init_certs_and_keys(self) -> None:
-        """Initialize the certificates and keys which are already present in relation data."""
-        tls_certificates_relation = self.get_tls_relation()
-        if not tls_certificates_relation:
-            return
-        for key, value in tls_certificates_relation.data[self.charm_app].items():
-            if key.startswith("chain-"):
-                hostname = key.split("-", maxsplit=1)[1]
-                self.certs[hostname] = value
-                self.keys[hostname] = self._get_private_key(hostname)["key"]
 
     def generate_password(self) -> str:
         """Generate a random 12 character password.
@@ -119,29 +105,20 @@ class TLSRelationService:
 
         return str(common_name_attribute[0].value)
 
-    def get_tls_relation(self) -> Union[Relation, None]:
-        """Get the TLS certificates relation.
-
-        Returns:
-            The TLS certificates relation of the charm.
-        """
-        relation = self.charm_model.get_relation(TLS_CERT)
-        return relation
-
     # The charm will not have annotations to avoid circular imports.
     def certificate_relation_joined(  # type: ignore[no-untyped-def]
         self,
         hostname: str,
         certificates: TLSCertificatesRequiresV3,
+        tls_integration: Relation,
     ) -> None:
         """Handle the TLS Certificate joined event.
 
         Args:
             hostname: Certificate's hostname.
             certificates: The certificate requirer library instance.
+            tls_integration: The tls certificates integration.
         """
-        tls_certificates_relation = self.get_tls_relation()
-        assert isinstance(tls_certificates_relation, Relation)  # nosec
         private_key_dict = self._get_private_key(hostname)
         csr = generate_csr(
             private_key=private_key_dict["key"].encode(),
@@ -149,22 +126,16 @@ class TLSRelationService:
             subject=hostname,
             sans_dns=[hostname],
         )
-        self.update_relation_data_fields(
-            {f"csr-{hostname}": csr.decode()}, tls_certificates_relation
-        )
+        self.update_relation_data_fields({f"csr-{hostname}": csr.decode()}, tls_integration)
         certificates.request_certificate_creation(certificate_signing_request=csr)
 
-    def certificate_relation_created(  # type: ignore[no-untyped-def]
-        self,
-        hostname: str,
-    ) -> None:
+    def certificate_relation_created(self, hostname: str, tls_integration: Relation) -> None:
         """Handle the TLS Certificate created event.
 
         Args:
             hostname: Certificate's hostname.
+            tls_integration: The tls certificates integration.
         """
-        tls_certificates_relation = self.get_tls_relation()
-        assert isinstance(tls_certificates_relation, Relation)  # nosec
         private_key_password = self.generate_password().encode()
         private_key = generate_private_key(password=private_key_password)
         private_key_dict = {
@@ -179,18 +150,17 @@ class TLSRelationService:
                 secret = self.charm_app.add_secret(
                     content=private_key_dict, label=f"private-key-{hostname}"
                 )
-                secret.grant(tls_certificates_relation)
+                secret.grant(tls_integration)
 
-    def certificate_relation_available(  # type: ignore[no-untyped-def]
-        self, event: CertificateAvailableEvent
+    def certificate_relation_available(
+        self, event: CertificateAvailableEvent, tls_integration: Relation
     ) -> None:
         """Handle the TLS Certificate available event.
 
         Args:
             event: The event that fires this method.
+            tls_integration: The tls certificates integration.
         """
-        tls_certificates_relation = self.get_tls_relation()
-        assert isinstance(tls_certificates_relation, Relation)  # nosec
         hostname = self.get_hostname_from_cert(event.certificate)
         self.update_relation_data_fields(
             {
@@ -198,28 +168,24 @@ class TLSRelationService:
                 f"ca-{hostname}": event.ca,
                 f"chain-{hostname}": str(event.chain_as_pem()),
             },
-            tls_certificates_relation,
+            tls_integration,
         )
-        private_key = self._get_private_key(hostname)
-
-        self.certs[hostname] = event.chain_as_pem()
-        self.keys[hostname] = private_key["key"]
 
     def certificate_expiring(  # type: ignore[no-untyped-def]
         self,
         event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
         certificates: TLSCertificatesRequiresV3,
+        tls_integration: Relation,
     ) -> None:
         """Handle the TLS Certificate expiring event.
 
         Args:
             event: The event that fires this method.
             certificates: The certificate requirer library instance.
+            tls_integration: The tls certificates integration.
         """
-        tls_certificates_relation = self.get_tls_relation()
-        assert isinstance(tls_certificates_relation, Relation)  # nosec
         hostname = self.get_hostname_from_cert(event.certificate)
-        old_csr = self.get_relation_data_field(f"csr-{hostname}", tls_certificates_relation)
+        old_csr = self.get_relation_data_field(f"csr-{hostname}", tls_integration)
         private_key_dict = self._get_private_key(hostname)
         new_csr = generate_csr(
             private_key=private_key_dict["key"].encode(),
@@ -231,24 +197,7 @@ class TLSRelationService:
             old_certificate_signing_request=old_csr.encode(),
             new_certificate_signing_request=new_csr,
         )
-        self.update_relation_data_fields(
-            {f"csr-{hostname}": new_csr.decode()}, tls_certificates_relation
-        )
-
-    def get_decrypted_keys(self) -> Dict[str, str]:
-        """Return the list of decrypted private keys.
-
-        Returns:
-            A dictionary indexed by domain, containing the decrypted private keys.
-        """
-        decrypted_private_keys = {
-            str(hostname): self._get_decrypted_key(
-                (private_key := self._get_private_key(hostname))["key"], private_key["password"]
-            )
-            for hostname in self.keys
-            if hostname
-        }
-        return decrypted_private_keys
+        self.update_relation_data_fields({f"csr-{hostname}": new_csr.decode()}, tls_integration)
 
     def _get_decrypted_key(self, private_key: str, password: str) -> str:
         """Decrypted the provided private key using the provided password.

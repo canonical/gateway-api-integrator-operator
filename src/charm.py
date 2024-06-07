@@ -34,6 +34,7 @@ from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InvalidResourceError
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
@@ -135,9 +136,11 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm(self, client)
 
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        # This line is currently here to validate the existence of the certificates relation.
-        # This charm state component will be used by the upcoming SecretResourceManager.
-        TLSInformation.from_charm(self)
+        tls_information = TLSInformation.from_charm(self)
+
+        secret_resource_definition = SecretResourceDefinition.from_charm_and_tls_information(
+            self, tls_information
+        )
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,

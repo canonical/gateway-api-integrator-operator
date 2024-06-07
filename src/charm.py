@@ -31,6 +31,7 @@ from ops.model import (
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from state.config import InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
 from tls_relation import TLSRelationService
 
@@ -105,10 +106,14 @@ class GatewayAPICharm(CharmBase):
         try:
             # This will be replaced by a secret resource definition component of the state
             # InvalidCharmConfigError will also not be caught twice
-            _ = TLSInformation.from_charm(self)
+            tls_information = TLSInformation.from_charm(self)
         except (TlsIntegrationMissingError, InvalidCharmConfigError):
             self.unit.status = BlockedStatus("Waiting for TLS.")
             return
+
+        secret_resource_definition = SecretResourceDefinition.from_charm_and_tls_information(
+            self, tls_information
+        )
 
         gateway_resource_manager = GatewayResourceManager(
             namespace=gateway_resource_definition.namespace,

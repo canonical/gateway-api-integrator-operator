@@ -12,7 +12,7 @@ import lightkube.generic_resource
 import lightkube.resources
 import lightkube.resources.apiextensions_v1
 import lightkube.resources.apps_v1
-import lightkube.resources.core_v1
+from lightkube.resources.core_v1 import Secret, Service, Endpoints
 import lightkube.resources.discovery_v1
 from lightkube import ApiError
 
@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 AnyResource = typing.TypeVar(
     "AnyResource",
-    lightkube.resources.core_v1.Endpoints,
+    Endpoints,
     lightkube.resources.discovery_v1.EndpointSlice,
-    lightkube.resources.core_v1.Service,
-    lightkube.resources.core_v1.Secret,
+    Service,
+    Secret,
     lightkube.generic_resource.GenericNamespacedResource,
 )
 

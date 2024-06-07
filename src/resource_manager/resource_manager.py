@@ -16,7 +16,7 @@ import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
 from lightkube.core.exceptions import ApiError
 
-from resource_definition import GatewayResourceDefinition
+from state.gateway import GatewayResourceDefinition
 
 logger = logging.getLogger(__name__)
 

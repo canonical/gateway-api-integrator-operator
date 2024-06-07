@@ -18,7 +18,7 @@ from lightkube.generic_resource import (
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from resource_definition import GatewayResourceDefinition
+from state.gateway import GatewayResourceDefinition
 
 from .resource_manager import ResourceManager, _map_k8s_auth_exception
 

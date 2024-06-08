@@ -23,3 +23,42 @@ parts:
       - libssl-dev
       - rustc
       - cargo
+
+# Metadata
+name: gateway-api-integrator
+title: Gateway API Integrator
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators) deploying and managing external access to HTTP/HTTPS services in a
+  Kubernetes cluster via a Gateway and an HTTPRoute resource. This requires the Kubernetes
+  cluster in question to have an Gateway API controller already deployed into it.
+summary: An operator to manage gateway resources.
+links:
+  documentation: https://discourse.charmhub.io/t/
+  issues: https://github.com/canonical/gateway-api-integrator-operator/issues
+  source: https://github.com/canonical/gateway-api-integrator-operator
+  contact:
+    - https://launchpad.net/~canonical-is-devops
+assumes:
+  - k8s-api
+  - juju >= 3.3
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+
+# config
+config:
+  options:
+    external-hostname:
+      default: ""
+      description: The hostname of the gateway.
+      type: string
+
+# actions
+actions:
+  get-certificate:
+    description: Returns the TLS Certificate. Intended for testing and debugging purposes.
+    params:
+      hostname:
+        type: string
+        description: Hostname to extract certs from.

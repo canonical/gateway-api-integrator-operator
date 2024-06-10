@@ -102,6 +102,8 @@ class GatewayAPICharm(CharmBase):
             or when creating the gateway resource fails.
         """
         try:
+            # Set field_manager for server-side apply when patching resources
+            # Keep this consistent across client initializations
             kubeconfig = KubeConfig.from_service_account()
             client = Client(config=kubeconfig, field_manager=self.app.name)
         except ConfigError as exc:

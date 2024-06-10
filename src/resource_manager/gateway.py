@@ -170,12 +170,13 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name: The name of the resource to patch.
             resource: The modified gateway resource object.
         """
-        # mypy can't detect that this is ok for patching custom resources
+        # Patch the resource with server-side apply
+        # force=True is required here so that the charm keeps control of the resource
         self._client.patch(  # type: ignore[type-var]
+            # mypy can't detect that this is ok for patching custom resources
             self._gateway_generic_resource,
             name,
             resource,
-            # we don't use the default strategic merge as it does not have an RFC standard.
             patch_type=PatchType.APPLY,
             force=True,
         )

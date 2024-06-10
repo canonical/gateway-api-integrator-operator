@@ -29,6 +29,7 @@ from ops.model import (
 
 from resource_definition import GatewayResourceDefinition, InvalidCharmConfigError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
+from resource_manager.resource_manager import InvalidResourceError, KuberentesCreateResourceError
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
@@ -120,9 +121,12 @@ class GatewayAPICharm(CharmBase):
 
         try:
             gateway = gateway_resource_manager.define_resource(gateway_resource_definition)
-        except CreateGatewayError as exc:
+        except (CreateGatewayError, InvalidResourceError) as exc:
             LOGGER.error("Error creating the gateway resource %s", exc)
             raise RuntimeError("Cannot create gateway.") from exc
+        except KuberentesCreateResourceError as exc:
+            self.unit.status = BlockedStatus(exc.msg)
+
         self.unit.status = ActiveStatus()
         gateway_resource_manager.cleanup_resources(exclude=gateway)
 

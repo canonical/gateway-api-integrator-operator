@@ -34,8 +34,8 @@ ResourceDefinition: typing.TypeAlias = GatewayResourceDefinition
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
-class InvalidGatewayError(Exception):
-    """Custom error that indicates invalid gateway definition.
+class InvalidResourceError(Exception):
+    """Custom error that indicates invalid resource definition.
 
     Args:
         msg: error message.
@@ -50,8 +50,24 @@ class InvalidGatewayError(Exception):
         self.msg = msg
 
 
+class KuberentesCreateResourceError(Exception):
+    """Custom error that indicates insufficient permission to create k8s resources.
+
+    Args:
+        msg: error message.
+    """
+
+    def __init__(self, msg: str):
+        """Construct the KuberentesCreateResourceError object.
+
+        Args:
+            msg: error message.
+        """
+        self.msg = msg
+
+
 def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
-    """Remap the kubernetes 403 ApiException to InvalidGatewayError.
+    """Remap the kubernetes 403 ApiException to KuberentesCreateResourceError.
 
     Args:
         func: function to be wrapped.
@@ -62,7 +78,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
 
     @functools.wraps(func)
     def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-        """Remap the kubernetes 403 ApiException to InvalidGatewayError.
+        """Remap the kubernetes 403 ApiException to KuberentesCreateResourceError.
 
         Args:
             args: function arguments.
@@ -73,7 +89,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
 
         Raises:
             ApiException: if the Python kubernetes raised an unknown ApiException
-            InvalidGatewayError: if the Python kubernetes raised a permission error
+            KuberentesCreateResourceError: if the Python kubernetes raised a permission error
         """
         try:
             return func(*args, **kwargs)
@@ -84,7 +100,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
                     "will request `juju trust` to be run"
                 )
                 juju_trust_cmd = "juju trust <nginx-ingress-integrator> --scope=cluster"
-                raise InvalidGatewayError(
+                raise KuberentesCreateResourceError(
                     f"Insufficient permissions, try: `{juju_trust_cmd}`"
                 ) from exc
             raise
@@ -181,12 +197,12 @@ class ResourceManager(typing.Protocol[AnyResource]):
             The name of the created or modified resource.
 
         Raises:
-            InvalidGatewayError: If the generated resource is invalid.
+            InvalidResourceError: If the generated resource is invalid.
         """
         resource_list = self._list_resource()
         resource = self._gen_resource_from_definition(definition)
         if not resource.metadata:
-            raise InvalidGatewayError("Missing metadata is resource.")
+            raise InvalidResourceError("Missing metadata in resource.")
 
         resources = [r.metadata.name for r in resource_list if r.metadata]
         if resource.metadata.name in resources:

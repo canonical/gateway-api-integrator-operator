@@ -103,7 +103,7 @@ class GatewayAPICharm(CharmBase):
         """
         try:
             kubeconfig = KubeConfig.from_service_account()
-            client = Client(config=kubeconfig)
+            client = Client(config=kubeconfig, field_manager=self.app.name)
         except ConfigError as exc:
             LOGGER.error("Error initializing the lightkube client: %s", exc)
             raise RuntimeError("Error initializing the lightkube client.") from exc
@@ -135,10 +135,11 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = BlockedStatus(exc.msg)
             return
 
-        if gateway_address := gateway_resource_manager.gateway_address:
-            self.unit.status = ActiveStatus(f"Gateway address: {gateway_address}")
+        self.unit.status = WaitingStatus("Waiting for gateway address")
+        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
+            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
-            self.unit.status = WaitingStatus("Waiting for gateway address")
+            self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
 
     def _on_config_changed(self, _: Any) -> None:

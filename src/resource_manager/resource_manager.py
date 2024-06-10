@@ -165,10 +165,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _patch_resource(self, resource: AnyResource) -> None:
+    def _patch_resource(self, name: str, resource: AnyResource) -> None:
         """Abstract method to patch an existing resource in a given namespace.
 
         Args:
+            name: The name of the resource to patch.
             resource: The modified resource object.
         """
 
@@ -202,11 +203,14 @@ class ResourceManager(typing.Protocol[AnyResource]):
         resource_list = self._list_resource()
         resource = self._gen_resource_from_definition(definition)
         if not resource.metadata:
-            raise InvalidResourceError("Missing metadata in resource.")
+            raise InvalidResourceError("Missing resource metadata.")
+
+        if not resource.metadata.name:
+            raise InvalidResourceError("Missing resource name.")
 
         resources = [r.metadata.name for r in resource_list if r.metadata]
         if resource.metadata.name in resources:
-            self._patch_resource(resource=resource)
+            self._patch_resource(name=resource.metadata.name, resource=resource)
             logger.info(
                 "%s updated in namespace %s with name %s",
                 self._name,

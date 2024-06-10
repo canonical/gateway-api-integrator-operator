@@ -9,14 +9,14 @@ from typing import List, Optional
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
+from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import (
     GenericNamespacedResource,
     create_global_resource,
     create_namespaced_resource,
 )
-from lightkube.core.exceptions import ApiError
-
 from lightkube.models.meta_v1 import ObjectMeta
+from lightkube.types import PatchType
 
 from resource_definition import GatewayResourceDefinition
 
@@ -163,13 +163,22 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         self._client.create(resource)
 
     @_map_k8s_auth_exception
-    def _patch_resource(self, resource: GenericNamespacedResource) -> None:
+    def _patch_resource(self, name: str, resource: GenericNamespacedResource) -> None:
         """Replace an existing gateway resource in a given namespace.
 
         Args:
+            name: The name of the resource to patch.
             resource: The modified gateway resource object.
         """
-        self._client.replace(resource)
+        # mypy can't detect that this is ok for patching custom resources
+        self._client.patch(  # type: ignore[type-var]
+            self._gateway_generic_resource,
+            name,
+            resource,
+            # we don't use the default strategic merge as it does not have an RFC standard.
+            patch_type=PatchType.APPLY,
+            force=True,
+        )
 
     @_map_k8s_auth_exception
     def _list_resource(self) -> List[GenericNamespacedResource]:
@@ -206,18 +215,23 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         Returns:
             Optional[str]: _description_
         """
-        deadline = time.time() + 100
+        deadline = time.time() + 60
+        delay = 5
         gateway_address = None
         while time.time() < deadline:
             try:
                 gateway = self._client.get(
                     self._gateway_generic_resource, name=name, namespace=self._namespace
                 )
-                gateway_address = gateway.status.loadBalancer.status.ingress[0].ip  # type: ignore
+                gateway_addresses = [
+                    addr["value"] for addr in gateway.status["addresses"]  # type: ignore
+                ]
+                if gateway_addresses:
+                    gateway_address = ",".join(gateway_addresses)
             except (ApiError, AttributeError, TypeError):
                 pass
             if gateway_address:
                 break
-            LOGGER.info("Gateway address not ready, waiting for %s seconds before retrying", 1)
-            time.sleep(1)
+            LOGGER.info("Gateway address not ready, waiting for %s seconds before retrying", delay)
+            time.sleep(delay)
         return gateway_address

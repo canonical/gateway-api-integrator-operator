@@ -24,7 +24,6 @@ parts:
       - rustc
       - cargo
 
-# Metadata
 name: gateway-api-integrator
 title: Gateway API Integrator
 description: |
@@ -46,7 +45,6 @@ requires:
     interface: tls-certificates
     limit: 1
 
-# config
 config:
   options:
     external-hostname:
@@ -54,7 +52,6 @@ config:
       description: The hostname of the gateway.
       type: string
 
-# actions
 actions:
   get-certificate:
     description: Returns the TLS Certificate. Intended for testing and debugging purposes.

@@ -9,8 +9,8 @@ from unittest.mock import MagicMock
 import pytest
 from ops.testing import Harness
 
-from tls_relation import TLSRelationService
 from resource_definition import GatewayResourceDefinition
+from tls_relation import TLSRelationService
 
 
 @pytest.mark.usefixtures("patch_lightkube_client")

@@ -14,7 +14,7 @@ import lightkube.resources.apiextensions_v1
 import lightkube.resources.apps_v1
 import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
-from lightkube import ApiError
+from lightkube.core.exceptions import ApiError
 
 from resource_definition import GatewayResourceDefinition
 
@@ -94,12 +94,12 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
         try:
             return func(*args, **kwargs)
         except ApiError as exc:
-            if exc.status == 403:
+            if exc.status.code == 403:
                 logger.error(
                     "Insufficient permissions to create the k8s service, "
                     "will request `juju trust` to be run"
                 )
-                juju_trust_cmd = "juju trust <nginx-ingress-integrator> --scope=cluster"
+                juju_trust_cmd = "juju trust <gateway-api-integrator> --scope=cluster"
                 raise KuberentesCreateResourceError(
                     f"Insufficient permissions, try: `{juju_trust_cmd}`"
                 ) from exc

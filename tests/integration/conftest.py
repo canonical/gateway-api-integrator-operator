@@ -15,6 +15,9 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
+TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+GATEWAY_CLASS_CONFIG = "cilium"
+
 
 @pytest_asyncio.fixture(scope="module", name="model")
 async def model_fixture(ops_test: OpsTest) -> Model:

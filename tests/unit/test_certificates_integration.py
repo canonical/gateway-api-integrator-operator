@@ -13,7 +13,6 @@ from ops.testing import Harness
 import tls_relation
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
 def test_generate_password(harness: Harness):
     """
     arrange: given a charm with no connectable container.
@@ -29,7 +28,6 @@ def test_generate_password(harness: Harness):
     assert len(password) == 12
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
 def test_cert_relation(
     harness: Harness,
     certificates_relation_data: Dict[str, str],

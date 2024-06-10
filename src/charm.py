@@ -16,6 +16,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     TLSCertificatesRequiresV3,
 )
 from lightkube import Client, KubeConfig
+from lightkube.core.exceptions import ConfigError
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
@@ -50,8 +51,6 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
-        self._kubeconfig = KubeConfig.from_service_account()
-        self.client = Client(config=self._kubeconfig)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -99,8 +98,16 @@ class GatewayAPICharm(CharmBase):
         """Reconcile charm status based on configuration and integrations.
 
         Raises:
-            RuntimeError: when the creation of the gateway resource failed.
+            RuntimeError: when initializing the lightkube client fails,
+            or when creating the gateway resource fails.
         """
+        try:
+            kubeconfig = KubeConfig.from_service_account()
+            client = Client(config=kubeconfig)
+        except ConfigError as exc:
+            LOGGER.error("Error initializing the lightkube client: %s", exc)
+            raise RuntimeError("Error initializing the lightkube client.") from exc
+
         try:
             gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         except InvalidCharmConfigError as exc:
@@ -116,7 +123,7 @@ class GatewayAPICharm(CharmBase):
         gateway_resource_manager = GatewayResourceManager(
             namespace=gateway_resource_definition.namespace,
             labels=self._labels,
-            client=self.client,
+            client=client,
         )
 
         try:
@@ -126,8 +133,12 @@ class GatewayAPICharm(CharmBase):
             raise RuntimeError("Cannot create gateway.") from exc
         except KuberentesCreateResourceError as exc:
             self.unit.status = BlockedStatus(exc.msg)
+            return
 
-        self.unit.status = ActiveStatus()
+        if gateway_address := gateway_resource_manager.gateway_address:
+            self.unit.status = ActiveStatus(f"Gateway address: {gateway_address}")
+        else:
+            self.unit.status = WaitingStatus("Waiting for gateway address")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
 
     def _on_config_changed(self, _: Any) -> None:

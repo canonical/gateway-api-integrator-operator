@@ -4,7 +4,8 @@
 
 
 import logging
-from typing import List
+import time
+from typing import List, Optional
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
@@ -13,6 +14,8 @@ from lightkube.generic_resource import (
     create_global_resource,
     create_namespaced_resource,
 )
+from lightkube.core.exceptions import ApiError
+
 from lightkube.models.meta_v1 import ObjectMeta
 
 from resource_definition import GatewayResourceDefinition
@@ -129,23 +132,23 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
             metadata=ObjectMeta(
-                name=definition.name, namespace=self._namespace, labels=self._labels
+                name=definition.gateway_name, namespace=self._namespace, labels=self._labels
             ),
             spec={
                 "listeners": [
                     {
                         "protocol": "HTTP",
                         "port": 80,
-                        "name": f"{definition.name}-http-listener",
-                        "hostname": definition.hostname,
-                        "allowedRoutes": {"namespaces": {"from": "Any"}},
+                        "name": f"{definition.gateway_name}-http-listener",
+                        "hostname": definition.config.external_hostname,
+                        "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                 ]
             },
         )
 
         self._set_gateway_class(
-            configured_gateway_class=definition.gateway_class, resource=gateway
+            configured_gateway_class=definition.config.gateway_class, resource=gateway
         )
         LOGGER.info("Generated gateway resource: %s", gateway)
         return gateway
@@ -191,3 +194,30 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         self._client.delete(
             res=self._gateway_generic_resource, name=name, namespace=self._namespace
         )
+
+    def gateway_address(self, name: str) -> Optional[str]:
+        """Return the LB address of the gateway resource.
+
+        Poll the address for 100 seconds.
+
+        Args:
+            name (str): _description_
+
+        Returns:
+            Optional[str]: _description_
+        """
+        deadline = time.time() + 100
+        gateway_address = None
+        while time.time() < deadline:
+            try:
+                gateway = self._client.get(
+                    self._gateway_generic_resource, name=name, namespace=self._namespace
+                )
+                gateway_address = gateway.status.loadBalancer.status.ingress[0].ip  # type: ignore
+            except (ApiError, AttributeError, TypeError):
+                pass
+            if gateway_address:
+                break
+            LOGGER.info("Gateway address not ready, waiting for %s seconds before retrying", 1)
+            time.sleep(1)
+        return gateway_address

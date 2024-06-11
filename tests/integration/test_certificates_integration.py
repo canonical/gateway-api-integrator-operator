@@ -28,7 +28,12 @@ async def test_certificates_relation(
     )
     await application.model.add_relation(application.name, certificate_provider_application.name)
     await application.model.wait_for_idle(
-        apps=[application.name, certificate_provider_application.name],
+        apps=[certificate_provider_application.name],
         idle_period=30,
         status="active",
     )
+    action = await application.units[0].run_action(
+        "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
+    )
+    await action.wait()
+    assert action.results

@@ -229,7 +229,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                 ]
                 if gateway_addresses:
                     gateway_address = ",".join(gateway_addresses)
-            except (ApiError, AttributeError, TypeError):
+            except (ApiError, AttributeError, TypeError, KeyError):
                 pass
             if gateway_address:
                 break

@@ -211,10 +211,10 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         Poll the address for 100 seconds.
 
         Args:
-            name (str): _description_
+            name (str): name of the gateway resource.
 
         Returns:
-            Optional[str]: _description_
+            Optional[str]: The addresses assigned to the gateway object, or none.
         """
         deadline = time.time() + 60
         delay = 5

@@ -30,7 +30,7 @@ from ops.model import (
 
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
-from state.config import InvalidCharmConfigError
+from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
 from tls_relation import TLSRelationService
@@ -90,7 +90,7 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    def _reconcile(self) -> None:
+    def _reconcile(self) -> None:  # noqa: C901
         """Reconcile charm status based on configuration and integrations.
 
         Raises:
@@ -189,13 +189,14 @@ class GatewayAPICharm(CharmBase):
         """
         try:
             tls_information = TLSInformation.from_charm(self)
+            config = CharmConfig.from_charm(self)
         except (TlsIntegrationMissingError, InvalidCharmConfigError) as exc:
             logger.error("Charm is not ready to handle this event, deferring: %s.", exc)
             event.defer()
             return
 
         self._tls.certificate_relation_created(
-            tls_information.config.external_hostname, tls_information.tls_requirer_integration
+            config.external_hostname, tls_information.tls_requirer_integration
         )
 
     def _on_certificates_relation_joined(self, event: RelationJoinedEvent) -> None:
@@ -206,6 +207,7 @@ class GatewayAPICharm(CharmBase):
         """
         try:
             tls_information = TLSInformation.from_charm(self)
+            config = CharmConfig.from_charm(self)
         except (TlsIntegrationMissingError, InvalidCharmConfigError) as exc:
             self.unit.status = BlockedStatus()
             logger.error("Charm is not ready to handle this event, deferring: %s.", exc)
@@ -213,7 +215,7 @@ class GatewayAPICharm(CharmBase):
             return
 
         self._tls.certificate_relation_joined(
-            tls_information.config.external_hostname,
+            config.external_hostname,
             self.certificates,
             tls_information.tls_requirer_integration,
         )
@@ -352,13 +354,13 @@ class GatewayAPICharm(CharmBase):
             return
 
         try:
-            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+            config = CharmConfig.from_charm(self)
         except InvalidCharmConfigError as exc:
             logger.error("Charm config not valid, skipping: %s", exc.msg)
             return
 
         if JujuVersion.from_environ().has_secrets:
-            hostname = gateway_resource_definition.config.external_hostname
+            hostname = config.external_hostname
             try:
                 secret = self.model.get_secret(label=f"private-key-{hostname}")
                 secret.remove_all_revisions()

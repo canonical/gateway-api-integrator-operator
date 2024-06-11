@@ -5,6 +5,8 @@
 
 import itertools
 import typing
+import ops
+import dataclasses
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -25,8 +27,9 @@ class InvalidCharmConfigError(Exception):
         self.msg = msg
 
 
+@dataclasses.dataclass(frozen=True)
 class CharmConfig(BaseModel):
-    """Charm configuration.
+    """A component of charm state that contains the charm's configuration.
 
     Attrs:
         gateway_class (_type_): _description_
@@ -37,6 +40,28 @@ class CharmConfig(BaseModel):
     external_hostname: str = Field(
         pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )
+
+    @classmethod
+    def from_charm(cls, charm: ops.CharmBase) -> "CharmConfig":
+        """Create a CharmConfig class from a charm instance.
+
+        Args:
+            charm (ops.CharmBase): _description_
+
+        Raises:
+            InvalidCharmConfigError: _description_
+
+        Returns:
+            CharmConfig: _description_
+        """
+        try:
+            return cls(
+                gateway_class=typing.cast(str, charm.config.get("gateway-class")),
+                external_hostname=typing.cast(str, charm.config.get("external-hostname")),
+            )
+        except ValidationError as exc:
+            error_field_str = ",".join(f"{f}" for f in get_invalid_config_fields(exc))
+            raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
 
 def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:

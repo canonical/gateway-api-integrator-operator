@@ -11,6 +11,9 @@ from ops.testing import Harness
 
 from charm import GatewayAPICharm
 
+TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+GATEWAY_CLASS_CONFIG = "cilium"
+
 
 @pytest.fixture(scope="function", name="harness")
 def harness_fixture():

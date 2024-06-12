@@ -202,20 +202,18 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
         resource_list = self._list_resource()
         resource = self._gen_resource_from_definition(definition)
-        if not resource.metadata:
-            raise InvalidResourceError("Missing resource metadata.")
-
-        if not resource.metadata.name:
+        res_name = resource_name(resource)
+        if res_name is None:
             raise InvalidResourceError("Missing resource name.")
 
-        resources = [r.metadata.name for r in resource_list if r.metadata]
-        if resource.metadata.name in resources:
-            self._patch_resource(name=resource.metadata.name, resource=resource)
+        resources = [resource_name(r) for r in resource_list if resource_name(r) is not None]
+        if res_name in resources:
+            self._patch_resource(name=res_name, resource=resource)
             logger.info(
                 "%s updated in namespace %s with name %s",
                 self._name,
                 self._namespace,
-                resource.metadata.name,
+                res_name,
             )
         else:
             self._create_resource(resource=resource)
@@ -223,7 +221,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
                 "%s created in namespace %s with name %s",
                 self._name,
                 self._namespace,
-                resource.metadata.name,
+                res_name,
             )
         return resource
 

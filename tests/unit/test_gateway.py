@@ -12,6 +12,8 @@ from ops.testing import Harness
 from resource_definition import GatewayResourceDefinition
 from tls_relation import TLSRelationService
 
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+
 
 @pytest.mark.usefixtures("patch_lightkube_client")
 def test_gateway_resource_definition(
@@ -22,7 +24,6 @@ def test_gateway_resource_definition(
     act: when agent reconciliation triggers.
     assert: the gateway resource is created with the expected values.
     """
-    hostname = "gateway.internal"
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data
     )
@@ -33,10 +34,12 @@ def test_gateway_resource_definition(
         "resource_manager.gateway.GatewayResourceManager.define_resource", define_resource_mock
     )
 
-    harness.update_config({"external-hostname": hostname, "gateway-class": "cilium"})
+    harness.update_config(
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+    )
 
     gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
     assert gateway_resource_definition.namespace == harness.model.name
-    assert gateway_resource_definition.config.external_hostname == hostname
+    assert gateway_resource_definition.config.external_hostname == TEST_EXTERNAL_HOSTNAME_CONFIG
     assert gateway_resource_definition.config.gateway_class == "cilium"
     define_resource_mock.assert_called_once_with(gateway_resource_definition)

@@ -22,7 +22,7 @@ from resource_definition import GatewayResourceDefinition
 
 from .resource_manager import ResourceManager, _map_k8s_auth_exception
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
@@ -102,7 +102,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         gateway_classes = list(self._client.list(self._gateway_class_generic_resource))
 
         if not gateway_classes:
-            LOGGER.error("Cluster has no available gateway class.")
+            logger.error("Cluster has no available gateway class.")
             raise CreateGatewayError("No gateway class available.")
 
         gateway_class_names = [
@@ -111,7 +111,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             if gateway_class.metadata
         ]
         if configured_gateway_class not in gateway_class_names:
-            LOGGER.error(
+            logger.error(
                 "Configured gateway class %s not present on the cluster.", configured_gateway_class
             )
             raise CreateGatewayError(f"Gateway class {configured_gateway_class} not found.")
@@ -150,7 +150,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         self._set_gateway_class(
             configured_gateway_class=definition.config.gateway_class, resource=gateway
         )
-        LOGGER.info("Generated gateway resource: %s", gateway)
+        logger.info("Generated gateway resource: %s", gateway)
         return gateway
 
     @_map_k8s_auth_exception
@@ -233,6 +233,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                 pass
             if gateway_address:
                 break
-            LOGGER.info("Gateway address not ready, waiting for %s seconds before retrying", delay)
+            logger.info("Gateway address not ready, waiting for %s seconds before retrying", delay)
             time.sleep(delay)
         return gateway_address

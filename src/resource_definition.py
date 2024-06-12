@@ -79,7 +79,7 @@ class GatewayResourceDefinition:
             error_fields = set(
                 itertools.chain.from_iterable(error["loc"] for error in exc.errors())
             )
-            error_field_str = " ".join(f"{f}" for f in error_fields)
+            error_field_str = " ".join(f"{field}" for field in error_fields)
             raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
         return cls(config=config, namespace=namespace, gateway_name=gateway_name)

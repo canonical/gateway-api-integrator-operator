@@ -12,6 +12,8 @@ from ops.testing import Harness
 
 import tls_relation
 
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+
 
 def test_generate_password(harness: Harness):
     """
@@ -52,7 +54,9 @@ def test_cert_relation(
     get_secret_mock = MagicMock()
     monkeypatch.setattr(ops.model.Model, "get_secret", get_secret_mock)
 
-    harness.update_config({"external-hostname": "igress-internal", "gateway-class": "cilium"})
+    harness.update_config(
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+    )
     harness.begin()
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data

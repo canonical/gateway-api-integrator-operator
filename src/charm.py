@@ -53,8 +53,6 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
-        self._kubeconfig = KubeConfig.from_service_account()
-        self.client = Client(config=self._kubeconfig)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -90,7 +88,7 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    def _reconcile(self) -> None:  # noqa: C901
+    def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
         Raises:
@@ -107,18 +105,12 @@ class GatewayAPICharm(CharmBase):
             raise RuntimeError("Error initializing the lightkube client.") from exc
 
         try:
+            config = CharmConfig.from_charm(self)
             gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError as exc:
-            logger.error("Invalid charm config: %s", exc.msg)
-            self.unit.status = BlockedStatus("Invalid charm configuration")
-            return
-
-        try:
-            # This will be replaced by a secret resource definition component of the state
-            # InvalidCharmConfigError will also not be caught twice
             _ = TLSInformation.from_charm(self)
-        except (TlsIntegrationMissingError, InvalidCharmConfigError):
-            self.unit.status = BlockedStatus("Waiting for TLS.")
+        except (InvalidCharmConfigError, TlsIntegrationMissingError) as exc:
+            logger.error("Charm not ready to create resources: %s", exc.msg)
+            self.unit.status = BlockedStatus(exc.msg)
             return
 
         gateway_resource_manager = GatewayResourceManager(
@@ -128,7 +120,7 @@ class GatewayAPICharm(CharmBase):
         )
 
         try:
-            gateway = gateway_resource_manager.define_resource(gateway_resource_definition)
+            gateway = gateway_resource_manager.define_resource(gateway_resource_definition, config)
         except (CreateGatewayError, InvalidResourceError) as exc:
             logger.exception("Error creating the gateway resource %s", exc)
             raise RuntimeError("Cannot create gateway.") from exc

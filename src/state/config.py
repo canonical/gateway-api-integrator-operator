@@ -1,13 +1,13 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""gateway-api-integrator resource definition."""
+"""gateway-api-integrator configuration."""
 
+import dataclasses
 import itertools
 import typing
-import ops
-import dataclasses
 
+import ops
 from pydantic import BaseModel, Field, ValidationError
 
 

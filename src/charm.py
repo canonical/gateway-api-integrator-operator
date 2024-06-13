@@ -29,7 +29,7 @@ from ops.model import (
 
 from resource_definition import GatewayResourceDefinition, InvalidCharmConfigError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
-from resource_manager.resource_manager import InvalidResourceError, KuberentesCreateResourceError
+from resource_manager.resource_manager import InvalidResourceError, InsufficientPermissionError
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
@@ -132,7 +132,7 @@ class GatewayAPICharm(CharmBase):
         except (CreateGatewayError, InvalidResourceError) as exc:
             logger.exception("Error creating the gateway resource %s", exc)
             raise RuntimeError("Cannot create gateway.") from exc
-        except KuberentesCreateResourceError as exc:
+        except InsufficientPermissionError as exc:
             self.unit.status = BlockedStatus(exc.msg)
             return
 

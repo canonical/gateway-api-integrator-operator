@@ -50,7 +50,7 @@ class InvalidResourceError(Exception):
         self.msg = msg
 
 
-class KuberentesCreateResourceError(Exception):
+class InsufficientPermissionError(Exception):
     """Custom error that indicates insufficient permission to create k8s resources.
 
     Args:
@@ -58,7 +58,7 @@ class KuberentesCreateResourceError(Exception):
     """
 
     def __init__(self, msg: str):
-        """Construct the KuberentesCreateResourceError object.
+        """Construct the InsufficientPermissionError object.
 
         Args:
             msg: error message.
@@ -67,7 +67,7 @@ class KuberentesCreateResourceError(Exception):
 
 
 def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
-    """Remap the kubernetes 403 ApiException to KuberentesCreateResourceError.
+    """Remap the kubernetes 403 ApiException to InsufficientPermissionError.
 
     Args:
         func: function to be wrapped.
@@ -78,7 +78,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
 
     @functools.wraps(func)
     def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-        """Remap the kubernetes 403 ApiException to KuberentesCreateResourceError.
+        """Remap the kubernetes 403 ApiException to InsufficientPermissionError.
 
         Args:
             args: function arguments.
@@ -89,7 +89,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
 
         Raises:
             ApiException: if the Python kubernetes raised an unknown ApiException
-            KuberentesCreateResourceError: if the Python kubernetes raised a permission error
+            InsufficientPermissionError: if the Python kubernetes raised a permission error
         """
         try:
             return func(*args, **kwargs)
@@ -100,7 +100,7 @@ def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
                     "will request `juju trust` to be run"
                 )
                 juju_trust_cmd = "juju trust <gateway-api-integrator> --scope=cluster"
-                raise KuberentesCreateResourceError(
+                raise InsufficientPermissionError(
                     f"Insufficient permissions, try: `{juju_trust_cmd}`"
                 ) from exc
             raise

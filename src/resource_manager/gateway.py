@@ -99,17 +99,17 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         Raises:
             CreateGatewayError: When there's no available gateway classes
         """
-        gateway_classes = list(self._client.list(self._gateway_class_generic_resource))
+        gateway_classes = tuple(self._client.list(self._gateway_class_generic_resource))
 
         if not gateway_classes:
             logger.error("Cluster has no available gateway class.")
             raise CreateGatewayError("No gateway class available.")
 
-        gateway_class_names = [
+        gateway_class_names = (
             gateway_class.metadata.name
             for gateway_class in gateway_classes
             if gateway_class.metadata
-        ]
+        )
         if configured_gateway_class not in gateway_class_names:
             logger.error(
                 "Configured gateway class %s not present on the cluster.", configured_gateway_class

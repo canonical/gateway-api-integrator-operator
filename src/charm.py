@@ -29,7 +29,7 @@ from ops.model import (
 
 from resource_definition import GatewayResourceDefinition, InvalidCharmConfigError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
-from resource_manager.resource_manager import InvalidResourceError, InsufficientPermissionError
+from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"

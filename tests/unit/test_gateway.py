@@ -33,6 +33,10 @@ def test_gateway_resource_definition(
     monkeypatch.setattr(
         "resource_manager.gateway.GatewayResourceManager.define_resource", define_resource_mock
     )
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.gateway_address",
+        MagicMock(return_value=TEST_EXTERNAL_HOSTNAME_CONFIG),
+    )
 
     harness.update_config(
         {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}

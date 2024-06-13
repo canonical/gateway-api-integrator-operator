@@ -203,7 +203,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         resource_list = self._list_resource()
         resource = self._gen_resource_from_definition(definition)
         res_name = resource_name(resource)
-        if res_name is None:
+        if not res_name:
             raise InvalidResourceError("Missing resource name.")
 
         resources = [resource_name(r) for r in resource_list if resource_name(r) is not None]
@@ -237,7 +237,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         for resource in self._list_resource():
             excluded_resource_name = resource_name(exclude)
             res_name = resource_name(resource)
-            if res_name is None or excluded_resource_name is None:
+            if not res_name or not excluded_resource_name:
                 continue
             if res_name == excluded_resource_name:
                 continue

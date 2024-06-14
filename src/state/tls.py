@@ -58,7 +58,7 @@ class TLSInformation:
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
         if tls_requirer_integration is None:
-            raise TlsIntegrationMissingError("certificates integration not set up.")
+            raise TlsIntegrationMissingError("Certificates integration not ready.")
 
         tls_certs = {}
         tls_keys = {}

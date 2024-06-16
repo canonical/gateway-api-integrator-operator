@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Decorator for state validation and set charm status."""
+"""Module for functions containing charm utilities."""
 
 import functools
 import logging
@@ -9,17 +9,19 @@ import typing
 
 import ops
 
-from .config import InvalidCharmConfigError
-from .tls import TlsIntegrationMissingError
+import state
+import state.config
+import state.tls
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
+
+C = typing.TypeVar("C", bound=ops.CharmBase)
 
 
-def block_if_not_ready(
+def block_if_invalid_config_or_missing_integration(
     defer: bool = False,
 ) -> typing.Callable[
-    [typing.Callable[[ops.CharmBase, ops.EventBase], None]],
-    typing.Callable[[ops.CharmBase, ops.EventBase], None],
+    [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]
 ]:
     """Create a decorator that puts the charm in blocked state if the config is wrong.
 
@@ -31,8 +33,8 @@ def block_if_not_ready(
     """
 
     def decorator(
-        method: typing.Callable[[ops.CharmBase, ops.EventBase], None]
-    ) -> typing.Callable[[ops.CharmBase, ops.EventBase], None]:
+        method: typing.Callable[[C, typing.Any], None]
+    ) -> typing.Callable[[C, typing.Any], None]:
         """Create a decorator that puts the charm in blocked state if the config is wrong.
 
         Args:
@@ -43,29 +45,28 @@ def block_if_not_ready(
         """
 
         @functools.wraps(method)
-        def wrapper(charm: ops.CharmBase, event: ops.EventBase) -> None:
+        def wrapper(instance: C, *args: typing.Any) -> None:
             """Block the charm if the config is wrong.
 
             Args:
-                charm: the charm instance.
-                event: the event for the observer.
+                instance: the instance of the class with the hook method.
+                args: Additional events
 
             Returns:
                 The value returned from the original function. That is, None.
             """
             try:
-                return method(charm, event)
-            except InvalidCharmConfigError as exc:
-                logger.exception("Invalid charm configuration: %s", exc)
+                return method(instance, *args)
+            except (
+                state.config.InvalidCharmConfigError,
+                state.tls.TlsIntegrationMissingError,
+            ) as exc:
                 if defer:
+                    event: ops.EventBase
+                    event, *_ = args
                     event.defer()
-                charm.unit.status = ops.BlockedStatus(exc.msg)
-                return None
-            except TlsIntegrationMissingError as exc:
-                if defer:
-                    event.defer()
-                logger.exception("Waiting for TLS: %s", exc)
-                charm.unit.status = ops.BlockedStatus("Waiting for TLS")
+                logger.exception("Wrong Charm Configuration")
+                instance.unit.status = ops.BlockedStatus(exc.msg)
                 return None
 
         return wrapper

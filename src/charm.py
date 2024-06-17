@@ -262,7 +262,7 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm(self, client)
 
         self._tls.certificate_relation_created(
-            config.external_hostname, tls_information.tls_requirer_integration
+            config.data.external_hostname, tls_information.tls_requirer_integration
         )
 
     @validate_config_and_integration(defer=True)
@@ -276,7 +276,7 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm(self, client)
 
         self._tls.certificate_relation_joined(
-            config.external_hostname,
+            config.data.external_hostname,
             self.certificates,
             tls_information.tls_requirer_integration,
         )
@@ -386,7 +386,7 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm(self, client)
 
         if JujuVersion.from_environ().has_secrets:
-            hostname = config.external_hostname
+            hostname = config.data.external_hostname
             try:
                 secret = self.model.get_secret(label=f"private-key-{hostname}")
                 secret.remove_all_revisions()

@@ -93,7 +93,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                         "protocol": "HTTP",
                         "port": 80,
                         "name": f"{definition.gateway_name}-http-listener",
-                        "hostname": config.external_hostname,
+                        "hostname": config.data.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                     {

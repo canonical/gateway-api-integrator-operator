@@ -17,9 +17,9 @@ from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 def test_generate_password(harness: Harness):
     """
-    arrange: given a charm with no connectable container.
-    act: when agent relation joined event is fired.
-    assert: the event is deferred.
+    arrange: Given a gateway api integrator charm.
+    act: run generate password.
+    assert: the password generated has the correct format.
     """
     harness.begin()
 
@@ -36,9 +36,9 @@ def test_cert_relation(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """
-    arrange: given a charm with no connectable container.
-    act: when agent relation joined event is fired.
-    assert: the event is deferred.
+    arrange: Given a charm with mocked tls module methods and valid config.
+    act: when relation with a TLS provider is established.
+    assert: the charm correctly generates a password and a CSR.
     """
     generate_password_mock = MagicMock(return_value="123456789101")
     monkeypatch.setattr(

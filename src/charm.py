@@ -106,13 +106,13 @@ class GatewayAPICharm(CharmBase):
             kubeconfig = KubeConfig.from_service_account()
             client = Client(config=kubeconfig, field_manager=self.app.name)
         except ConfigError as exc:
-            logger.error("Error initializing the lightkube client: %s", exc)
+            logger.exception("Error initializing the lightkube client.")
             raise RuntimeError("Error initializing the lightkube client.") from exc
 
         try:
             gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError as exc:
-            logger.error("Invalid charm config: %s", exc.msg)
+        except InvalidCharmConfigError:
+            logger.exception("Invalid charm config.")
             self.unit.status = BlockedStatus("Invalid charm configuration")
             return
 
@@ -191,8 +191,8 @@ class GatewayAPICharm(CharmBase):
             return
         try:
             gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError as exc:
-            logger.error("Invalid charm config: %s", exc.msg)
+        except InvalidCharmConfigError:
+            logger.exception("Invalid charm config.")
             self.unit.status = BlockedStatus("Invalid charm configuration")
             return
 
@@ -213,7 +213,7 @@ class GatewayAPICharm(CharmBase):
         try:
             gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         except InvalidCharmConfigError as exc:
-            logger.error("Invalid charm config: %s", exc.msg)
+            logger.exception("Invalid charm config.")
             self.unit.status = BlockedStatus(exc.msg)
             return
         self._tls.certificate_relation_joined(
@@ -319,8 +319,8 @@ class GatewayAPICharm(CharmBase):
 
         try:
             gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError as exc:
-            logger.error("Charm config not valid, skipping: %s", exc.msg)
+        except InvalidCharmConfigError:
+            logger.exception("Charm config not valid.")
             return
 
         if JujuVersion.from_environ().has_secrets:

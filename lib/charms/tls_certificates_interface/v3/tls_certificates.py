@@ -1394,8 +1394,8 @@ class TLSCertificatesProvidesV3(Object):
                     certificate_object = x509.load_pem_x509_certificate(
                         data=certificate["certificate"].encode()
                     )
-                except ValueError as e:
-                    logger.error("Could not load certificate - Skipping: %s", e)
+                except ValueError:
+                    logger.exception("Could not load certificate - Skipping")
                     continue
                 provider_certificate = ProviderCertificate(
                     relation_id=relation.id,
@@ -1640,7 +1640,7 @@ class TLSCertificatesRequiresV3(Object):
             try:
                 certificate_object = x509.load_pem_x509_certificate(data=certificate.encode())
             except ValueError as e:
-                logger.error("Could not load certificate - Skipping: %s", e)
+                logger.exception("Could not load certificate - Skipping.")
                 continue
             ca = provider_certificate_dict.get("ca")
             chain = provider_certificate_dict.get("chain", [])

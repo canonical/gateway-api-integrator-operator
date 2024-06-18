@@ -104,7 +104,9 @@ class GatewayAPICharm(CharmBase):
             # Set field_manager for server-side apply when patching resources
             # Keep this consistent across client initializations
             kubeconfig = KubeConfig.from_service_account()
-            client = Client(config=kubeconfig, field_manager=self.app.name)
+            client = Client(
+                config=kubeconfig, field_manager=self.app.name, namespace=self.model.name
+            )
         except ConfigError as exc:
             logger.exception("Error initializing the lightkube client.")
             raise RuntimeError("Error initializing the lightkube client.") from exc

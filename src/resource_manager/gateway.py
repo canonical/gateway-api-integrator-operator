@@ -54,7 +54,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             labels: Label to be added to created resources.
             client: Initialized lightkube client.
         """
-        self._ns = namespace
         self._client = client
         self._labels = labels
         self._gateway_class_generic_resource = create_global_resource(
@@ -68,15 +67,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     def _name(self) -> str:
         """Returns "gateway"."""
         return "gateway"
-
-    @property
-    def _namespace(self) -> str:
-        """Returns the kubernetes namespace.
-
-        Returns:
-            The namespace.
-        """
-        return self._ns
 
     @property
     def _label_selector(self) -> str:
@@ -131,9 +121,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(
-                name=definition.gateway_name, namespace=self._namespace, labels=self._labels
-            ),
+            metadata=ObjectMeta(name=definition.gateway_name, labels=self._labels),
             spec={
                 "listeners": [
                     {

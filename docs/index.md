@@ -18,8 +18,7 @@ Documentation is an important part of this project, and we take the same open-so
 
 If there’s a particular area of documentation that you’d like to see that’s missing, please [file a bug](https://github.com/canonical/gateway-api-integrator-operator/issues).
 
-
 # In this documentation
 |-----------------|----------------|
-| [Tutorial](tutorial)</br>  Hands-on introductions to gateway API integrator | |
+| [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator | |
 | [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |

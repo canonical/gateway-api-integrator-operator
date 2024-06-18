@@ -5,7 +5,8 @@ on:
 
 jobs:
   unit-tests:
-    uses: canonical/operator-workflows/.github/workflows/test.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/test.yaml@remove_default_jammy_label
     secrets: inherit
     with:
-      self-hosted-runner: false
+      self-hosted-runner: true
+      self-hosted-runner-label: "noble"

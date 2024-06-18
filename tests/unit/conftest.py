@@ -4,11 +4,15 @@
 """Fixtures for gateway-api-integrator charm unit tests."""
 
 from typing import Dict
+from unittest.mock import MagicMock
 
 import pytest
 from ops.testing import Harness
 
 from charm import GatewayAPICharm
+
+TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+GATEWAY_CLASS_CONFIG = "cilium"
 
 
 @pytest.fixture(scope="function", name="harness")
@@ -30,7 +34,10 @@ def certificates_relation_data_fixture() -> Dict[str, str]:
     }
 
 
-@pytest.fixture(scope="function", name="patch_load_incluster_config")
-def patch_load_incluster_config_fixture(monkeypatch: pytest.MonkeyPatch):
-    """Patch kubernetes.config.load_incluster_config."""
-    monkeypatch.setattr("kubernetes.config.load_incluster_config", lambda: None)
+@pytest.fixture(scope="function", name="patch_lightkube_client")
+def patch_lightkube_client_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """Patch lightkube cluster initialization."""
+    monkeypatch.setattr("charm.KubeConfig", MagicMock())
+    monkeypatch.setattr("charm.Client", MagicMock())

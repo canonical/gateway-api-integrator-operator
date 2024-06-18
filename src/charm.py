@@ -124,7 +124,6 @@ class GatewayAPICharm(CharmBase):
             return
 
         gateway_resource_manager = GatewayResourceManager(
-            namespace=gateway_resource_definition.namespace,
             labels=self._labels,
             client=client,
         )

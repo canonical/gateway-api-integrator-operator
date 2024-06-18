@@ -5,9 +5,8 @@
 """gateway-api-integrator charm file."""
 
 import logging
-from typing import Any, List, Union, cast
+import typing
 
-import kubernetes.client
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
     CertificateAvailableEvent,
@@ -15,6 +14,8 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
 )
+from lightkube import Client, KubeConfig
+from lightkube.core.exceptions import ConfigError
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
@@ -26,11 +27,14 @@ from ops.model import (
     WaitingStatus,
 )
 
-from gateway_definition import get_config
+from resource_definition import GatewayResourceDefinition, InvalidCharmConfigError
+from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
+from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
+CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
 class GatewayAPICharm(CharmBase):
@@ -45,7 +49,6 @@ class GatewayAPICharm(CharmBase):
             args: Variable list of positional arguments passed to the parent constructor.
         """
         super().__init__(*args)
-        kubernetes.config.load_incluster_config()
 
         self._tls = TLSRelationService(self.model)
 
@@ -77,15 +80,10 @@ class GatewayAPICharm(CharmBase):
             self._on_all_certificates_invalidated,
         )
 
-    def get_hostname(self) -> str:
-        """Get a list containing all ingress hostnames.
-
-        Returns:
-            A list containing service and additional hostnames
-        """
-        # The relation will always exist when this method is called
-        external_hostname = cast(str, get_config(self, "external-hostname"))
-        return external_hostname
+    @property
+    def _labels(self) -> dict[str, str]:
+        """Get labels assigned to resources created by this app."""
+        return {CREATED_BY_LABEL: self.app.name}
 
     def _are_relations_ready(self) -> bool:
         """Check if required relations are ready.
@@ -96,18 +94,60 @@ class GatewayAPICharm(CharmBase):
         return self._tls.get_tls_relation() is not None
 
     def _reconcile(self) -> None:
-        """Reconcile charm status based on configuration and integrations."""
+        """Reconcile charm status based on configuration and integrations.
+
+        Raises:
+            RuntimeError: when initializing the lightkube client fails,
+            or when creating the gateway resource fails.
+        """
+        try:
+            # Set field_manager for server-side apply when patching resources
+            # Keep this consistent across client initializations
+            kubeconfig = KubeConfig.from_service_account()
+            client = Client(config=kubeconfig, field_manager=self.app.name)
+        except ConfigError as exc:
+            logger.exception("Error initializing the lightkube client.")
+            raise RuntimeError("Error initializing the lightkube client.") from exc
+
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError:
+            logger.exception("Invalid charm config.")
+            self.unit.status = BlockedStatus("Invalid charm configuration")
+            return
+
         tls_certificates_relation = self._tls.get_tls_relation()
         if not tls_certificates_relation:
             self.unit.status = BlockedStatus("Waiting for TLS.")
             return
-        self.unit.status = ActiveStatus()
 
-    def _on_config_changed(self, _: Any) -> None:
+        gateway_resource_manager = GatewayResourceManager(
+            namespace=gateway_resource_definition.namespace,
+            labels=self._labels,
+            client=client,
+        )
+
+        try:
+            gateway = gateway_resource_manager.define_resource(gateway_resource_definition)
+        except (CreateGatewayError, InvalidResourceError) as exc:
+            logger.exception("Error creating the gateway resource %s", exc)
+            raise RuntimeError("Cannot create gateway.") from exc
+        except InsufficientPermissionError as exc:
+            self.unit.status = BlockedStatus(exc.msg)
+            return
+
+        self.unit.status = WaitingStatus("Waiting for gateway address")
+        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
+            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
+        else:
+            self.unit.status = WaitingStatus("Gateway address unavailable")
+        gateway_resource_manager.cleanup_resources(exclude=gateway)
+
+    def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         self._reconcile()
 
-    def _on_start(self, _: Any) -> None:
+    def _on_start(self, _: typing.Any) -> None:
         """Handle the start event."""
         self._reconcile()
 
@@ -149,12 +189,16 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
             event.defer()
             return
-        hostname = self.get_hostname()
-        if not hostname:
-            self.unit.status = BlockedStatus("Waiting for hostname to be configured")
-            event.defer()
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError:
+            logger.exception("Invalid charm config.")
+            self.unit.status = BlockedStatus("Invalid charm configuration")
             return
-        self._tls.certificate_relation_created(hostname)
+
+        self._tls.certificate_relation_created(
+            gateway_resource_definition.config.external_hostname
+        )
 
     def _on_certificates_relation_joined(self, event: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event.
@@ -166,14 +210,17 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
             event.defer()
             return
-        hostname = self.get_hostname()
-        if not hostname:
-            self.unit.status = BlockedStatus("Waiting for hostname to be configured")
-            event.defer()
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError as exc:
+            logger.exception("Invalid charm config.")
+            self.unit.status = BlockedStatus(exc.msg)
             return
-        self._tls.certificate_relation_joined(hostname, self.certificates)
+        self._tls.certificate_relation_joined(
+            gateway_resource_definition.config.external_hostname, self.certificates
+        )
 
-    def _on_certificates_relation_broken(self, _: Any) -> None:
+    def _on_certificates_relation_broken(self, _: typing.Any) -> None:
         """Handle the TLS Certificate relation broken event."""
         self._reconcile()
 
@@ -189,11 +236,12 @@ class GatewayAPICharm(CharmBase):
             event.defer()
             return
         self._tls.certificate_relation_available(event)
+        logger.info("TLS configured, creating kubernetes resources.")
         self._reconcile()
 
     def _on_certificate_expiring(
         self,
-        event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
+        event: typing.Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
     ) -> None:
         """Handle the TLS Certificate expiring event.
 
@@ -207,7 +255,7 @@ class GatewayAPICharm(CharmBase):
         self._tls.certificate_expiring(event, self.certificates)
 
     # This method is too complex but hard to simplify.
-    def _certificate_revoked(self, revoke_list: List[str]) -> None:  # noqa: C901
+    def _certificate_revoked(self, revoke_list: typing.List[str]) -> None:  # noqa: C901
         """Handle TLS Certificate revocation.
 
         Args:
@@ -228,7 +276,7 @@ class GatewayAPICharm(CharmBase):
                     secret = self.model.get_secret(label=f"private-key-{hostname}")
                     secret.remove_all_revisions()
                 except SecretNotFoundError:
-                    LOGGER.warning("Juju secret for %s already does not exist", hostname)
+                    logger.warning("Juju secret for %s already does not exist", hostname)
                     continue
             try:
                 self._tls.pop_relation_data_fields(
@@ -236,7 +284,7 @@ class GatewayAPICharm(CharmBase):
                     tls_certificates_relation,  # type: ignore[arg-type]
                 )
             except KeyError:
-                LOGGER.warning("Relation data for %s already does not exist", hostname)
+                logger.warning("Relation data for %s already does not exist", hostname)
             self.certificates.request_certificate_revocation(
                 certificate_signing_request=old_csr.encode()
             )
@@ -268,13 +316,20 @@ class GatewayAPICharm(CharmBase):
         tls_relation = self._tls.get_tls_relation()
         if tls_relation:
             tls_relation.data[self.app].clear()
+
+        try:
+            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        except InvalidCharmConfigError:
+            logger.exception("Charm config not valid.")
+            return
+
         if JujuVersion.from_environ().has_secrets:
-            hostname = self.get_hostname()
+            hostname = gateway_resource_definition.config.external_hostname
             try:
                 secret = self.model.get_secret(label=f"private-key-{hostname}")
                 secret.remove_all_revisions()
             except SecretNotFoundError:
-                LOGGER.warning("Juju secret for %s already does not exist", hostname)
+                logger.warning("Juju secret for %s already does not exist", hostname)
 
 
 if __name__ == "__main__":  # pragma: no cover

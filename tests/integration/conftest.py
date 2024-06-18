@@ -15,6 +15,9 @@ from pytest_operator.plugin import OpsTest
 
 logger = logging.getLogger(__name__)
 
+TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+GATEWAY_CLASS_CONFIG = "cilium"
+
 
 @pytest_asyncio.fixture(scope="module", name="model")
 async def model_fixture(ops_test: OpsTest) -> Model:
@@ -38,7 +41,7 @@ async def charm_fixture(pytestconfig: pytest.Config) -> str:
 async def application_fixture(charm: str, model: Model) -> AsyncGenerator[Application, None]:
     """Deploy the charm."""
     # Deploy the charm and wait for active/idle status
-    application = await model.deploy(f"./{charm}")
+    application = await model.deploy(f"./{charm}", trust=True)
     await model.wait_for_idle(
         apps=[application.name],
         status="blocked",

@@ -5,9 +5,8 @@
 """Gateway API TLS relation business logic."""
 import secrets
 import string
-from typing import Dict, List, Union
+from typing import Dict, Union
 
-import kubernetes
 from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateAvailableEvent,
     CertificateExpiringEvent,
@@ -59,39 +58,6 @@ class TLSRelationService:
         """
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
-
-    def update_cert_on_service_hostname_change(
-        self,
-        hostnames: List[str],
-        tls_certificates_relation: Union[Relation, None],
-        namespace: str,
-    ) -> List[str]:
-        """Handle TLS certificate updates when the charm config changes.
-
-        Args:
-            hostnames: Ingress service hostname list.
-            tls_certificates_relation: TLS Certificates relation.
-            namespace: Kubernetes namespace.
-
-        Returns:
-            bool: If the TLS certificate needs to be updated.
-        """
-        hostnames_to_revoke: List[str] = []
-        if tls_certificates_relation:
-            api = kubernetes.client.NetworkingV1Api()
-            ingresses = api.list_namespaced_ingress(namespace=namespace)
-            hostnames_to_revoke = []
-            hostnames_unchanged = []
-            for hostname in hostnames:
-                csr = tls_certificates_relation.data[self.charm_app].get(f"csr-{hostname}")
-                if csr and hostname in [x.spec.rules[0].host for x in ingresses.items]:
-                    hostnames_unchanged.append(hostname)
-            hostnames_to_revoke = [
-                x.spec.rules[0].host
-                for x in ingresses.items
-                if x.spec.rules[0].host not in hostnames_unchanged
-            ]
-        return hostnames_to_revoke
 
     def update_relation_data_fields(self, relation_fields: dict, tls_relation: Relation) -> None:
         """Update a dict of items from the app relation databag.
@@ -319,5 +285,4 @@ class TLSRelationService:
             secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
             private_key_dict["key"] = secret.get_content()["key"]
             private_key_dict["password"] = secret.get_content()["password"]
-
         return private_key_dict

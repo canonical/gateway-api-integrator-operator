@@ -12,29 +12,33 @@ from ops.testing import Harness
 
 import tls_relation
 
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
-@pytest.mark.usefixtures("patch_load_incluster_config")
+
 def test_generate_password(harness: Harness):
     """
-    arrange: given a charm with no connectable container.
-    act: when agent relation joined event is fired.
-    assert: the event is deferred.
+    arrange: Given a gateway api integrator charm.
+    act: run generate password.
+    assert: the password generated has the correct format.
     """
     harness.begin()
+
     tls_rel = tls_relation.TLSRelationService(harness.charm.model)
+
     password = tls_rel.generate_password()
     assert isinstance(password, str)
     assert len(password) == 12
 
 
-@pytest.mark.usefixtures("patch_load_incluster_config")
 def test_cert_relation(
-    harness: Harness, certificates_relation_data: Dict[str, str], monkeypatch: pytest.MonkeyPatch
+    harness: Harness,
+    certificates_relation_data: Dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """
-    arrange: given a charm with no connectable container.
-    act: when agent relation joined event is fired.
-    assert: the event is deferred.
+    arrange: Given a charm with mocked tls module methods and valid config.
+    act: when relation with a TLS provider is established.
+    assert: the charm correctly generates a password and a CSR.
     """
     generate_password_mock = MagicMock(return_value="123456789101")
     monkeypatch.setattr(
@@ -50,7 +54,9 @@ def test_cert_relation(
     get_secret_mock = MagicMock()
     monkeypatch.setattr(ops.model.Model, "get_secret", get_secret_mock)
 
-    harness.update_config({"external-hostname": "igress-internal"})
+    harness.update_config(
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+    )
     harness.begin()
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data

@@ -9,4 +9,4 @@ jobs:
     secrets: inherit
     with:
       self-hosted-runner: true
-      self-hosted-runner-label: "noble"
+      self-hosted-runner-image: "noble"

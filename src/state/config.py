@@ -3,12 +3,12 @@
 
 """gateway-api-integrator configuration."""
 
-import dataclasses
 import itertools
 import typing
 
 import ops
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import Field, ValidationError
+from pydantic.dataclasses import dataclass
 
 
 class InvalidCharmConfigError(Exception):
@@ -27,8 +27,8 @@ class InvalidCharmConfigError(Exception):
         self.msg = msg
 
 
-@dataclasses.dataclass(frozen=True)
-class CharmConfig(BaseModel):
+@dataclass(frozen=True)
+class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
     Attrs:
@@ -38,7 +38,7 @@ class CharmConfig(BaseModel):
 
     gateway_class: str = Field(min_length=1)
     external_hostname: str = Field(
-        pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+        min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )
 
     @classmethod
@@ -60,7 +60,7 @@ class CharmConfig(BaseModel):
                 external_hostname=typing.cast(str, charm.config.get("external-hostname")),
             )
         except ValidationError as exc:
-            error_field_str = ",".join(f"{f}" for f in get_invalid_config_fields(exc))
+            error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
             raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
 

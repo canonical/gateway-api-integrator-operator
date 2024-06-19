@@ -4,11 +4,8 @@
 """gateway-api-integrator secret resource definition."""
 
 import dataclasses
-import typing
 
 import ops
-
-from .tls import TLSInformation
 
 
 @dataclasses.dataclass(frozen=True)
@@ -19,7 +16,7 @@ class SecretResourceDefinition:
         InvalidCharmConfigError: _description_
 
     Attrs:
-        secret_resource_name (str):
+        secret_resource_name_prefix (str):
 
     Returns:
         _type_: _description_
@@ -28,12 +25,11 @@ class SecretResourceDefinition:
     secret_resource_name_prefix: str
 
     @classmethod
-    def from_charm_and_tls_information(cls, charm: ops.CharmBase) -> "SecretResourceDefinition":
+    def from_charm(cls, charm: ops.CharmBase) -> "SecretResourceDefinition":
         """Create a resource definition from charm instance.
 
         Args:
             charm (ops.CharmBase): _description_
-            tls_information (TLSInformation) : _description_
 
         Returns:
             ResourceDefinition: _description_

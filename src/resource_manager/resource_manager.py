@@ -16,7 +16,6 @@ import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
 from lightkube.core.exceptions import ApiError
 
-from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 
 logger = logging.getLogger(__name__)
@@ -142,7 +141,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
         Args:
             definition: Ingress definition to use for generating the resource.
-            config: The charm's configuration.
+            args: Additional arguments.
         """
 
     @abc.abstractmethod
@@ -179,7 +178,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
         Args:
             definition: The ingress definition
-            config: The charm's configuration.
+            args: Additional arguments.
 
         Returns:
             The name of the created or modified resource.

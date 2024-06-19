@@ -11,6 +11,7 @@ from ops.testing import Harness
 
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
 from tls_relation import TLSRelationService
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -38,15 +39,20 @@ def test_gateway_resource_definition(
         "resource_manager.gateway.GatewayResourceManager.gateway_address",
         MagicMock(return_value=TEST_EXTERNAL_HOSTNAME_CONFIG),
     )
+    monkeypatch.setattr(
+        "resource_manager.secret.SecretResourceManager",
+        MagicMock(),
+    )
 
     harness.update_config(
         {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
     )
 
-    gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
     config = CharmConfig.from_charm(harness.charm)
-
-    assert gateway_resource_definition.namespace == harness.model.name
+    gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
+    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
     assert config.external_hostname == TEST_EXTERNAL_HOSTNAME_CONFIG
     assert config.gateway_class == "cilium"
-    define_resource_mock.assert_called_once_with(gateway_resource_definition, config)
+    define_resource_mock.assert_called_once_with(
+        gateway_resource_definition, config, secret_resource_definition
+    )

@@ -23,7 +23,7 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
 @pytest.mark.abort_on_fail
-async def test_certificates_relation(
+async def test_deploy(
     application: Application,
     certificate_provider_application: Application,
     lightkube_client: lightkube.Client,

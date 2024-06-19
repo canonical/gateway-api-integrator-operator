@@ -6,6 +6,7 @@
 import logging
 import time
 import typing
+
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.core.exceptions import ApiError
@@ -15,6 +16,7 @@ from lightkube.types import PatchType
 
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
 
 from .decorator import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -66,18 +68,25 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
 
         Args:
             definition: The gateway resoucre definition to use.
-            config: The charm's configuration.
+            args: Additional arguments.
 
         Returns:
             A dictionary representing the gateway custom resource.
 
         Raises:
-            CreateGatewayError if the method is not called with the correct arguments.
+            CreateGatewayError: if the method is not called with the correct arguments.
         """
-        if len(args) != 1 or not isinstance(args[0], CharmConfig):
+        if (
+            len(args) != 2
+            or not isinstance(args[0], CharmConfig)
+            or not isinstance(args[1], SecretResourceDefinition)
+        ):
             raise CreateGatewayError("_gen_resource called with the wrong parameters.")
 
-        config: CharmConfig = args[0]
+        config: CharmConfig
+        secret: SecretResourceDefinition
+        config, secret = args
+        tls_secret_name = f"{secret.secret_resource_name_prefix}-{config.external_hostname}"
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
@@ -91,6 +100,14 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                         "name": f"{definition.gateway_name}-http-listener",
                         "hostname": config.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
+                    },
+                    {
+                        "protocol": "HTTPS",
+                        "port": 443,
+                        "name": f"{definition.gateway_name}-https-listener",
+                        "hostname": config.external_hostname,
+                        "allowedRoutes": {"namespaces": {"from": "All"}},
+                        "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
                     },
                 ],
             },
@@ -125,8 +142,8 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             force=True,
         )
 
-    @map_k8s_auth_exception
-    def _list_resource(self) -> List[GenericNamespacedResource]:
+    @_map_k8s_auth_exception
+    def _list_resource(self) -> typing.List[GenericNamespacedResource]:
         """List gateway resources in the current namespace based on a label selector.
 
         Returns:
@@ -146,7 +163,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name=name,
         )
 
-    def gateway_address(self, name: str) -> Optional[str]:
+    def gateway_address(self, name: str) -> typing.Optional[str]:
         """Return the LB address of the gateway resource.
 
         Poll the address for 100 seconds.

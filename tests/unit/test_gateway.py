@@ -11,6 +11,7 @@ from ops.testing import Harness
 
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
 from tls_relation import TLSRelationService
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -40,6 +41,10 @@ def test_gateway_resource_definition(
     monkeypatch.setattr(
         "resource_manager.gateway.GatewayResourceManager.gateway_address",
         MagicMock(return_value=TEST_EXTERNAL_HOSTNAME_CONFIG),
+    )
+    monkeypatch.setattr(
+        "resource_manager.secret.SecretResourceManager",
+        MagicMock(),
     )
 
     harness.update_config(

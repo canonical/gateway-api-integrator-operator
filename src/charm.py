@@ -139,16 +139,12 @@ class GatewayAPICharm(CharmBase):
 
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         tls_information = TLSInformation.from_charm(self)
-
-        secret_resource_definition = SecretResourceDefinition.from_charm_and_tls_information(
-            self, tls_information
-        )
+        secret_resource_definition = SecretResourceDefinition.from_charm(self)
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
-
         secret_resource_manager = resource_manager.secret.SecretResourceManager(
             self._labels, client
         )
@@ -157,7 +153,9 @@ class GatewayAPICharm(CharmBase):
             secret = secret_resource_manager.define_resource(
                 secret_resource_definition, config, tls_information
             )
-            gateway = gateway_resource_manager.define_resource(gateway_resource_definition, config)
+            gateway = gateway_resource_manager.define_resource(
+                gateway_resource_definition, config, secret_resource_definition
+            )
         except (
             CreateGatewayError,
             InvalidResourceError,

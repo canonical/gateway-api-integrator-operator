@@ -7,17 +7,25 @@
 
 import logging
 
+import lightkube
+import lightkube.generic_resource
 import pytest
 from juju.application import Application
 
 logger = logging.getLogger(__name__)
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
+CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
+GATEWAY_RESOURCE_NAME = "Gateway"
+GATEWAY_PLURAL = "gateways"
+CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
 @pytest.mark.abort_on_fail
 async def test_certificates_relation(
-    application: Application, certificate_provider_application: Application
+    application: Application,
+    certificate_provider_application: Application,
+    client: lightkube.Client,
 ):
     """Deploy the charm together with related charms.
 
@@ -37,3 +45,11 @@ async def test_certificates_relation(
     )
     await action.wait()
     assert action.results
+
+    gateway_generic_resource_class = lightkube.generic_resource.create_namespaced_resource(
+        CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
+    )
+    gateway = client.list(
+        gateway_generic_resource_class, labels={CREATED_BY_LABEL: application.name}
+    )
+    logger.info(list(gateway))

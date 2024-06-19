@@ -78,8 +78,8 @@ class SecretResourceManager(ResourceManager[Secret]):
         tls_secret_name = f"{definition.secret_resource_name_prefix}-{config.external_hostname}"
 
         secret = Secret(
-            apiVersion="gateway.networking.k8s.io/v1",
-            kind="Gateway",
+            apiVersion="v1",
+            kind="Secret",
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
                 "tls.crt": tls_information.tls_certs[config.external_hostname],

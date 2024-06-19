@@ -8,9 +8,10 @@
 import logging
 
 import lightkube
-import lightkube.generic_resource
 import pytest
 from juju.application import Application
+from lightkube.generic_resource import create_namespaced_resource
+from lightkube.resources.core_v1 import Secret
 
 logger = logging.getLogger(__name__)
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
@@ -25,7 +26,7 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 async def test_certificates_relation(
     application: Application,
     certificate_provider_application: Application,
-    client: lightkube.Client,
+    lightkube_client: lightkube.Client,
 ):
     """Deploy the charm together with related charms.
 
@@ -46,10 +47,14 @@ async def test_certificates_relation(
     await action.wait()
     assert action.results
 
-    gateway_generic_resource_class = lightkube.generic_resource.create_namespaced_resource(
+    gateway_generic_resource_class = create_namespaced_resource(
         CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
     )
-    gateway = client.list(
-        gateway_generic_resource_class, labels={CREATED_BY_LABEL: application.name}
+    gateway = lightkube_client.get(gateway_generic_resource_class, name=application.name)
+    assert len(gateway.spec["listeners"]) == 2
+    secret: Secret = lightkube_client.get(
+        Secret, name=f"{application.name}-secret-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
     )
-    logger.info(list(gateway))
+    assert secret.data
+    assert secret.data["tls.crt"]
+    assert secret.data["tls.key"]

@@ -34,7 +34,7 @@ class SecretResourceDefinition:
         Returns:
             ResourceDefinition: _description_
         """
-        secret_resource_name_prefix = f"{charm.app.name}-secret-"
+        secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         return cls(
             secret_resource_name_prefix=secret_resource_name_prefix,

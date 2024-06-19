@@ -15,7 +15,7 @@ Gateway API TLS relation business logic.
 ## <kbd>class</kbd> `TLSRelationService`
 TLS Relation service class. 
 
-<a href="../src/tls_relation.py#L31"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L30"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `__init__`
 
@@ -36,7 +36,7 @@ Init method for the class.
 
 ---
 
-<a href="../src/tls_relation.py#L242"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L208"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_expiring`
 
@@ -58,7 +58,7 @@ Handle the TLS Certificate expiring event.
 
 ---
 
-<a href="../src/tls_relation.py#L218"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L184"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_relation_available`
 
@@ -76,7 +76,7 @@ Handle the TLS Certificate available event.
 
 ---
 
-<a href="../src/tls_relation.py#L191"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L157"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_relation_created`
 
@@ -94,7 +94,7 @@ Handle the TLS Certificate created event.
 
 ---
 
-<a href="../src/tls_relation.py#L166"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L132"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_relation_joined`
 
@@ -116,7 +116,7 @@ Handle the TLS Certificate joined event.
 
 ---
 
-<a href="../src/tls_relation.py#L54"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L53"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `generate_password`
 
@@ -134,7 +134,7 @@ Generate a random 12 character password.
 
 ---
 
-<a href="../src/tls_relation.py#L272"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L238"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `get_decrypted_keys`
 
@@ -151,7 +151,7 @@ Return the list of decrypted private keys.
 
 ---
 
-<a href="../src/tls_relation.py#L139"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L105"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `get_hostname_from_cert`
 
@@ -174,7 +174,7 @@ Get the hostname from a certificate subject name.
 
 ---
 
-<a href="../src/tls_relation.py#L120"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `get_relation_data_field`
 
@@ -204,7 +204,7 @@ Get an item from the app relation databag.
 
 ---
 
-<a href="../src/tls_relation.py#L156"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L122"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `get_tls_relation`
 
@@ -221,7 +221,7 @@ Get the TLS certificates relation.
 
 ---
 
-<a href="../src/tls_relation.py#L106"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `pop_relation_data_fields`
 
@@ -240,37 +240,7 @@ Pop a list of items from the app relation databag.
 
 ---
 
-<a href="../src/tls_relation.py#L63"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>function</kbd> `update_cert_on_service_hostname_change`
-
-```python
-update_cert_on_service_hostname_change(
-    hostnames: List[str],
-    tls_certificates_relation: Optional[Relation],
-    namespace: str
-) → List[str]
-```
-
-Handle TLS certificate updates when the charm config changes. 
-
-
-
-**Args:**
- 
- - <b>`hostnames`</b>:  Ingress service hostname list. 
- - <b>`tls_certificates_relation`</b>:  TLS Certificates relation. 
- - <b>`namespace`</b>:  Kubernetes namespace. 
-
-
-
-**Returns:**
- 
- - <b>`bool`</b>:  If the TLS certificate needs to be updated. 
-
----
-
-<a href="../src/tls_relation.py#L96"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L62"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `update_relation_data_fields`
 

@@ -47,15 +47,13 @@ class CreateGatewayError(Exception):
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     """Kubernetes Ingress resource controller."""
 
-    def __init__(self, namespace: str, labels: LabelSelector, client: Client) -> None:
+    def __init__(self, labels: LabelSelector, client: Client) -> None:
         """Initialize the GatewayResourceManager.
 
         Args:
-            namespace: Kubernetes namespace.
             labels: Label to be added to created resources.
             client: Initialized lightkube client.
         """
-        self._ns = namespace
         self._client = client
         self._labels = labels
         self._gateway_class_generic_resource = create_global_resource(
@@ -69,15 +67,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     def _name(self) -> str:
         """Returns "gateway"."""
         return "gateway"
-
-    @property
-    def _namespace(self) -> str:
-        """Returns the kubernetes namespace.
-
-        Returns:
-            The namespace.
-        """
-        return self._ns
 
     @property
     def _label_selector(self) -> str:
@@ -133,9 +122,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(
-                name=definition.gateway_name, namespace=self._namespace, labels=self._labels
-            ),
+            metadata=ObjectMeta(name=definition.gateway_name, labels=self._labels),
             spec={
                 "listeners": [
                     {
@@ -155,7 +142,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
 
     @_map_k8s_auth_exception
     def _create_resource(self, resource: GenericNamespacedResource) -> None:
-        """Create a new gateway resource in a given namespace.
+        """Create a new gateway resource in the current namespace.
 
         Args:
             resource: The gateway resource object to create.
@@ -164,7 +151,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
 
     @_map_k8s_auth_exception
     def _patch_resource(self, name: str, resource: GenericNamespacedResource) -> None:
-        """Replace an existing gateway resource in a given namespace.
+        """Replace an existing gateway resource in the current namespace.
 
         Args:
             name: The name of the resource to patch.
@@ -183,26 +170,23 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
 
     @_map_k8s_auth_exception
     def _list_resource(self) -> List[GenericNamespacedResource]:
-        """List gateway resources in a given namespace based on a label selector.
+        """List gateway resources in the current namespace based on a label selector.
 
         Returns:
             A list of matched gateway resources.
         """
-        return list(
-            self._client.list(
-                res=self._gateway_generic_resource, namespace=self._namespace, labels=self._labels
-            )
-        )
+        return list(self._client.list(res=self._gateway_generic_resource, labels=self._labels))
 
     @_map_k8s_auth_exception
     def _delete_resource(self, name: str) -> None:
-        """Delete a gateway resource from a given namespace.
+        """Delete a gateway resource from the current namespace.
 
         Args:
             name: The name of the V1Ingress resource to delete.
         """
         self._client.delete(
-            res=self._gateway_generic_resource, name=name, namespace=self._namespace
+            res=self._gateway_generic_resource,
+            name=name,
         )
 
     def gateway_address(self, name: str) -> Optional[str]:
@@ -222,7 +206,8 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         while time.time() < deadline:
             try:
                 gateway = self._client.get(
-                    self._gateway_generic_resource, name=name, namespace=self._namespace
+                    self._gateway_generic_resource,
+                    name=name,
                 )
                 gateway_addresses = [
                     addr["value"] for addr in gateway.status["addresses"]  # type: ignore

@@ -101,7 +101,9 @@ class GatewayAPICharm(CharmBase):
             # Set field_manager for server-side apply when patching resources
             # Keep this consistent across client initializations
             kubeconfig = KubeConfig.from_service_account()
-            client = Client(config=kubeconfig, field_manager=self.app.name)
+            client = Client(
+                config=kubeconfig, field_manager=self.app.name, namespace=self.model.name
+            )
         except ConfigError as exc:
             logger.error("Error initializing the lightkube client: %s", exc)
             raise RuntimeError("Error initializing the lightkube client.") from exc
@@ -111,7 +113,6 @@ class GatewayAPICharm(CharmBase):
         _ = TLSInformation.from_charm(self)
 
         gateway_resource_manager = GatewayResourceManager(
-            namespace=gateway_resource_definition.namespace,
             labels=self._labels,
             client=client,
         )

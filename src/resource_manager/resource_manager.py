@@ -119,11 +119,7 @@ def resource_name(resource: AnyResource | None) -> typing.Optional[str]:
     Returns:
         typing.Optional[str]: The resource name, or None if not set.
     """
-    if resource is None:
-        return None
-    if resource.metadata is None:
-        return None
-    if resource.metadata.name is None:
+    if resource is None or resource.metadata is None or resource.metadata.name is None:
         return None
     return resource.metadata.name
 
@@ -140,15 +136,6 @@ class ResourceManager(typing.Protocol[AnyResource]):
             Name of the resource type.
         """
 
-    @property
-    @abc.abstractmethod
-    def _namespace(self) -> str:
-        """Abstract property that returns the namespace of the controller.
-
-        Returns:
-            The namespace.
-        """
-
     @abc.abstractmethod
     def _gen_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
@@ -160,7 +147,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     @abc.abstractmethod
     def _create_resource(self, resource: AnyResource) -> None:
-        """Abstract method to create a new resource in a given namespace.
+        """Abstract method to create a new resource in the current namespace.
 
         Args:
             resource: The resource object to create.
@@ -168,7 +155,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     @abc.abstractmethod
     def _patch_resource(self, name: str, resource: AnyResource) -> None:
-        """Abstract method to patch an existing resource in a given namespace.
+        """Abstract method to patch an existing resource in the current namespace.
 
         Args:
             name: The name of the resource to patch.
@@ -177,11 +164,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     @abc.abstractmethod
     def _list_resource(self) -> typing.List[AnyResource]:
-        """Abstract method to list resources in a given namespace based on a label selector."""
+        """Abstract method to list resources in the current namespace based on a label selector."""
 
     @abc.abstractmethod
     def _delete_resource(self, name: str) -> None:
-        """Abstract method to delete a resource from a given namespace.
+        """Abstract method to delete a resource from the current namespace.
 
         Args:
             name: The name of the resource to delete.
@@ -209,20 +196,8 @@ class ResourceManager(typing.Protocol[AnyResource]):
         resources = [resource_name(r) for r in resource_list if resource_name(r) is not None]
         if res_name in resources:
             self._patch_resource(name=res_name, resource=resource)
-            logger.info(
-                "%s updated in namespace %s with name %s",
-                self._name,
-                self._namespace,
-                res_name,
-            )
         else:
             self._create_resource(resource=resource)
-            logger.info(
-                "%s created in namespace %s with name %s",
-                self._name,
-                self._namespace,
-                res_name,
-            )
         return resource
 
     def cleanup_resources(
@@ -242,9 +217,3 @@ class ResourceManager(typing.Protocol[AnyResource]):
             if res_name == excluded_resource_name:
                 continue
             self._delete_resource(name=res_name)
-            logger.info(
-                "%s deleted in namespace %s with name %s",
-                self._name,
-                self._namespace,
-                resource,
-            )

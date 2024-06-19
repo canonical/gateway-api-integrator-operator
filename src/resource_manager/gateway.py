@@ -5,8 +5,7 @@
 
 import logging
 import time
-from typing import List, Optional
-
+import typing
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.core.exceptions import ApiError
@@ -109,7 +108,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         resource.spec["gatewayClassName"] = configured_gateway_class
 
     @_map_k8s_auth_exception
-    def _gen_resource(self, definition: GatewayResourceDefinition, config: CharmConfig) -> dict:
+    def _gen_resource(self, definition: GatewayResourceDefinition, *args: typing.Any) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
@@ -118,7 +117,14 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
 
         Returns:
             A dictionary representing the gateway custom resource.
+
+        Raises:
+            CreateGatewayError if the method is not called with the correct arguments.
         """
+        if len(args) != 1 or not isinstance(args[0], CharmConfig):
+            raise CreateGatewayError("_gen_resource called with the wrong parameters.")
+
+        config: CharmConfig = args[0]
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",

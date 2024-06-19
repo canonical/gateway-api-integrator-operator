@@ -28,6 +28,8 @@ from ops.model import (
     WaitingStatus,
 )
 
+import resource_manager
+import resource_manager.secret
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
 from state.config import CharmConfig, InvalidCharmConfigError
@@ -122,11 +124,22 @@ class GatewayAPICharm(CharmBase):
             client=client,
         )
 
+        secret_resource_manager = resource_manager.secret.SecretResourceManager(
+            self._labels, client
+        )
+
         try:
+            secret = secret_resource_manager.define_resource(
+                secret_resource_definition, config, tls_information
+            )
             gateway = gateway_resource_manager.define_resource(gateway_resource_definition, config)
-        except (CreateGatewayError, InvalidResourceError) as exc:
-            logger.exception("Error creating the gateway resource %s", exc)
-            raise RuntimeError("Cannot create gateway.") from exc
+        except (
+            CreateGatewayError,
+            InvalidResourceError,
+            resource_manager.secret.CreateSecretError,
+        ) as exc:
+            logger.exception("Error creating resource %r", exc)
+            raise RuntimeError("Error creating resource.") from exc
         except InsufficientPermissionError as exc:
             self.unit.status = BlockedStatus(exc.msg)
             return
@@ -137,6 +150,7 @@ class GatewayAPICharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
+        secret_resource_manager.cleanup_resources(exclude=secret)
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""

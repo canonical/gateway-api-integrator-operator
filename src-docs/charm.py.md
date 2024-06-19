@@ -8,6 +8,7 @@ gateway-api-integrator charm file.
 **Global Variables**
 ---------------
 - **TLS_CERT**
+- **CREATED_BY_LABEL**
 
 
 ---
@@ -15,7 +16,7 @@ gateway-api-integrator charm file.
 ## <kbd>class</kbd> `GatewayAPICharm`
 The main charm class for the gateway-api-integrator charm. 
 
-<a href="../src/charm.py#L41"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/charm.py#L45"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `__init__`
 
@@ -69,22 +70,5 @@ Shortcut for more simple access the model.
 Unit that this execution is responsible for. 
 
 
-
----
-
-<a href="../src/charm.py#L80"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>function</kbd> `get_hostname`
-
-```python
-get_hostname() → str
-```
-
-Get a list containing all ingress hostnames. 
-
-
-
-**Returns:**
-  A list containing service and additional hostnames 
 
 

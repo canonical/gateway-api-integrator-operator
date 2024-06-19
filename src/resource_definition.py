@@ -47,12 +47,10 @@ class GatewayResourceDefinition:
 
     Attrs:
         config: The config data of the charm.
-        namespace: The gateway resource's namespace.
         gateway_name: The gateway resource's name
     """
 
     config: CharmConfig
-    namespace: str
     gateway_name: str
 
     @classmethod
@@ -73,7 +71,6 @@ class GatewayResourceDefinition:
                 gateway_class=typing.cast(str, charm.config.get("gateway-class")),
                 external_hostname=typing.cast(str, charm.config.get("external-hostname")),
             )
-            namespace = charm.model.name
             gateway_name = charm.app.name
         except ValidationError as exc:
             error_fields = set(
@@ -82,4 +79,4 @@ class GatewayResourceDefinition:
             error_field_str = " ".join(f"{field}" for field in error_fields)
             raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
-        return cls(config=config, namespace=namespace, gateway_name=gateway_name)
+        return cls(config=config, gateway_name=gateway_name)

@@ -64,12 +64,12 @@ class CharmConfig:
             CharmConfig: Instance of the charm config state component.
         """
         gateway_class = typing.cast(str, charm.config.get("gateway-class"))
-        client: Client = charm.client
+        # my-py don't know that charm.client will always be initialized here
+        client: Client = charm.client  # type: ignore[attr-defined]
         gateway_class_generic_resource = create_global_resource(
             CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_CLASS_RESOURCE_NAME, GATEWAY_CLASS_PLURAL
         )
         gateway_classes = tuple(client.list(gateway_class_generic_resource))
-
         if not gateway_classes:
             logger.error("No gateway class available on cluster.")
             raise InvalidCharmConfigError("No gateway class available on cluster.")

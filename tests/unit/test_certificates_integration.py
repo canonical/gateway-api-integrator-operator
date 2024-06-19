@@ -11,10 +11,12 @@ import pytest
 from ops.testing import Harness
 
 import tls_relation
+from state.config import CharmConfig
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
+@pytest.mark.usefixtures("patch_lightkube_client")
 def test_generate_password(harness: Harness):
     """
     arrange: Given a gateway api integrator charm.
@@ -30,6 +32,7 @@ def test_generate_password(harness: Harness):
     assert len(password) == 12
 
 
+@pytest.mark.usefixtures("patch_lightkube_client")
 def test_cert_relation(
     harness: Harness,
     certificates_relation_data: Dict[str, str],
@@ -53,7 +56,9 @@ def test_cert_relation(
     monkeypatch.setattr(ops.JujuVersion, "has_secrets", has_secrets_mock)
     get_secret_mock = MagicMock()
     monkeypatch.setattr(ops.model.Model, "get_secret", get_secret_mock)
-
+    monkeypatch.setattr(
+        "state.config.CharmConfig.from_charm", MagicMock(return_value=MagicMock(spec=CharmConfig))
+    )
     harness.update_config(
         {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
     )

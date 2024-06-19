@@ -51,6 +51,9 @@ class GatewayAPICharm(CharmBase):
 
         Args:
             args: Variable list of positional arguments passed to the parent constructor.
+
+        Raises:
+            RuntimeError: If initialization of the lightkube client fails
         """
         super().__init__(*args)
         try:
@@ -107,7 +110,6 @@ class GatewayAPICharm(CharmBase):
             RuntimeError: when initializing the lightkube client fails,
             or when creating the gateway resource fails.
         """
-
         config = CharmConfig.from_charm(self)
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         # This line is currently here to validate the existence of the certificates relation.

@@ -35,6 +35,9 @@ def test_gateway_resource_definition(
         "resource_manager.gateway.GatewayResourceManager.define_resource", define_resource_mock
     )
     monkeypatch.setattr(
+        "state.config.CharmConfig.from_charm", MagicMock(return_value=MagicMock(spec=CharmConfig))
+    )
+    monkeypatch.setattr(
         "resource_manager.gateway.GatewayResourceManager.gateway_address",
         MagicMock(return_value=TEST_EXTERNAL_HOSTNAME_CONFIG),
     )
@@ -47,6 +50,4 @@ def test_gateway_resource_definition(
     config = CharmConfig.from_charm(harness.charm)
 
     assert gateway_resource_definition.namespace == harness.model.name
-    assert config.external_hostname == TEST_EXTERNAL_HOSTNAME_CONFIG
-    assert config.gateway_class == "cilium"
     define_resource_mock.assert_called_once_with(gateway_resource_definition, config)

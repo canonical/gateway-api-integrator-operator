@@ -23,14 +23,14 @@ Attrs:  gateway_class (_type_): _description_  external_hostname: The configured
 ## <kbd>class</kbd> `GatewayResourceDefinition`
 Base class containing kubernetes resource definition. 
 
-Attrs:  config: The config data of the charm.  namespace: The gateway resource's namespace.  gateway_name: The gateway resource's name 
+Attrs:  config: The config data of the charm.  gateway_name: The gateway resource's name 
 
 
 
 
 ---
 
-<a href="../src/resource_definition.py#L58"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/resource_definition.py#L56"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>classmethod</kbd> `from_charm`
 

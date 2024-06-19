@@ -43,7 +43,6 @@ def test_gateway_resource_definition(
     )
 
     gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
-    assert gateway_resource_definition.namespace == harness.model.name
     assert gateway_resource_definition.config.external_hostname == TEST_EXTERNAL_HOSTNAME_CONFIG
     assert gateway_resource_definition.config.gateway_class == "cilium"
     define_resource_mock.assert_called_once_with(gateway_resource_definition)

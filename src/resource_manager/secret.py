@@ -4,18 +4,21 @@
 
 
 import logging
-from typing import List
+import typing
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.models.core_v1 import Secret
 from lightkube.models.meta_v1 import ObjectMeta
 
-from state.secret import SecretResourceDefinition
+import state
+import state.config
+import state.secret
+import state.tls
 
 from .resource_manager import ResourceManager, _map_k8s_auth_exception
 
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class CreateSecretError(Exception):
@@ -30,18 +33,17 @@ class CreateSecretError(Exception):
         self.msg = msg
 
 
-class GatewayResourceManager(ResourceManager[Secret]):
+class SecretResourceManager(ResourceManager[Secret]):
     """Kubernetes Ingress resource controller."""
 
-    def __init__(self, namespace: str, labels: LabelSelector, client: Client) -> None:
-        """Initialize the GatewayResourceManager.
+    def __init__(self, labels: LabelSelector, client: Client) -> None:
+        """Initialize the SecretResourceManager.
 
         Args:
             namespace: Kubernetes namespace.
             labels: Label to be added to created resources.
             client: Initialized lightkube client.
         """
-        self._ns = namespace
         self._client = client
         self._labels = labels
 
@@ -49,15 +51,6 @@ class GatewayResourceManager(ResourceManager[Secret]):
     def _name(self) -> str:
         """Returns "gateway"."""
         return "gateway"
-
-    @property
-    def _namespace(self) -> str:
-        """Returns the kubernetes namespace.
-
-        Returns:
-            The namespace.
-        """
-        return self._ns
 
     @property
     def _label_selector(self) -> str:
@@ -69,7 +62,9 @@ class GatewayResourceManager(ResourceManager[Secret]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @_map_k8s_auth_exception
-    def _gen_resource_from_definition(self, definition: SecretResourceDefinition) -> Secret:
+    def _gen_resource(
+        self, definition: state.secret.SecretResourceDefinition, *args: typing.Any
+    ) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
@@ -78,20 +73,28 @@ class GatewayResourceManager(ResourceManager[Secret]):
         Returns:
             A dictionary representing the gateway custom resource.
         """
+        if (
+            len(args) != 2
+            or not isinstance(args[0], state.config.CharmConfig)
+            or not isinstance(args[1], state.tls.TLSInformation)
+        ):
+            raise CreateSecretError("_gen_resource called with the wrong parameters.")
+
+        config: state.config.CharmConfig
+        tls_information: state.tls.TLSInformation
+        config, tls_information = args
         secret = Secret(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(
-                name=definition.name, namespace=self._namespace, labels=self._labels
-            ),
+            metadata=ObjectMeta(name=definition.name, labels=self._labels),
             stringData={
-                "tls.crt": definition.tls_certs["hostname"],
-                "tls.key": definition.tls_keys["hostname"],
+                "tls.crt": tls_information.tls_certs[config.external_hostname],
+                "tls.key": tls_information.tls_keys[config.external_hostname],
             },
             type="kubernetes.io/tls",
         )
 
-        LOGGER.info("Generated secret resource: %s", secret)
+        logger.info("Generated secret resource: %s", secret)
         return secret
 
     @_map_k8s_auth_exception
@@ -113,13 +116,13 @@ class GatewayResourceManager(ResourceManager[Secret]):
         self._client.replace(resource)
 
     @_map_k8s_auth_exception
-    def _list_resource(self) -> List[Secret]:
+    def _list_resource(self) -> typing.List[Secret]:
         """List secret resources in a given namespace based on a label selector.
 
         Returns:
             A list of matched secret resources.
         """
-        return list(self._client.list(res=Secret, namespace=self._namespace, labels=self._labels))
+        return list(self._client.list(res=Secret, labels=self._labels))
 
     @_map_k8s_auth_exception
     def _delete_resource(self, name: str) -> None:
@@ -128,4 +131,4 @@ class GatewayResourceManager(ResourceManager[Secret]):
         Args:
             name: The name of the secret resource to delete.
         """
-        self._client.delete(res=Secret, name=name, namespace=self._namespace)
+        self._client.delete(res=Secret, name=name)

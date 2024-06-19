@@ -20,23 +20,15 @@ class SecretResourceDefinition:
 
     Attrs:
         secret_resource_name (str):
-        namespace (str):
-        tls_certs (typing.Dict[str, str]):
-        tls_keys (typing.Dict[str, str]):
 
     Returns:
         _type_: _description_
     """
 
     secret_resource_name_prefix: str
-    namespace: str
-    tls_certs: typing.Dict[str, str]
-    tls_keys: typing.Dict[str, str]
 
     @classmethod
-    def from_charm_and_tls_information(
-        cls, charm: ops.CharmBase, tls_information: TLSInformation
-    ) -> "SecretResourceDefinition":
+    def from_charm_and_tls_information(cls, charm: ops.CharmBase) -> "SecretResourceDefinition":
         """Create a resource definition from charm instance.
 
         Args:
@@ -46,12 +38,8 @@ class SecretResourceDefinition:
         Returns:
             ResourceDefinition: _description_
         """
-        namespace = charm.model.name
         secret_resource_name_prefix = f"{charm.app.name}-secret-"
 
         return cls(
-            tls_certs=tls_information.tls_certs,
-            tls_keys=tls_information.tls_keys,
-            namespace=namespace,
             secret_resource_name_prefix=secret_resource_name_prefix,
         )

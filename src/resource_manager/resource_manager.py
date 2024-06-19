@@ -65,7 +65,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _gen_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
+    def _gen_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
@@ -102,7 +102,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             name: The name of the resource to delete.
         """
 
-    def define_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
+    def define_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:
         """Create or update a resource in kubernetes.
 
         Args:
@@ -116,7 +116,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             InvalidResourceError: If the generated resource is invalid.
         """
         resource_list = self._list_resource()
-        resource = self._gen_resource(definition, config)
+        resource = self._gen_resource(definition, *args)
         res_name = resource_name(resource)
         if not res_name:
             raise InvalidResourceError("Missing resource name.")

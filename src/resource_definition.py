@@ -6,7 +6,7 @@
 import dataclasses
 import itertools
 import typing
-
+from lightkube import Client
 import ops
 from pydantic import BaseModel, Field, ValidationError
 
@@ -72,6 +72,8 @@ class GatewayResourceDefinition:
                 external_hostname=typing.cast(str, charm.config.get("external-hostname")),
             )
             gateway_name = charm.app.name
+
+            client: Client = charm.client
         except ValidationError as exc:
             error_fields = set(
                 itertools.chain.from_iterable(error["loc"] for error in exc.errors())

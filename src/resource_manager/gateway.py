@@ -26,8 +26,6 @@ from .resource_manager import ResourceManager, _map_k8s_auth_exception
 logger = logging.getLogger(__name__)
 
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
-GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
-GATEWAY_CLASS_PLURAL = "gatewayclasses"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 
@@ -56,9 +54,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         self._client = client
         self._labels = labels
-        self._gateway_class_generic_resource = create_global_resource(
-            CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_CLASS_RESOURCE_NAME, GATEWAY_CLASS_PLURAL
-        )
         self._gateway_generic_resource = create_namespaced_resource(
             CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
         )
@@ -77,37 +72,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
-    def _set_gateway_class(
-        self, configured_gateway_class: str, resource: GenericNamespacedResource
-    ) -> None:
-        """Set the configured gateway class, otherwise the cluster's default gateway class.
-
-        Args:
-            configured_gateway_class: The desired gateway class name.
-            resource: The Ingress resource object.
-
-        Raises:
-            CreateGatewayError: When there's no available gateway classes
-        """
-        gateway_classes = tuple(self._client.list(self._gateway_class_generic_resource))
-
-        if not gateway_classes:
-            logger.error("Cluster has no available gateway class.")
-            raise CreateGatewayError("No gateway class available.")
-
-        gateway_class_names = (
-            gateway_class.metadata.name
-            for gateway_class in gateway_classes
-            if gateway_class.metadata
-        )
-        if configured_gateway_class not in gateway_class_names:
-            logger.error(
-                "Configured gateway class %s not present on the cluster.", configured_gateway_class
-            )
-            raise CreateGatewayError(f"Gateway class {configured_gateway_class} not found.")
-
-        resource.spec["gatewayClassName"] = configured_gateway_class
-
     @_map_k8s_auth_exception
     def _gen_resource(self, definition: GatewayResourceDefinition, config: CharmConfig) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
@@ -124,6 +88,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             kind="Gateway",
             metadata=ObjectMeta(name=definition.gateway_name, labels=self._labels),
             spec={
+                "gatewayClassName": config.gateway_class,
                 "listeners": [
                     {
                         "protocol": "HTTP",
@@ -132,12 +97,9 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                         "hostname": config.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
-                ]
+                ],
             },
         )
-
-        self._set_gateway_class(configured_gateway_class=config.gateway_class, resource=gateway)
-        logger.info("Generated gateway resource: %s", gateway)
         return gateway
 
     @_map_k8s_auth_exception

@@ -53,6 +53,16 @@ class GatewayAPICharm(CharmBase):
             args: Variable list of positional arguments passed to the parent constructor.
         """
         super().__init__(*args)
+        try:
+            # Set field_manager for server-side apply when patching resources
+            # Keep this consistent across client initializations
+            kubeconfig = KubeConfig.from_service_account()
+            self.client = Client(
+                config=kubeconfig, field_manager=self.app.name, namespace=self.model.name
+            )
+        except ConfigError as exc:
+            logger.exception("Error initializing the lightkube client.")
+            raise RuntimeError("Error initializing the lightkube client.") from exc
 
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._tls = TLSRelationService(self.model)
@@ -97,16 +107,6 @@ class GatewayAPICharm(CharmBase):
             RuntimeError: when initializing the lightkube client fails,
             or when creating the gateway resource fails.
         """
-        try:
-            # Set field_manager for server-side apply when patching resources
-            # Keep this consistent across client initializations
-            kubeconfig = KubeConfig.from_service_account()
-            client = Client(
-                config=kubeconfig, field_manager=self.app.name, namespace=self.model.name
-            )
-        except ConfigError as exc:
-            logger.exception("Error initializing the lightkube client.")
-            raise RuntimeError("Error initializing the lightkube client.") from exc
 
         config = CharmConfig.from_charm(self)
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
@@ -116,7 +116,7 @@ class GatewayAPICharm(CharmBase):
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
-            client=client,
+            client=self.client,
         )
 
         try:

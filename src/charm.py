@@ -105,7 +105,7 @@ class GatewayAPICharm(CharmBase):
                 config=kubeconfig, field_manager=self.app.name, namespace=self.model.name
             )
         except ConfigError as exc:
-            logger.error("Error initializing the lightkube client: %s", exc)
+            logger.exception("Error initializing the lightkube client.")
             raise RuntimeError("Error initializing the lightkube client.") from exc
 
         config = CharmConfig.from_charm(self)

@@ -48,13 +48,13 @@ class TLSInformation:
         """Create a resource definition from charm instance.
 
         Args:
-            charm (ops.CharmBase): _description_
+            charm (ops.CharmBase): The gateway-api-integrator charm.
 
         Raises:
-            TlsIntegrationMissingError: _description_
+            TlsIntegrationMissingError: When integration is not ready.
 
         Returns:
-            TLSInformation: _description_
+            TLSInformation: Information about configured TLS certs.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
         if tls_requirer_integration is None:

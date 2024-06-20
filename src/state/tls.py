@@ -4,7 +4,6 @@
 """gateway-api-integrator resource definition."""
 
 import dataclasses
-from typing import Dict
 
 import ops
 from ops.jujuversion import JujuVersion

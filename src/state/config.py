@@ -36,6 +36,22 @@ class InvalidCharmConfigError(Exception):
         self.msg = msg
 
 
+class GatewayClassUnavailableError(Exception):
+    """Exception raised when a charm configuration is found to be invalid.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the InvalidCharmConfigError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
 @dataclass(frozen=True)
 class CharmConfig:
     """A component of charm state that contains the charm's configuration.
@@ -58,7 +74,8 @@ class CharmConfig:
             charm (ops.CharmBase): The gateway-api-integrator charm.
 
         Raises:
-            InvalidCharmConfigError: When validation of the charm's config failed.
+            InvalidCharmConfigError: _description_
+            GatewayClassUnavailableError: When the cluster has no available gateway classes.
 
         Returns:
             CharmConfig: Instance of the charm config state component.
@@ -72,7 +89,7 @@ class CharmConfig:
         gateway_classes = tuple(client.list(gateway_class_generic_resource))
         if not gateway_classes:
             logger.error("No gateway class available on cluster.")
-            raise InvalidCharmConfigError("No gateway class available on cluster.")
+            raise GatewayClassUnavailableError("No gateway class available on cluster.")
 
         gateway_class_names = (
             gateway_class.metadata.name

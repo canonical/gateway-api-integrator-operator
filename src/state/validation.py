@@ -60,6 +60,7 @@ def validate_config_and_integration(
             except (
                 state.config.InvalidCharmConfigError,
                 state.tls.TlsIntegrationMissingError,
+                state.config.GatewayClassUnavailableError,
             ) as exc:
                 if defer:
                     event: ops.EventBase

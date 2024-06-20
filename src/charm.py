@@ -41,6 +41,22 @@ logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
+class LightKubeInitializationError(Exception):
+    """Exception raised when initialization of the lightkube client failed.
+
+    Attrs:
+        msg (str): Explanation of the error.
+    """
+
+    def __init__(self, msg: str):
+        """Initialize a new instance of the InvalidCharmConfigError exception.
+
+        Args:
+            msg (str): Explanation of the error.
+        """
+        self.msg = msg
+
+
 class GatewayAPICharm(CharmBase):
     """The main charm class for the gateway-api-integrator charm."""
 
@@ -53,7 +69,7 @@ class GatewayAPICharm(CharmBase):
             args: Variable list of positional arguments passed to the parent constructor.
 
         Raises:
-            RuntimeError: If initialization of the lightkube client fails
+            LightKubeInitializationError: If initialization of the lightkube client fails
         """
         super().__init__(*args)
         try:
@@ -65,7 +81,7 @@ class GatewayAPICharm(CharmBase):
             )
         except ConfigError as exc:
             logger.exception("Error initializing the lightkube client.")
-            raise RuntimeError("Error initializing the lightkube client.") from exc
+            raise LightKubeInitializationError("Error initializing the lightkube client.") from exc
 
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._tls = TLSRelationService(self.model)

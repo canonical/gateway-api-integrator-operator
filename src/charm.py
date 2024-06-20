@@ -38,6 +38,8 @@ from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
 from state.validation import block_if_invalid_config_or_missing_integration
 from tls_relation import TLSRelationService
+from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
+
 
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
@@ -58,6 +60,7 @@ class GatewayAPICharm(CharmBase):
         super().__init__(*args)
 
         self._tls = TLSRelationService(self.model)
+        self._ingress_provider = IngressPerAppProvider(charm=self)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)

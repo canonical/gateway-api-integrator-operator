@@ -11,5 +11,5 @@ jobs:
       provider: k8s
       use-canonical-k8s: true
       self-hosted-runner: true
-      self-hosted-runner-label: "large"
+      self-hosted-runner-label: "stg-private-endpoint"
       juju-channel: 3.3/stable

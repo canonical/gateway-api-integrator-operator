@@ -163,9 +163,9 @@ class GatewayAPICharm(CharmBase):
 
         event.set_results(
             {
-                f"certificate-{hostname}": tls_rel_data.get(f"certificate-{hostname}"),
-                f"ca-{hostname}": tls_rel_data.get(f"ca-{hostname}"),
-                f"chain-{hostname}": tls_rel_data.get(f"chain-{hostname}"),
+                f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],
+                f"ca-{hostname}": tls_rel_data[f"ca-{hostname}"],
+                f"chain-{hostname}": tls_rel_data[f"chain-{hostname}"],
             }
         )
 

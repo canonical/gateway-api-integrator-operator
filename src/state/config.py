@@ -67,11 +67,12 @@ class CharmConfig:
     )
 
     @classmethod
-    def from_charm(cls, charm: ops.CharmBase) -> "CharmConfig":
+    def from_charm(cls, charm: ops.CharmBase, client: Client) -> "CharmConfig":
         """Create a CharmConfig class from a charm instance.
 
         Args:
             charm (ops.CharmBase): The gateway-api-integrator charm.
+            client (lightkube.Client): The lightkube client
 
         Raises:
             InvalidCharmConfigError: _description_
@@ -81,8 +82,6 @@ class CharmConfig:
             CharmConfig: Instance of the charm config state component.
         """
         gateway_class = typing.cast(str, charm.config.get("gateway-class"))
-        # my-py don't know that charm.client will always be initialized here
-        client: Client = charm.client  # type: ignore[attr-defined]
         gateway_class_generic_resource = create_global_resource(
             CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_CLASS_RESOURCE_NAME, GATEWAY_CLASS_PLURAL
         )

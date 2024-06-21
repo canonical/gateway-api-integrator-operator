@@ -47,7 +47,7 @@ def test_gateway_resource_definition(
     )
 
     gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
-    config = CharmConfig.from_charm(harness.charm)
+    config = CharmConfig.from_charm(harness.charm, client=MagicMock())
 
     assert gateway_resource_definition.namespace == harness.model.name
     define_resource_mock.assert_called_once_with(gateway_resource_definition, config)

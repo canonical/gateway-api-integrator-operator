@@ -33,7 +33,7 @@ from resource_manager.resource_manager import InsufficientPermissionError, Inval
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
-from state.validation import block_if_invalid_config_or_missing_integration
+from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
@@ -54,12 +54,12 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
+        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
 
-        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
         )
@@ -89,7 +89,7 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    @block_if_invalid_config_or_missing_integration(defer=False)
+    @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -143,7 +143,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the start event."""
         self._reconcile()
 
-    @block_if_invalid_config_or_missing_integration(defer=False)
+    @validate_config_and_integration(defer=False)
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
@@ -169,7 +169,7 @@ class GatewayAPICharm(CharmBase):
             }
         )
 
-    @block_if_invalid_config_or_missing_integration(defer=True)
+    @validate_config_and_integration(defer=True)
     def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event."""
         tls_information = TLSInformation.from_charm(self)
@@ -179,7 +179,7 @@ class GatewayAPICharm(CharmBase):
             config.external_hostname, tls_information.tls_requirer_integration
         )
 
-    @block_if_invalid_config_or_missing_integration(defer=True)
+    @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
         tls_information = TLSInformation.from_charm(self)
@@ -195,7 +195,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation broken event."""
         self._reconcile()
 
-    @block_if_invalid_config_or_missing_integration(defer=True)
+    @validate_config_and_integration(defer=True)
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event.
 
@@ -208,7 +208,7 @@ class GatewayAPICharm(CharmBase):
         logger.info("TLS configured, creating kubernetes resources.")
         self._reconcile()
 
-    @block_if_invalid_config_or_missing_integration(defer=True)
+    @validate_config_and_integration(defer=True)
     def _on_certificate_expiring(
         self,
         event: typing.Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
@@ -258,7 +258,7 @@ class GatewayAPICharm(CharmBase):
                 certificate_signing_request=old_csr.encode()
             )
 
-    @block_if_invalid_config_or_missing_integration(defer=True)
+    @validate_config_and_integration(defer=True)
     def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
         """Handle the TLS Certificate invalidation event.
 
@@ -284,7 +284,7 @@ class GatewayAPICharm(CharmBase):
             )
         self.unit.status = MaintenanceStatus("Waiting for new certificate")
 
-    @block_if_invalid_config_or_missing_integration(defer=True)
+    @validate_config_and_integration(defer=True)
     def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
         tls_information = TLSInformation.from_charm(self)

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 C = typing.TypeVar("C", bound=ops.CharmBase)
 
 
-def block_if_invalid_config_or_missing_integration(
+def validate_config_and_integration(
     defer: bool = False,
 ) -> typing.Callable[
     [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]

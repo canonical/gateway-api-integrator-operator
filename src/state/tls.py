@@ -57,7 +57,7 @@ class TLSInformation:
             TLSInformation: Information about configured TLS certs.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
-        if tls_requirer_integration is None:
+        if tls_requirer_integration is None or tls_requirer_integration.get(charm.app) is None:
             raise TlsIntegrationMissingError("Certificates integration not ready.")
 
         tls_certs = {}

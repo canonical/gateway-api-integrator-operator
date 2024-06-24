@@ -112,7 +112,7 @@ class GatewayAPICharm(CharmBase):
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         # This line is currently here to validate the existence of the certificates relation.
         # This charm state component will be used by the upcoming SecretResourceManager.
-        _ = TLSInformation.from_charm(self)
+        TLSInformation.from_charm(self)
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,

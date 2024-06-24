@@ -55,6 +55,20 @@ class TLSRelationService:
         for key, value in relation_fields.items():
             tls_relation.data[self.charm_app].update({key: value})
 
+    def pop_relation_data_fields(
+        self,
+        relation_fields: list,
+        tls_relation: Relation,
+    ) -> None:
+        """Pop a list of items from the app relation databag.
+
+        Args:
+            relation_fields: items to pop
+            tls_relation: TLS certificates relation
+        """
+        for item in relation_fields:
+            tls_relation.data[self.charm_app].pop(item)
+
     def get_relation_data_field(self, relation_field: str, tls_relation: Relation) -> str:
         """Get an item from the app relation databag.
 

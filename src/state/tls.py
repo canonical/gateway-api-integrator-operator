@@ -44,7 +44,7 @@ class TLSInformation:
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "TLSInformation":
-        """Create a resource definition from charm instance.
+        """Get TLS information from a charm instance.
 
         Args:
             charm (ops.CharmBase): The gateway-api-integrator charm.

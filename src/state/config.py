@@ -19,6 +19,7 @@ GATEWAY_CLASS_PLURAL = "gatewayclasses"
 
 logger = logging.getLogger()
 
+
 class InvalidCharmConfigError(Exception):
     """Exception raised when a charm configuration is found to be invalid.
 
@@ -49,7 +50,6 @@ class GatewayClassUnavailableError(Exception):
             msg (str): Explanation of the error.
         """
         self.msg = msg
-
 
 
 @dataclass(frozen=True)

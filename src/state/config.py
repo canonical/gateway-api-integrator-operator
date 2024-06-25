@@ -19,7 +19,6 @@ GATEWAY_CLASS_PLURAL = "gatewayclasses"
 
 logger = logging.getLogger()
 
-
 class InvalidCharmConfigError(Exception):
     """Exception raised when a charm configuration is found to be invalid.
 
@@ -52,6 +51,7 @@ class GatewayClassUnavailableError(Exception):
         self.msg = msg
 
 
+
 @dataclass(frozen=True)
 class CharmConfig:
     """A component of charm state that contains the charm's configuration.
@@ -61,7 +61,7 @@ class CharmConfig:
         external_hostname (str): The configured gateway hostname.
     """
 
-    gateway_class: str = Field()
+    gateway_class: str = Field(min_length=1)
     external_hostname: str = Field(
         min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )

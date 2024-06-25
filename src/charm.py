@@ -322,7 +322,6 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation broken event."""
         tls_information = TLSInformation.from_charm(self)
         tls_information.tls_requirer_integration.data[self.app].clear()
-
         config = CharmConfig.from_charm(self, get_client(self.app.name, self.model.name))
 
         if JujuVersion.from_environ().has_secrets:

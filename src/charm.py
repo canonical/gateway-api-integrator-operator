@@ -23,13 +23,17 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
+    Relation,
     SecretNotFoundError,
     WaitingStatus,
 )
 
-from resource_definition import GatewayResourceDefinition, InvalidCharmConfigError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
+from state.config import CharmConfig, InvalidCharmConfigError
+from state.gateway import GatewayResourceDefinition
+from state.tls import TLSInformation, TlsIntegrationMissingError
+from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
@@ -50,12 +54,12 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
+        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._tls = TLSRelationService(self.model)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
 
-        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self.framework.observe(
             self.on.certificates_relation_created, self._on_certificates_relation_created
         )
@@ -85,14 +89,7 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    def _are_relations_ready(self) -> bool:
-        """Check if required relations are ready.
-
-        Returns:
-            Whether required relations are ready and execution should continue.
-        """
-        return self._tls.get_tls_relation() is not None
-
+    @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -111,17 +108,11 @@ class GatewayAPICharm(CharmBase):
             logger.exception("Error initializing the lightkube client.")
             raise RuntimeError("Error initializing the lightkube client.") from exc
 
-        try:
-            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError:
-            logger.exception("Invalid charm config.")
-            self.unit.status = BlockedStatus("Invalid charm configuration")
-            return
-
-        tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
-            self.unit.status = BlockedStatus("Waiting for TLS.")
-            return
+        config = CharmConfig.from_charm(self)
+        gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        # This line is currently here to validate the existence of the certificates relation.
+        # This charm state component will be used by the upcoming SecretResourceManager.
+        TLSInformation.from_charm(self)
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
@@ -129,7 +120,7 @@ class GatewayAPICharm(CharmBase):
         )
 
         try:
-            gateway = gateway_resource_manager.define_resource(gateway_resource_definition)
+            gateway = gateway_resource_manager.define_resource(gateway_resource_definition, config)
         except (CreateGatewayError, InvalidResourceError) as exc:
             logger.exception("Error creating the gateway resource %s", exc)
             raise RuntimeError("Cannot create gateway.") from exc
@@ -152,6 +143,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the start event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
@@ -159,12 +151,9 @@ class GatewayAPICharm(CharmBase):
             event: Juju event
         """
         hostname = event.params["hostname"]
-        tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
-            event.fail("Certificates relation not created.")
-            return
+        tls_information = TLSInformation.from_charm(self)
 
-        tls_rel_data = tls_certificates_relation.data[self.app]
+        tls_rel_data = tls_information.tls_requirer_integration.data[self.app]
         if any(
             not tls_rel_data.get(key)
             for key in [f"certificate-{hostname}", f"ca-{hostname}", f"chain-{hostname}"]
@@ -180,66 +169,46 @@ class GatewayAPICharm(CharmBase):
             }
         )
 
-    def _on_certificates_relation_created(self, event: RelationCreatedEvent) -> None:
-        """Handle the TLS Certificate relation created event.
-
-        Args:
-            event: The event that fires this method.
-        """
-        if not self._are_relations_ready():
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            event.defer()
-            return
-        try:
-            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError:
-            logger.exception("Invalid charm config.")
-            self.unit.status = BlockedStatus("Invalid charm configuration")
-            return
+    @validate_config_and_integration(defer=True)
+    def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
+        """Handle the TLS Certificate relation created event."""
+        tls_information = TLSInformation.from_charm(self)
+        config = CharmConfig.from_charm(self)
 
         self._tls.certificate_relation_created(
-            gateway_resource_definition.config.external_hostname
+            config.external_hostname, tls_information.tls_requirer_integration
         )
 
-    def _on_certificates_relation_joined(self, event: RelationJoinedEvent) -> None:
-        """Handle the TLS Certificate relation joined event.
+    @validate_config_and_integration(defer=True)
+    def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
+        """Handle the TLS Certificate relation joined event."""
+        tls_information = TLSInformation.from_charm(self)
+        config = CharmConfig.from_charm(self)
 
-        Args:
-            event: The event that fires this method.
-        """
-        if not self._are_relations_ready():
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            event.defer()
-            return
-        try:
-            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError as exc:
-            logger.exception("Invalid charm config.")
-            self.unit.status = BlockedStatus(exc.msg)
-            return
         self._tls.certificate_relation_joined(
-            gateway_resource_definition.config.external_hostname, self.certificates
+            config.external_hostname,
+            self.certificates,
+            tls_information.tls_requirer_integration,
         )
 
     def _on_certificates_relation_broken(self, _: typing.Any) -> None:
         """Handle the TLS Certificate relation broken event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=True)
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event.
 
         Args:
             event: The event that fires this method.
         """
-        tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            event.defer()
-            return
-        self._tls.certificate_relation_available(event)
+        tls_information = TLSInformation.from_charm(self)
+
+        self._tls.certificate_relation_available(event, tls_information.tls_requirer_integration)
         logger.info("TLS configured, creating kubernetes resources.")
         self._reconcile()
 
+    @validate_config_and_integration(defer=True)
     def _on_certificate_expiring(
         self,
         event: typing.Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
@@ -249,26 +218,25 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        if not self._are_relations_ready():
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            event.defer()
-            return
-        self._tls.certificate_expiring(event, self.certificates)
+        tls_information = TLSInformation.from_charm(self)
+        self._tls.certificate_expiring(
+            event, self.certificates, tls_information.tls_requirer_integration
+        )
 
     # This method is too complex but hard to simplify.
-    def _certificate_revoked(self, revoke_list: typing.List[str]) -> None:  # noqa: C901
+    def _certificate_revoked(
+        self, revoke_list: typing.List[str], tls_requirer_integration: Relation
+    ) -> None:  # noqa: C901
         """Handle TLS Certificate revocation.
 
         Args:
             revoke_list: TLS Certificates list to revoke
+            tls_requirer_integration: The TLS certificate integration.
         """
-        if not self._are_relations_ready():
-            return
-        tls_certificates_relation = self._tls.get_tls_relation()
         for hostname in revoke_list:
             old_csr = self._tls.get_relation_data_field(
                 f"csr-{hostname}",
-                tls_certificates_relation,  # type: ignore[arg-type]
+                tls_requirer_integration,  # type: ignore[arg-type]
             )
             if not old_csr:
                 continue
@@ -282,7 +250,7 @@ class GatewayAPICharm(CharmBase):
             try:
                 self._tls.pop_relation_data_fields(
                     [f"key-{hostname}", f"password-{hostname}"],
-                    tls_certificates_relation,  # type: ignore[arg-type]
+                    tls_requirer_integration,  # type: ignore[arg-type]
                 )
             except KeyError:
                 logger.warning("Relation data for %s already does not exist", hostname)
@@ -290,42 +258,42 @@ class GatewayAPICharm(CharmBase):
                 certificate_signing_request=old_csr.encode()
             )
 
+    @validate_config_and_integration(defer=True)
     def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
         """Handle the TLS Certificate invalidation event.
 
         Args:
             event: The event that fires this method.
         """
-        tls_certificates_relation = self._tls.get_tls_relation()
-        if not tls_certificates_relation:
+        try:
+            tls_information = TLSInformation.from_charm(self)
+        except (TlsIntegrationMissingError, InvalidCharmConfigError) as exc:
             self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
+            logger.error(
+                "(%s) charm is not ready to handle this event, deferring: %s.", event, exc
+            )
             event.defer()
             return
+
         if event.reason == "revoked":
             hostname = self._tls.get_hostname_from_cert(event.certificate)
-            self._certificate_revoked([hostname])
+            self._certificate_revoked([hostname], tls_information.tls_requirer_integration)
         if event.reason == "expired":
-            self._tls.certificate_expiring(event, self.certificates)
+            self._tls.certificate_expiring(
+                event, self.certificates, tls_information.tls_requirer_integration
+            )
         self.unit.status = MaintenanceStatus("Waiting for new certificate")
 
+    @validate_config_and_integration(defer=True)
     def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
-        """Handle the TLS Certificate relation broken event.
+        """Handle the TLS Certificate relation broken event."""
+        tls_information = TLSInformation.from_charm(self)
+        tls_information.tls_requirer_integration.data[self.app].clear()
 
-        Args:
-            _: The event that fires this method.
-        """
-        tls_relation = self._tls.get_tls_relation()
-        if tls_relation:
-            tls_relation.data[self.app].clear()
-
-        try:
-            gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        except InvalidCharmConfigError:
-            logger.exception("Charm config not valid.")
-            return
+        config = CharmConfig.from_charm(self)
 
         if JujuVersion.from_environ().has_secrets:
-            hostname = gateway_resource_definition.config.external_hostname
+            hostname = config.external_hostname
             try:
                 secret = self.model.get_secret(label=f"private-key-{hostname}")
                 secret.remove_all_revisions()

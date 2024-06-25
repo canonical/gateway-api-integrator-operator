@@ -9,7 +9,8 @@ from unittest.mock import MagicMock
 import pytest
 from ops.testing import Harness
 
-from resource_definition import GatewayResourceDefinition
+from state.config import CharmConfig
+from state.gateway import GatewayResourceDefinition
 from tls_relation import TLSRelationService
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -43,6 +44,9 @@ def test_gateway_resource_definition(
     )
 
     gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
-    assert gateway_resource_definition.config.external_hostname == TEST_EXTERNAL_HOSTNAME_CONFIG
-    assert gateway_resource_definition.config.gateway_class == "cilium"
-    define_resource_mock.assert_called_once_with(gateway_resource_definition)
+    config = CharmConfig.from_charm(harness.charm)
+
+    assert gateway_resource_definition.namespace == harness.model.name
+    assert config.external_hostname == TEST_EXTERNAL_HOSTNAME_CONFIG
+    assert config.gateway_class == "cilium"
+    define_resource_mock.assert_called_once_with(gateway_resource_definition, config)

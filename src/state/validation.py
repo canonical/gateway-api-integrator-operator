@@ -67,7 +67,7 @@ def validate_config_and_integration(
                     event, *_ = args
                     event.defer()
                 logger.exception("Wrong Charm Configuration")
-                instance.unit.status = ops.BlockedStatus(exc.msg)
+                instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
 
         return wrapper

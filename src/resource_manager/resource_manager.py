@@ -36,35 +36,11 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
 class InvalidResourceError(Exception):
-    """Custom error that indicates invalid resource definition.
-
-    Args:
-        msg: error message.
-    """
-
-    def __init__(self, msg: str):
-        """Construct the InvalidGatewayError object.
-
-        Args:
-            msg: error message.
-        """
-        self.msg = msg
+    """Custom error that indicates invalid resource definition."""
 
 
 class InsufficientPermissionError(Exception):
-    """Custom error that indicates insufficient permission to create k8s resources.
-
-    Args:
-        msg: error message.
-    """
-
-    def __init__(self, msg: str):
-        """Construct the InsufficientPermissionError object.
-
-        Args:
-            msg: error message.
-        """
-        self.msg = msg
+    """Custom error that indicates insufficient permission to create k8s resources."""
 
 
 def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:

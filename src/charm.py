@@ -69,19 +69,7 @@ def get_client(field_manager: str, namespace: str) -> Client:
 
 
 class LightKubeInitializationError(Exception):
-    """Exception raised when initialization of the lightkube client failed.
-
-    Attrs:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the InvalidCharmConfigError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+    """Exception raised when initialization of the lightkube client failed."""
 
 
 class GatewayAPICharm(CharmBase):
@@ -161,7 +149,7 @@ class GatewayAPICharm(CharmBase):
             logger.exception("Error creating the gateway resource %s", exc)
             raise RuntimeError("Cannot create gateway.") from exc
         except InsufficientPermissionError as exc:
-            self.unit.status = BlockedStatus(exc.msg)
+            self.unit.status = BlockedStatus(str(exc))
             return
 
         self.unit.status = WaitingStatus("Waiting for gateway address")

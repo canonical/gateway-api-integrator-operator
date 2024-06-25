@@ -21,35 +21,11 @@ logger = logging.getLogger()
 
 
 class InvalidCharmConfigError(Exception):
-    """Exception raised when a charm configuration is found to be invalid.
-
-    Attrs:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the InvalidCharmConfigError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+    """Exception raised when a charm configuration is found to be invalid."""
 
 
 class GatewayClassUnavailableError(Exception):
-    """Exception raised when a charm configuration is found to be invalid.
-
-    Attrs:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the InvalidCharmConfigError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+    """Exception raised when a charm configuration is found to be invalid."""
 
 
 @dataclass(frozen=True)

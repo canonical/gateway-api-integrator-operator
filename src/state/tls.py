@@ -13,19 +13,7 @@ TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 
 class TlsIntegrationMissingError(Exception):
-    """Exception raised when _situation_.
-
-    Attrs:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the TlsIntegrationMissingError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+    """Exception raised when _situation_."""
 
 
 @dataclasses.dataclass(frozen=True)

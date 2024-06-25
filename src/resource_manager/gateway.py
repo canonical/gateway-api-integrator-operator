@@ -29,14 +29,6 @@ GATEWAY_PLURAL = "gateways"
 class CreateGatewayError(Exception):
     """Represents an error when creating the gateway resource."""
 
-    def __init__(self, msg: str):
-        """Initialize a new instance of the CreateGatewayError exception.
-
-        Args:
-            msg: Explanation of the error.
-        """
-        self.msg = msg
-
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     """Kubernetes Ingress resource controller."""

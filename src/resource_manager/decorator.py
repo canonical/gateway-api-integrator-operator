@@ -9,10 +9,12 @@ import typing
 
 from lightkube.core.exceptions import ApiError
 
+from exception import CharmStateValidationBaseError
+
 logger = logging.getLogger(__name__)
 
 
-class InsufficientPermissionError(Exception):
+class InsufficientPermissionError(CharmStateValidationBaseError):
     """Custom error that indicates insufficient permission to create k8s resources."""
 
 

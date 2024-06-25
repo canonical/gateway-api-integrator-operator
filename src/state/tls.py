@@ -9,10 +9,12 @@ import ops
 from ops.jujuversion import JujuVersion
 from ops.model import Relation
 
+from exception import CharmStateValidationBaseError
+
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 
-class TlsIntegrationMissingError(Exception):
+class TlsIntegrationMissingError(CharmStateValidationBaseError):
     """Exception raised when certificates relation is missing."""
 
 

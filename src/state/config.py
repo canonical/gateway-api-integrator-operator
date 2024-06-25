@@ -13,6 +13,7 @@ from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
 
+from exception import CharmStateValidationBaseError
 from resource_manager.permission import map_k8s_auth_exception
 
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
@@ -22,11 +23,11 @@ GATEWAY_CLASS_PLURAL = "gatewayclasses"
 logger = logging.getLogger()
 
 
-class InvalidCharmConfigError(Exception):
+class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 
-class GatewayClassUnavailableError(Exception):
+class GatewayClassUnavailableError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 

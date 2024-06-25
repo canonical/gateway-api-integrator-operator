@@ -38,6 +38,10 @@ requires:
   certificates:
     interface: tls-certificates
     limit: 1
+provides:
+  gateway:
+    interface: ingress
+    limit: 1
 
 config:
   options:

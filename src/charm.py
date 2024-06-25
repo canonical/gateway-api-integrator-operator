@@ -14,6 +14,11 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
 )
+from charms.traefik_k8s.v2.ingress import (
+    IngressPerAppDataProvidedEvent,
+    IngressPerAppDataRemovedEvent,
+    IngressPerAppProvider,
+)
 from lightkube import Client, KubeConfig
 from lightkube.core.exceptions import ConfigError
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
@@ -89,6 +94,7 @@ class GatewayAPICharm(CharmBase):
 
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._tls = TLSRelationService(self.model)
+        self._ingress_provider = IngressPerAppProvider(charm=self)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -116,6 +122,9 @@ class GatewayAPICharm(CharmBase):
             self.certificates.on.all_certificates_invalidated,
             self._on_all_certificates_invalidated,
         )
+
+        self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
+        self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
 
     @property
     def _labels(self) -> dict[str, str]:
@@ -334,6 +343,14 @@ class GatewayAPICharm(CharmBase):
                 secret.remove_all_revisions()
             except SecretNotFoundError:
                 logger.warning("Juju secret for %s already does not exist", hostname)
+
+    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
+        """Handle the data-provided event."""
+        self._reconcile()
+
+    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+        """Handle the data-removed event."""
+        self._reconcile()
 
 
 if __name__ == "__main__":  # pragma: no cover

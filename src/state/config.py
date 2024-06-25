@@ -75,7 +75,7 @@ class CharmConfig:
             client (lightkube.Client): The lightkube client
 
         Raises:
-            InvalidCharmConfigError: _description_
+            InvalidCharmConfigError: When the chamr's config is invalid.
             GatewayClassUnavailableError: When the cluster has no available gateway classes.
 
         Returns:

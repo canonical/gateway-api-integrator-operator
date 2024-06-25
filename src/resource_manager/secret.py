@@ -11,6 +11,7 @@ from lightkube.core.client import LabelSelector
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
+from cryptography.hazmat.primitives import serialization
 
 from state.config import CharmConfig
 from state.secret import SecretResourceDefinition
@@ -31,6 +32,28 @@ class CreateSecretError(Exception):
             msg: Explanation of the error.
         """
         self.msg = msg
+
+
+def _get_decrypted_key(self, private_key: str, password: str) -> str:
+    """Decrypted the provided private key using the provided password.
+
+    Args:
+        private_key: The encrypted private key.
+        password: The password to decrypt the private key.
+
+    Returns:
+        The decrypted private key.
+    """
+    decrypted_key = serialization.load_pem_private_key(
+        private_key.encode(), password=password.encode()
+    )
+
+    # There are multiple representation PKCS8 is the default supported by nginx controller
+    return decrypted_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
 
 
 class SecretResourceManager(ResourceManager[Secret]):
@@ -83,7 +106,10 @@ class SecretResourceManager(ResourceManager[Secret]):
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
                 "tls.crt": tls_information.tls_certs[config.external_hostname],
-                "tls.key": tls_information.tls_keys[config.external_hostname],
+                "tls.key": _get_decrypted_key(
+                    tls_information.tls_keys[config.external_hostname]["key"],
+                    tls_information.tls_keys[config.external_hostname]["password"],
+                ),
             },
             type="kubernetes.io/tls",
         )

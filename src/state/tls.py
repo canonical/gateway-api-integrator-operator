@@ -28,7 +28,7 @@ class TLSInformation:
 
     tls_requirer_integration: Relation
     tls_certs: dict[str, str]
-    tls_keys: dict[str, str]
+    tls_keys: dict[str, dict[str, str]]
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "TLSInformation":

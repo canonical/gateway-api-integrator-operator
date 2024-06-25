@@ -63,7 +63,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @map_k8s_auth_exception
-    def _gen_resource(self, definition: GatewayResourceDefinition, config: CharmConfig) -> dict:
+    def _gen_resource(self, definition: GatewayResourceDefinition, *args: typing.Any) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
@@ -142,7 +142,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             force=True,
         )
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _list_resource(self) -> typing.List[GenericNamespacedResource]:
         """List gateway resources in the current namespace based on a label selector.
 

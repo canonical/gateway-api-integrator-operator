@@ -29,9 +29,8 @@ from ops.model import (
     WaitingStatus,
 )
 
+from resource_manager.secret import SecretResourceManager, CreateSecretError
 from resource_manager.decorator import InsufficientPermissionError
-import resource_manager
-import resource_manager.secret
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InvalidResourceError
 from state.config import CharmConfig, InvalidCharmConfigError
@@ -145,9 +144,7 @@ class GatewayAPICharm(CharmBase):
             labels=self._labels,
             client=client,
         )
-        secret_resource_manager = resource_manager.secret.SecretResourceManager(
-            self._labels, client
-        )
+        secret_resource_manager = SecretResourceManager(self._labels, client)
 
         try:
             secret = secret_resource_manager.define_resource(
@@ -159,7 +156,7 @@ class GatewayAPICharm(CharmBase):
         except (
             CreateGatewayError,
             InvalidResourceError,
-            resource_manager.secret.CreateSecretError,
+            CreateSecretError,
         ) as exc:
             logger.exception("Error creating resource %r", exc)
             raise RuntimeError("Error creating resource.") from exc

@@ -6,18 +6,19 @@
 import logging
 import typing
 
+from cryptography.hazmat.primitives import serialization
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
-from cryptography.hazmat.primitives import serialization
 
 from state.config import CharmConfig
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation
 
-from .resource_manager import ResourceManager, _map_k8s_auth_exception
+from .decorator import map_k8s_auth_exception
+from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
 
@@ -25,16 +26,8 @@ logger = logging.getLogger(__name__)
 class CreateSecretError(Exception):
     """Represents an error when creating the secret resource."""
 
-    def __init__(self, msg: str):
-        """Initialize a new instance of the CreateSecretError exception.
 
-        Args:
-            msg: Explanation of the error.
-        """
-        self.msg = msg
-
-
-def _get_decrypted_key(self, private_key: str, password: str) -> str:
+def _get_decrypted_key(private_key: str, password: str) -> str:
     """Decrypted the provided private key using the provided password.
 
     Args:
@@ -74,7 +67,7 @@ class SecretResourceManager(ResourceManager[Secret]):
         """Returns "gateway"."""
         return "gateway"
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _gen_resource(self, definition: SecretResourceDefinition, *args: typing.Any) -> Secret:
         """Generate a Gateway resource from a gateway resource definition.
 
@@ -117,7 +110,7 @@ class SecretResourceManager(ResourceManager[Secret]):
         logger.info("Generated secret resource: %s", secret)
         return secret
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _create_resource(self, resource: Secret) -> None:
         """Create a new secret resource in a given namespace.
 
@@ -126,7 +119,7 @@ class SecretResourceManager(ResourceManager[Secret]):
         """
         self._client.create(resource)
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _patch_resource(self, name: str, resource: Secret) -> None:
         """Replace an existing gateway resource in the current namespace.
 
@@ -145,7 +138,7 @@ class SecretResourceManager(ResourceManager[Secret]):
             force=True,
         )
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _list_resource(self) -> typing.List[Secret]:
         """List secret resources in a given namespace based on a label selector.
 
@@ -154,7 +147,7 @@ class SecretResourceManager(ResourceManager[Secret]):
         """
         return list(self._client.list(res=Secret, labels=self._labels))
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _delete_resource(self, name: str) -> None:
         """Delete a secret resource from a given namespace.
 

@@ -51,6 +51,9 @@ def test_gateway_resource_definition(
         {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
     )
 
+    config = CharmConfig.from_charm(harness.charm, MagicMock())
     gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
-    config = CharmConfig.from_charm(harness.charm, client=MagicMock())
-    define_resource_mock.assert_called_once_with(gateway_resource_definition, config)
+    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
+    define_resource_mock.assert_called_once_with(
+        gateway_resource_definition, config, secret_resource_definition
+    )

@@ -1,6 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-"""nginx-ingress-integrator k8s ingress controller."""
+"""Gateway resource manager."""
 
 
 import logging
@@ -17,7 +17,8 @@ from lightkube.types import PatchType
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 
-from .resource_manager import ResourceManager, _map_k8s_auth_exception
+from .decorator import map_k8s_auth_exception
+from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _gen_resource(self, definition: GatewayResourceDefinition, config: CharmConfig) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
@@ -90,7 +91,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         )
         return gateway
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _create_resource(self, resource: GenericNamespacedResource) -> None:
         """Create a new gateway resource in the current namespace.
 
@@ -99,7 +100,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         self._client.create(resource)
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _patch_resource(self, name: str, resource: GenericNamespacedResource) -> None:
         """Replace an existing gateway resource in the current namespace.
 
@@ -118,7 +119,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             force=True,
         )
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _list_resource(self) -> List[GenericNamespacedResource]:
         """List gateway resources in the current namespace based on a label selector.
 
@@ -127,7 +128,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         return list(self._client.list(res=self._gateway_generic_resource, labels=self._labels))
 
-    @_map_k8s_auth_exception
+    @map_k8s_auth_exception
     def _delete_resource(self, name: str) -> None:
         """Delete a gateway resource from the current namespace.
 

@@ -13,6 +13,8 @@ from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
 
+from resource_manager.decorator import map_k8s_auth_exception
+
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
@@ -43,6 +45,7 @@ class CharmConfig:
     )
 
     @classmethod
+    @map_k8s_auth_exception
     def from_charm(cls, charm: ops.CharmBase, client: Client) -> "CharmConfig":
         """Create a CharmConfig class from a charm instance.
 
@@ -66,7 +69,7 @@ class CharmConfig:
             logger.error("No gateway class available on cluster.")
             raise GatewayClassUnavailableError("No gateway class available on cluster.")
 
-        gateway_class_names = (
+        gateway_class_names = tuple(
             gateway_class.metadata.name
             for gateway_class in gateway_classes
             if gateway_class.metadata and gateway_class.metadata.name
@@ -76,13 +79,13 @@ class CharmConfig:
             logger.error(
                 (
                     "Configured gateway class %s not present on the cluster."
-                    "Available ones are: %s"
+                    "Available ones are: %r"
                 ),
                 gateway_class,
                 available_gateway_classes,
             )
             raise InvalidCharmConfigError(
-                f"Gateway class must be one of {available_gateway_classes}"
+                f"Gateway class must be one of: [{available_gateway_classes}]"
             )
 
         try:

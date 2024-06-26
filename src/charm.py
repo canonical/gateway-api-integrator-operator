@@ -38,10 +38,13 @@ from resource_manager.decorator import InsufficientPermissionError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import CreateSecretError, SecretResourceManager
+from resource_manager.service import ServiceResourceManager
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
+from state.http_route import HTTPRouteResourceDefinition
+
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
 
@@ -180,6 +183,17 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
         secret_resource_manager.cleanup_resources(exclude=secret)
+
+        http_route_resource_definition = HTTPRouteResourceDefinition.from_charm(
+            self, self._ingress_provider
+        )
+        service_resource_manager = ServiceResourceManager(self._labels, client)
+        try:
+            service = service_resource_manager.define_resource(http_route_resource_definition)
+        except InsufficientPermissionError as exc:
+            self.unit.status = BlockedStatus(str(exc))
+            return
+        service_resource_manager.cleanup_resources(service)
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""

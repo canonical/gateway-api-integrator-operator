@@ -26,10 +26,10 @@ class HTTPRouteResourceDefinition:
     """A component of charm state containing resource definition for kubernetes secret.
 
     Attrs:
-        service_name (str): The name of the service we're providing routing to.
-        service_port (int): The port of the service we're providing routing to.
-        service_port (int): The port name of the service we're providing routing to.
-        endpoints (list[str]): Upstream endpoint ip addresses, only in ingress v2 relation.
+        service_name: The name of the service we're providing routing to.
+        service_port: The port of the service we're providing routing to.
+        service_port_name: The port name of the service we're providing routing to.
+        endpoints: Upstream endpoint ip addresses, only in ingress v2 relation.
     """
 
     service_name: str
@@ -62,7 +62,7 @@ class HTTPRouteResourceDefinition:
             integration_data = ingress_provider.get_data(ingress_integration)
             service_name = integration_data.app.name
             service_port = integration_data.app.port
-            service_port_name = f"tcp={service_port}"
+            service_port_name = f"tcp-{service_port}"
 
             endpoints = [u.ip for u in integration_data.units if u.ip is not None]
             return cls(

@@ -44,15 +44,6 @@ def resource_name(resource: AnyResource | None) -> typing.Optional[str]:
 class ResourceManager(typing.Protocol[AnyResource]):
     """Abstract base class for a generic Kubernetes resource controller."""
 
-    @property
-    @abc.abstractmethod
-    def _name(self) -> str:
-        """Abstract property that returns the name of the resource type.
-
-        Returns:
-            Name of the resource type.
-        """
-
     @abc.abstractmethod
     def _gen_resource(self, state: State) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.

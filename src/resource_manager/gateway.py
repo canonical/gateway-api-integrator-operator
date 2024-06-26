@@ -43,11 +43,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
     @property
-    def _name(self) -> str:
-        """Returns "gateway"."""
-        return "gateway"
-
-    @property
     def _label_selector(self) -> str:
         """Return the label selector for resources managed by this controller.
 

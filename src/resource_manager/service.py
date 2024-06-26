@@ -34,11 +34,6 @@ class ServiceResourceManager(ResourceManager[Service]):
         self._client = client
         self._labels = labels
 
-    @property
-    def _name(self) -> str:
-        """Returns "gateway"."""
-        return "gateway"
-
     @map_k8s_auth_exception
     def _gen_resource(self, definition: HTTPRouteResourceDefinition, *_: typing.Any) -> Service:
         """Generate a Gateway resource from a gateway resource definition.

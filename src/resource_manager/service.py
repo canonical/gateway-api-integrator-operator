@@ -61,17 +61,6 @@ class ServiceResourceManager(ResourceManager[Service]):
             ),
         )
 
-        return service
-
-    @map_k8s_auth_exception
-    def _create_resource(self, resource: Service) -> None:
-        """Create a new secret resource in a given namespace.
-
-        Args:
-            resource: The secret resource object to create.
-        """
-        self._client.create(resource)
-
     @map_k8s_auth_exception
     def _patch_resource(self, name: str, resource: Service) -> None:
         """Replace an existing gateway resource in the current namespace.

@@ -43,7 +43,7 @@ def test_gateway_resource_definition(
         MagicMock(return_value=TEST_EXTERNAL_HOSTNAME_CONFIG),
     )
     monkeypatch.setattr(
-        "resource_manager.secret.SecretResourceManager",
+        "resource_manager.secret.SecretResourceManager.define_resource",
         MagicMock(),
     )
 

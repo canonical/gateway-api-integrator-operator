@@ -36,8 +36,6 @@ from state.gateway import GatewayResourceDefinition
 from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
-from state.http_route import HTTPRouteResourceDefinition
-
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
 
@@ -183,14 +181,6 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
-
-        http_route_resource_definition = HTTPRouteResourceDefinition.from_charm(
-            self, self._ingress_provider
-        )
-        service_resource_manager = ServiceResourceManager(self._labels, client)
-
-        service = service_resource_manager.define_resource(http_route_resource_definition)
-        service_resource_manager.cleanup_resources(service)
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
@@ -362,11 +352,11 @@ class GatewayAPICharm(CharmBase):
             except SecretNotFoundError:
                 logger.warning("Juju secret for %s already does not exist", hostname)
 
-    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
+    def _on_data_provided(self, _: typing.Any) -> None:
         """Handle the data-provided event."""
         self._reconcile()
 
-    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+    def _on_data_removed(self, _: typing.Any) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 

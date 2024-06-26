@@ -352,11 +352,11 @@ class GatewayAPICharm(CharmBase):
             except SecretNotFoundError:
                 logger.warning("Juju secret for %s already does not exist", hostname)
 
-    def _on_data_provided(self, _: typing.Any) -> None:
+    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event."""
         self._reconcile()
 
-    def _on_data_removed(self, _: typing.Any) -> None:
+    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 

@@ -174,11 +174,6 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = BlockedStatus(str(exc))
             return
 
-        self.unit.status = WaitingStatus("Waiting for gateway address")
-        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
-            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
-        else:
-            self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
         secret_resource_manager.cleanup_resources(exclude=secret)
 
@@ -193,7 +188,7 @@ class GatewayAPICharm(CharmBase):
                 http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTP
             )
             http_route_resource_manager.define_resource(
-                http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTP
+                http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTPS
             )
         except CreateHTTPRouteError as exc:
             logger.exception("Error creating resource.")
@@ -206,8 +201,14 @@ class GatewayAPICharm(CharmBase):
         relation = self.model.get_relation(INGRESS_RELATION)
         assert relation  # Let mypy know that relation always exists here
         self._ingress_provider.publish_url(
-            relation, f"{config.external_hostname}/{http_route_resource_definition.service_name}"
+            relation,
+            f"https://{config.external_hostname}/{http_route_resource_definition.service_name}",
         )
+        self.unit.status = WaitingStatus("Waiting for gateway address")
+        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
+            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
+        else:
+            self.unit.status = WaitingStatus("Gateway address unavailable")
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
@@ -379,11 +380,11 @@ class GatewayAPICharm(CharmBase):
             except SecretNotFoundError:
                 logger.warning("Juju secret for %s already does not exist", hostname)
 
-    def _on_data_provided(self, _: typing.Any) -> None:
+    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event."""
         self._reconcile()
 
-    def _on_data_removed(self, _: typing.Any) -> None:
+    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 

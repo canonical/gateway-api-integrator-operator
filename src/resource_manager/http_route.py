@@ -22,7 +22,7 @@ from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
 
-CUSTOM_RESOURCE_GROUP_NAME = "httproute.gateway.networking.k8s.io"
+CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 HTTP_ROUTE_RESOURCE_NAME = "HTTPRoute"
 HTTP_ROUTE_PLURAL = "httproutes"
 
@@ -84,14 +84,16 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
 
         http_route_type: HTTPRouteType
         gateway_resource_definition: GatewayResourceDefinition
-        http_route_type, gateway_resource_definition = args
-
+        gateway_resource_definition, http_route_type = args
+        listener_id = (
+            f"{gateway_resource_definition.gateway_name}-{http_route_type.value}-listener"
+        )
         spec = {
             "parentRefs": [
                 {
                     "name": gateway_resource_definition.gateway_name,
                     "namespace": self._client.namespace,
-                    "sectionName": f"{http_route_type}-listener",
+                    "sectionName": listener_id,
                 }
             ],
         }
@@ -112,15 +114,17 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                     "filters": [
                         {
                             "type": "RequestRedirect",
-                            "RequestRedirect": {"scheme": "https", "statusCode": 301},
+                            "requestRedirect": {"scheme": "https", "statusCode": 301},
                         }
                     ]
                 }
             ]
         http_route = self._http_route_generic_resource_class(
-            apiVersion="v1",
-            kind="Service",
-            metadata=ObjectMeta(name=definition.service_name, labels=self._labels),
+            apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
+            kind=HTTP_ROUTE_RESOURCE_NAME,
+            metadata=ObjectMeta(
+                name=f"{definition.service_name}-{http_route_type.value}", labels=self._labels
+            ),
             spec=spec,
         )
 

@@ -55,7 +55,8 @@ class ServiceResourceManager(ResourceManager[Service]):
                         name=definition.service_port_name,
                         targetPort=definition.service_port,
                     )
-                ]
+                ],
+                selector={"app.kubernetes.io/name": definition.application_name},
             ),
         )
 

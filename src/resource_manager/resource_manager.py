@@ -6,13 +6,8 @@ import abc
 import logging
 import typing
 
-import lightkube
-import lightkube.generic_resource
-import lightkube.resources
-import lightkube.resources.apiextensions_v1
-import lightkube.resources.apps_v1
-import lightkube.resources.core_v1
-import lightkube.resources.discovery_v1
+from lightkube.generic_resource import GenericNamespacedResource
+from lightkube.resources.core_v1 import Secret, Service
 
 from state.gateway import GatewayResourceDefinition
 from state.http_route import HTTPRouteResourceDefinition
@@ -22,11 +17,9 @@ logger = logging.getLogger(__name__)
 
 AnyResource = typing.TypeVar(
     "AnyResource",
-    lightkube.resources.core_v1.Endpoints,
-    lightkube.resources.discovery_v1.EndpointSlice,
-    lightkube.resources.core_v1.Service,
-    lightkube.resources.core_v1.Secret,
-    lightkube.generic_resource.GenericNamespacedResource,
+    Service,
+    Secret,
+    GenericNamespacedResource,
 )
 
 ResourceDefinition = typing.TypeVar(

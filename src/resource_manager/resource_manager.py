@@ -15,9 +15,8 @@ import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
 
 from state.gateway import GatewayResourceDefinition
-from state.secret import SecretResourceDefinition
 from state.http_route import HTTPRouteResourceDefinition
-
+from state.secret import SecretResourceDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -61,15 +60,6 @@ def resource_name(resource: AnyResource | None) -> typing.Optional[str]:
 
 class ResourceManager(typing.Protocol[AnyResource]):
     """Abstract base class for a generic Kubernetes resource controller."""
-
-    @property
-    @abc.abstractmethod
-    def _name(self) -> str:
-        """Abstract property that returns the name of the resource type.
-
-        Returns:
-            Name of the resource type.
-        """
 
     @abc.abstractmethod
     def _gen_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:

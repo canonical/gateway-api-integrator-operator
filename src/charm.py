@@ -36,21 +36,26 @@ from ops.model import (
 
 from resource_manager.decorator import InsufficientPermissionError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
+from resource_manager.http_route import (
+    CreateHTTPRouteError,
+    HTTPRouteResourceManager,
+    HTTPRouteType,
+)
 from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import CreateSecretError, SecretResourceManager
 from resource_manager.service import ServiceResourceManager
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
+from state.http_route import HTTPRouteResourceDefinition
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
-from state.http_route import HTTPRouteResourceDefinition
-
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
+INGRESS_RELATION = "gateway"
 
 
 @lru_cache(maxsize=1)
@@ -98,7 +103,7 @@ class GatewayAPICharm(CharmBase):
 
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._tls = TLSRelationService(self.model)
-        self._ingress_provider = IngressPerAppProvider(charm=self)
+        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -136,7 +141,7 @@ class GatewayAPICharm(CharmBase):
         return {CREATED_BY_LABEL: self.app.name}
 
     @validate_config_and_integration(defer=False)
-    def _reconcile(self) -> None:
+    def _reconcile(self) -> None:  # pylint: disable=too-many-locals
         """Reconcile charm status based on configuration and integrations.
 
         Raises:
@@ -188,12 +193,28 @@ class GatewayAPICharm(CharmBase):
             self, self._ingress_provider
         )
         service_resource_manager = ServiceResourceManager(self._labels, client)
+        http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
         try:
             service = service_resource_manager.define_resource(http_route_resource_definition)
+            http_route_resource_manager.define_resource(
+                http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTP
+            )
+            http_route_resource_manager.define_resource(
+                http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTP
+            )
+        except CreateHTTPRouteError as exc:
+            logger.exception("Error creating resource.")
+            raise RuntimeError("Error creating resource.") from exc
         except InsufficientPermissionError as exc:
             self.unit.status = BlockedStatus(str(exc))
             return
         service_resource_manager.cleanup_resources(service)
+
+        relation = self.model.get_relation(INGRESS_RELATION)
+        assert relation  # Let mypy know that relation always exists here
+        self._ingress_provider.publish_url(
+            relation, f"{config.external_hostname}/{http_route_resource_definition.service_name}"
+        )
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
@@ -371,11 +392,11 @@ class GatewayAPICharm(CharmBase):
             except SecretNotFoundError:
                 logger.warning("Juju secret for %s already does not exist", hostname)
 
-    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
+    def _on_data_provided(self, _: typing.Any) -> None:
         """Handle the data-provided event."""
         self._reconcile()
 
-    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+    def _on_data_removed(self, _: typing.Any) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 

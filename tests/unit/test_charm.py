@@ -47,7 +47,7 @@ def test_deploy_lightkube_error(
     """
     arrange: given a gateway-api-integrator charm with valid tls relation
     and mocked lightkube client.
-    act: Change the charm's config to trigger reconcilation.
+    act: Change the charm's config to trigger reconciliation.
     assert: the charm goes into error state.
     """
     harness.add_relation(
@@ -71,7 +71,7 @@ def test_deploy_with_initial_hooks(harness: Harness):
     """
     arrange: given a gateway-api-integrator charm with valid tls relation
     and mocked lightkube client.
-    act: Change the charm's config to trigger reconcilation.
+    act: Change the charm's config to trigger reconciliation.
     assert: the charm goes into error state.
     """
     harness.begin_with_initial_hooks()

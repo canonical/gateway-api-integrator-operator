@@ -4,29 +4,18 @@
 """gateway-api-integrator resource definition."""
 
 import dataclasses
-from typing import Dict
 
 import ops
 from ops.jujuversion import JujuVersion
 from ops.model import Relation
 
+from exception import CharmStateValidationBaseError
+
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 
-class TlsIntegrationMissingError(Exception):
-    """Exception raised when _situation_.
-
-    Attrs:
-        msg (str): Explanation of the error.
-    """
-
-    def __init__(self, msg: str):
-        """Initialize a new instance of the TlsIntegrationMissingError exception.
-
-        Args:
-            msg (str): Explanation of the error.
-        """
-        self.msg = msg
+class TlsIntegrationMissingError(CharmStateValidationBaseError):
+    """Exception raised when _situation_."""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -40,12 +29,12 @@ class TLSInformation:
     """
 
     tls_requirer_integration: Relation
-    tls_certs: Dict[str, str]
-    tls_keys: Dict[str, str]
+    tls_certs: dict[str, str]
+    tls_keys: dict[str, dict[str, str]]
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "TLSInformation":
-        """Create a resource definition from charm instance.
+        """Get TLS information from a charm instance.
 
         Args:
             charm (ops.CharmBase): The gateway-api-integrator charm.
@@ -73,7 +62,10 @@ class TLSInformation:
 
                 if JujuVersion.from_environ().has_secrets:
                     secret = charm.model.get_secret(label=f"private-key-{hostname}")
-                    tls_keys[hostname] = secret.get_content()["key"]
+                    tls_keys[hostname] = {
+                        "key": secret.get_content()["key"],
+                        "password": secret.get_content()["password"],
+                    }
 
         return cls(
             tls_requirer_integration=tls_requirer_integration,

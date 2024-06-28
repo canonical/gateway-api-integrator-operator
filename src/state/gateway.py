@@ -13,11 +13,10 @@ class GatewayResourceDefinition:
     """Base class containing kubernetes resource definition.
 
     Attrs:
-        namespace: The gateway resource's namespace.
         gateway_name: The gateway resource's name
     """
 
-    namespace: str
+    # We're expecting more fields to be added.
     gateway_name: str
 
     @classmethod
@@ -25,9 +24,9 @@ class GatewayResourceDefinition:
         """Create a resource definition from charm instance.
 
         Args:
-            charm (ops.CharmBase): _description_
+            charm (ops.CharmBase): The charm instance.
 
         Returns:
-            ResourceDefinition: _description_
+            GatewayResourceDefinition: The gateway resource definition object.
         """
-        return cls(namespace=charm.model.name, gateway_name=charm.app.name)
+        return cls(gateway_name=charm.app.name)

@@ -9,9 +9,7 @@ import typing
 
 import ops
 
-import state
-import state.config
-import state.tls
+from exception import CharmStateValidationBaseError
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +55,13 @@ def validate_config_and_integration(
             """
             try:
                 return method(instance, *args)
-            except (
-                state.config.InvalidCharmConfigError,
-                state.tls.TlsIntegrationMissingError,
-            ) as exc:
+            except CharmStateValidationBaseError as exc:
                 if defer:
                     event: ops.EventBase
                     event, *_ = args
                     event.defer()
-                logger.exception("Wrong Charm Configuration")
-                instance.unit.status = ops.BlockedStatus(exc.msg)
+                logger.exception(str(exc))
+                instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
 
         return wrapper

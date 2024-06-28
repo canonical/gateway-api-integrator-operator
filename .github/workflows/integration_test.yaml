@@ -13,3 +13,4 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-label: "large"
       juju-channel: 3.3/stable
+      charmcraft-channel: latest/edge

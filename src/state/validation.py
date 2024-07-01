@@ -12,6 +12,7 @@ import ops
 import state
 import state.config
 import state.tls
+from resource_manager.decorator import InsufficientPermissionError
 
 logger = logging.getLogger(__name__)
 
@@ -60,13 +61,15 @@ def validate_config_and_integration(
             except (
                 state.config.InvalidCharmConfigError,
                 state.tls.TlsIntegrationMissingError,
+                state.config.GatewayClassUnavailableError,
+                InsufficientPermissionError,
             ) as exc:
                 if defer:
                     event: ops.EventBase
                     event, *_ = args
                     event.defer()
-                logger.exception("Wrong Charm Configuration")
-                instance.unit.status = ops.BlockedStatus(exc.msg)
+                logger.exception(str(exc))
+                instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
 
         return wrapper

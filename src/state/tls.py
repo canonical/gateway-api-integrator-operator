@@ -28,7 +28,7 @@ class TLSInformation:
 
     tls_requirer_integration: Relation
     tls_certs: dict[str, str]
-    tls_keys: dict[str, str]
+    tls_keys: dict[str, dict[str, str]]
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "TLSInformation":
@@ -60,7 +60,10 @@ class TLSInformation:
 
                 if JujuVersion.from_environ().has_secrets:
                     secret = charm.model.get_secret(label=f"private-key-{hostname}")
-                    tls_keys[hostname] = secret.get_content()["key"]
+                    tls_keys[hostname] = {
+                        "key": secret.get_content()["key"],
+                        "password": secret.get_content()["password"],
+                    }
 
         return cls(
             tls_requirer_integration=tls_requirer_integration,

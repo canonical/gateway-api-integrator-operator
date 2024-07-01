@@ -32,8 +32,10 @@ from ops.model import (
 from resource_manager.decorator import InsufficientPermissionError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.resource_manager import InvalidResourceError
+from resource_manager.secret import CreateSecretError, SecretResourceManager
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService
@@ -135,20 +137,29 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm(self, client)
 
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
-        # This line is currently here to validate the existence of the certificates relation.
-        # This charm state component will be used by the upcoming SecretResourceManager.
-        TLSInformation.from_charm(self)
+        tls_information = TLSInformation.from_charm(self)
+        secret_resource_definition = SecretResourceDefinition.from_charm(self)
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
+        secret_resource_manager = SecretResourceManager(self._labels, client)
 
         try:
-            gateway = gateway_resource_manager.define_resource(gateway_resource_definition, config)
-        except (CreateGatewayError, InvalidResourceError) as exc:
-            logger.exception("Error creating the gateway resource %s", exc)
-            raise RuntimeError("Cannot create gateway.") from exc
+            secret = secret_resource_manager.define_resource(
+                secret_resource_definition, config, tls_information
+            )
+            gateway = gateway_resource_manager.define_resource(
+                gateway_resource_definition, config, secret_resource_definition
+            )
+        except (
+            CreateGatewayError,
+            InvalidResourceError,
+            CreateSecretError,
+        ) as exc:
+            logger.exception("Error creating resource %r", exc)
+            raise RuntimeError("Error creating resource.") from exc
         except InsufficientPermissionError as exc:
             self.unit.status = BlockedStatus(str(exc))
             return
@@ -159,6 +170,7 @@ class GatewayAPICharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
+        secret_resource_manager.cleanup_resources(exclude=secret)
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""

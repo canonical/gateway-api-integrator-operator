@@ -7,6 +7,10 @@ import logging
 import os.path
 from typing import AsyncGenerator
 
+import lightkube
+import lightkube.config
+import lightkube.config.kubeconfig
+import lightkube.core
 import pytest
 import pytest_asyncio
 from juju.application import Application
@@ -65,3 +69,21 @@ async def certificate_provider_application_fixture(
     application = await model.deploy(certificate_provider_application_name, channel="edge")
     await model.wait_for_idle(apps=[certificate_provider_application_name], status="active")
     return application
+
+
+@pytest.fixture(scope="module", name="kube_config")
+def kube_config_fixture(request: pytest.FixtureRequest) -> str:
+    """The kubernetes config file path."""
+    kube_config = request.config.getoption("--kube-config")
+    assert (
+        kube_config
+    ), "--kube-confg argument is required which should contain the path to kube config."
+    return kube_config
+
+
+@pytest_asyncio.fixture(scope="module", name="lightkube_client")
+async def lightkube_client_fixture(kube_config: str, model: Model) -> lightkube.Client:
+    """Deploy self-signed-certificates."""
+    config = lightkube.KubeConfig.from_file(kube_config)
+    client = lightkube.Client(config, namespace=model.name)
+    return client

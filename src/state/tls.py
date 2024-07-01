@@ -13,7 +13,7 @@ TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 
 class TlsIntegrationMissingError(Exception):
-    """Exception raised when _situation_."""
+    """Exception raised when certificates relation is missing."""
 
 
 @dataclasses.dataclass(frozen=True)

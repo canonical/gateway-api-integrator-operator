@@ -35,8 +35,8 @@ class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
     Attrs:
-        gateway_class (str): The configured gateway class.
-        external_hostname (str): The configured gateway hostname.
+        gateway_class: The configured gateway class.
+        external_hostname: The configured gateway hostname.
     """
 
     gateway_class: str = Field(min_length=1)
@@ -102,7 +102,7 @@ def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:
     """Return a list on invalid config from pydantic validation error.
 
     Args:
-        exc (ValidationError): The validation error exception.
+        exc: The validation error exception.
 
     Returns:
         str: list of fields that failed validation.

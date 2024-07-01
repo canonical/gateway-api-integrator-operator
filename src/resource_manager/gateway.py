@@ -146,7 +146,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         Poll the address for 100 seconds.
 
         Args:
-            name (str): name of the gateway resource.
+            name: name of the gateway resource.
 
         Returns:
             Optional[str]: The addresses assigned to the gateway object, or none.

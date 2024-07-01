@@ -143,7 +143,7 @@ class GatewayAPICharm(CharmBase):
         try:
             gateway = gateway_resource_manager.define_resource(gateway_resource_definition, config)
         except (CreateGatewayError, InvalidResourceError) as exc:
-            logger.exception("Error creating the gateway resource %s", exc)
+            logger.exception("Error creating the gateway resource.")
             raise RuntimeError("Cannot create gateway.") from exc
         except InsufficientPermissionError as exc:
             self.unit.status = BlockedStatus(str(exc))

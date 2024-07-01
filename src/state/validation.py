@@ -68,7 +68,6 @@ def validate_config_and_integration(
                     event: ops.EventBase
                     event, *_ = args
                     event.defer()
-                logger.exception(str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
 

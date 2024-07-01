@@ -5,7 +5,7 @@ on:
 
 jobs:
   integration-tests:
-    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@add_support_for_canonical_k8s
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@add_support_for_canonical_k8s_w_workaround
     secrets: inherit
     with:
       provider: k8s
@@ -13,3 +13,4 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-label: "large"
       juju-channel: 3.3/stable
+      charmcraft-channel: latest/edge

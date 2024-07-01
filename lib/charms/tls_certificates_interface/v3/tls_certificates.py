@@ -317,7 +317,7 @@ LIBAPI = 3
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 15
+LIBPATCH = 16
 
 PYDEPS = ["cryptography", "jsonschema"]
 
@@ -477,11 +477,9 @@ class ProviderCertificate:
                 "chain": self.chain,
                 "revoked": self.revoked,
                 "expiry_time": self.expiry_time.isoformat(),
-                "expiry_notification_time": (
-                    self.expiry_notification_time.isoformat()
-                    if self.expiry_notification_time
-                    else None
-                ),
+                "expiry_notification_time": self.expiry_notification_time.isoformat()
+                if self.expiry_notification_time
+                else None,
             }
         )
 
@@ -737,16 +735,16 @@ def calculate_expiry_notification_time(
     """
     if provider_recommended_notification_time is not None:
         provider_recommended_notification_time = abs(provider_recommended_notification_time)
-        provider_recommendation_time_delta = expiry_time - timedelta(
-            hours=provider_recommended_notification_time
+        provider_recommendation_time_delta = (
+            expiry_time - timedelta(hours=provider_recommended_notification_time)
         )
         if validity_start_time < provider_recommendation_time_delta:
             return provider_recommendation_time_delta
 
     if requirer_recommended_notification_time is not None:
         requirer_recommended_notification_time = abs(requirer_recommended_notification_time)
-        requirer_recommendation_time_delta = expiry_time - timedelta(
-            hours=requirer_recommended_notification_time
+        requirer_recommendation_time_delta = (
+            expiry_time - timedelta(hours=requirer_recommended_notification_time)
         )
         if validity_start_time < requirer_recommendation_time_delta:
             return requirer_recommendation_time_delta
@@ -1111,25 +1109,16 @@ def csr_matches_certificate(csr: str, cert: str) -> bool:
     Returns:
         bool: True/False depending on whether the CSR matches the certificate.
     """
-    try:
-        csr_object = x509.load_pem_x509_csr(csr.encode("utf-8"))
-        cert_object = x509.load_pem_x509_certificate(cert.encode("utf-8"))
+    csr_object = x509.load_pem_x509_csr(csr.encode("utf-8"))
+    cert_object = x509.load_pem_x509_certificate(cert.encode("utf-8"))
 
-        if csr_object.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ) != cert_object.public_key().public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo,
-        ):
-            return False
-        if (
-            csr_object.public_key().public_numbers().n  # type: ignore[union-attr]
-            != cert_object.public_key().public_numbers().n  # type: ignore[union-attr]
-        ):
-            return False
-    except ValueError:
-        logger.warning("Could not load certificate or CSR.")
+    if csr_object.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ) != cert_object.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    ):
         return False
     return True
 
@@ -1394,8 +1383,8 @@ class TLSCertificatesProvidesV3(Object):
                     certificate_object = x509.load_pem_x509_certificate(
                         data=certificate["certificate"].encode()
                     )
-                except ValueError:
-                    logger.exception("Could not load certificate - Skipping")
+                except ValueError as e:
+                    logger.error("Could not load certificate - Skipping: %s", e)
                     continue
                 provider_certificate = ProviderCertificate(
                     relation_id=relation.id,
@@ -1640,7 +1629,7 @@ class TLSCertificatesRequiresV3(Object):
             try:
                 certificate_object = x509.load_pem_x509_certificate(data=certificate.encode())
             except ValueError as e:
-                logger.exception("Could not load certificate - Skipping.")
+                logger.error("Could not load certificate - Skipping: %s", e)
                 continue
             ca = provider_certificate_dict.get("ca")
             chain = provider_certificate_dict.get("chain", [])
@@ -1888,7 +1877,8 @@ class TLSCertificatesRequiresV3(Object):
                             "Removing secret with label %s",
                             f"{LIBID}-{csr_in_sha256_hex}",
                         )
-                        secret = self.model.get_secret(label=f"{LIBID}-{csr_in_sha256_hex}")
+                        secret = self.model.get_secret(
+                            label=f"{LIBID}-{csr_in_sha256_hex}")
                         secret.remove_all_revisions()
                     self.on.certificate_invalidated.emit(
                         reason="revoked",

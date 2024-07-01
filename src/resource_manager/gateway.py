@@ -18,7 +18,8 @@ from lightkube.generic_resource import (
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from resource_definition import GatewayResourceDefinition
+from state.config import CharmConfig
+from state.gateway import GatewayResourceDefinition
 
 from .resource_manager import ResourceManager, _map_k8s_auth_exception
 
@@ -108,11 +109,12 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         resource.spec["gatewayClassName"] = configured_gateway_class
 
     @_map_k8s_auth_exception
-    def _gen_resource_from_definition(self, definition: GatewayResourceDefinition) -> dict:
+    def _gen_resource(self, definition: GatewayResourceDefinition, config: CharmConfig) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
             definition: The gateway resoucre definition to use.
+            config: The charm's configuration.
 
         Returns:
             A dictionary representing the gateway custom resource.
@@ -127,16 +129,14 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                         "protocol": "HTTP",
                         "port": 80,
                         "name": f"{definition.gateway_name}-http-listener",
-                        "hostname": definition.config.external_hostname,
+                        "hostname": config.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                 ]
             },
         )
 
-        self._set_gateway_class(
-            configured_gateway_class=definition.config.gateway_class, resource=gateway
-        )
+        self._set_gateway_class(configured_gateway_class=config.gateway_class, resource=gateway)
         logger.info("Generated gateway resource: %s", gateway)
         return gateway
 

@@ -12,7 +12,7 @@ import ops
 import state
 import state.config
 import state.tls
-from resource_manager.decorator import InsufficientPermissionError
+from resource_manager.permission import InsufficientPermissionError
 
 logger = logging.getLogger(__name__)
 

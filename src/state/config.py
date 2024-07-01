@@ -13,7 +13,7 @@ from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
 
-from resource_manager.decorator import map_k8s_auth_exception
+from resource_manager.permission import map_k8s_auth_exception
 
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"

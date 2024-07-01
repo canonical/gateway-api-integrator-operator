@@ -17,7 +17,7 @@ from lightkube.types import PatchType
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 
-from .decorator import map_k8s_auth_exception
+from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)

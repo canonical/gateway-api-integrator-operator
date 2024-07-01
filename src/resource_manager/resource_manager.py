@@ -3,7 +3,6 @@
 """Generic kubernetes resource manager for gateway-api-integrator."""
 
 import abc
-import functools
 import logging
 import typing
 
@@ -14,7 +13,6 @@ import lightkube.resources.apiextensions_v1
 import lightkube.resources.apps_v1
 import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
-from lightkube.core.exceptions import ApiError
 
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
@@ -36,77 +34,7 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
 class InvalidResourceError(Exception):
-    """Custom error that indicates invalid resource definition.
-
-    Args:
-        msg: error message.
-    """
-
-    def __init__(self, msg: str):
-        """Construct the InvalidGatewayError object.
-
-        Args:
-            msg: error message.
-        """
-        self.msg = msg
-
-
-class InsufficientPermissionError(Exception):
-    """Custom error that indicates insufficient permission to create k8s resources.
-
-    Args:
-        msg: error message.
-    """
-
-    def __init__(self, msg: str):
-        """Construct the InsufficientPermissionError object.
-
-        Args:
-            msg: error message.
-        """
-        self.msg = msg
-
-
-def _map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
-    """Remap the kubernetes 403 ApiException to InsufficientPermissionError.
-
-    Args:
-        func: function to be wrapped.
-
-    Returns:
-        A wrapped function.
-    """
-
-    @functools.wraps(func)
-    def wrapper(*args: typing.Any, **kwargs: typing.Any) -> typing.Any:
-        """Remap the kubernetes 403 ApiException to InsufficientPermissionError.
-
-        Args:
-            args: function arguments.
-            kwargs: function keyword arguments.
-
-        Returns:
-            The function return value.
-
-        Raises:
-            ApiException: if the Python kubernetes raised an unknown ApiException
-            InsufficientPermissionError: if the Python kubernetes raised a permission error
-        """
-        try:
-            return func(*args, **kwargs)
-        except ApiError as exc:
-            if exc.status.code == 403:
-                logger.error(
-                    "Insufficient permissions to create the k8s service, "
-                    "will request `juju trust` to be run"
-                )
-                juju_trust_cmd = "juju trust <gateway-api-integrator> --scope=cluster"
-                raise InsufficientPermissionError(
-                    f"Insufficient permissions, try: `{juju_trust_cmd}`"
-                ) from exc
-            raise
-
-    return wrapper
+    """Custom error that indicates invalid resource definition."""
 
 
 # Helper function here since AnyResource are lightkube classes

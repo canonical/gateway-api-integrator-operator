@@ -6,6 +6,7 @@
 
 import logging
 import typing
+from functools import lru_cache
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
@@ -28,8 +29,9 @@ from ops.model import (
     WaitingStatus,
 )
 
+from resource_manager.decorator import InsufficientPermissionError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
-from resource_manager.resource_manager import InsufficientPermissionError, InvalidResourceError
+from resource_manager.resource_manager import InvalidResourceError
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
@@ -39,6 +41,36 @@ from tls_relation import TLSRelationService
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
+
+
+@lru_cache(maxsize=1)
+def get_client(field_manager: str, namespace: str) -> Client:
+    """Initialize the lightkube client with the correct namespace and field_manager.
+
+    Args:
+        field_manager (str): field manager for server side apply when patching resources.
+        namespace (str): The k8s namespace in which resources are managed.
+
+    Raises:
+        LightKubeInitializationError: When initialization of the lightkube client fails
+
+    Returns:
+        Client: The initialized lightkube client
+    """
+    try:
+        # Set field_manager for server-side apply when patching resources
+        # Keep this consistent across client initializations
+        kubeconfig = KubeConfig.from_service_account()
+        client = Client(config=kubeconfig, field_manager=field_manager, namespace=namespace)
+    except ConfigError as exc:
+        logger.exception("Error initializing the lightkube client.")
+        raise LightKubeInitializationError("Error initializing the lightkube client.") from exc
+
+    return client
+
+
+class LightKubeInitializationError(Exception):
+    """Exception raised when initialization of the lightkube client failed."""
 
 
 class GatewayAPICharm(CharmBase):
@@ -97,18 +129,11 @@ class GatewayAPICharm(CharmBase):
             RuntimeError: when initializing the lightkube client fails,
             or when creating the gateway resource fails.
         """
-        try:
-            # Set field_manager for server-side apply when patching resources
-            # Keep this consistent across client initializations
-            kubeconfig = KubeConfig.from_service_account()
-            client = Client(
-                config=kubeconfig, field_manager=self.app.name, namespace=self.model.name
-            )
-        except ConfigError as exc:
-            logger.exception("Error initializing the lightkube client.")
-            raise RuntimeError("Error initializing the lightkube client.") from exc
+        field_manager = self.app.name
+        namespace = self.model.name
+        client = get_client(field_manager, namespace)
+        config = CharmConfig.from_charm(self, client)
 
-        config = CharmConfig.from_charm(self)
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         # This line is currently here to validate the existence of the certificates relation.
         # This charm state component will be used by the upcoming SecretResourceManager.
@@ -125,7 +150,7 @@ class GatewayAPICharm(CharmBase):
             logger.exception("Error creating the gateway resource %s", exc)
             raise RuntimeError("Cannot create gateway.") from exc
         except InsufficientPermissionError as exc:
-            self.unit.status = BlockedStatus(exc.msg)
+            self.unit.status = BlockedStatus(str(exc))
             return
 
         self.unit.status = WaitingStatus("Waiting for gateway address")
@@ -173,7 +198,11 @@ class GatewayAPICharm(CharmBase):
     def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event."""
         tls_information = TLSInformation.from_charm(self)
-        config = CharmConfig.from_charm(self)
+
+        field_manager = self.app.name
+        namespace = self.model.name
+        client = get_client(field_manager, namespace)
+        config = CharmConfig.from_charm(self, client)
 
         self._tls.certificate_relation_created(
             config.external_hostname, tls_information.tls_requirer_integration
@@ -183,7 +212,11 @@ class GatewayAPICharm(CharmBase):
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
         tls_information = TLSInformation.from_charm(self)
-        config = CharmConfig.from_charm(self)
+
+        field_manager = self.app.name
+        namespace = self.model.name
+        client = get_client(field_manager, namespace)
+        config = CharmConfig.from_charm(self, client)
 
         self._tls.certificate_relation_joined(
             config.external_hostname,
@@ -290,7 +323,10 @@ class GatewayAPICharm(CharmBase):
         tls_information = TLSInformation.from_charm(self)
         tls_information.tls_requirer_integration.data[self.app].clear()
 
-        config = CharmConfig.from_charm(self)
+        field_manager = self.app.name
+        namespace = self.model.name
+        client = get_client(field_manager, namespace)
+        config = CharmConfig.from_charm(self, client)
 
         if JujuVersion.from_environ().has_secrets:
             hostname = config.external_hostname

@@ -6,8 +6,6 @@ build-base: ubuntu@24.04
 
 platforms:
   amd64:
-    build-on: amd64
-    build-for: amd64
 
 parts:
   charm:

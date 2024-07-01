@@ -13,7 +13,7 @@ from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
 
-from resource_manager.decorator import map_k8s_auth_exception
+from resource_manager.permission import map_k8s_auth_exception
 
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
@@ -35,8 +35,8 @@ class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
     Attrs:
-        gateway_class (str): The configured gateway class.
-        external_hostname (str): The configured gateway hostname.
+        gateway_class: The configured gateway class.
+        external_hostname: The configured gateway hostname.
     """
 
     gateway_class: str = Field(min_length=1)
@@ -102,7 +102,7 @@ def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:
     """Return a list on invalid config from pydantic validation error.
 
     Args:
-        exc (ValidationError): The validation error exception.
+        exc: The validation error exception.
 
     Returns:
         str: list of fields that failed validation.

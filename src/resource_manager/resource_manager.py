@@ -42,7 +42,7 @@ def resource_name(resource: AnyResource | None) -> typing.Optional[str]:
     """Get the resource name from metadata.
 
     Args:
-        resource (AnyResource): The kubernetes resource.
+        resource: The kubernetes resource.
 
     Returns:
         typing.Optional[str]: The resource name, or None if not set.

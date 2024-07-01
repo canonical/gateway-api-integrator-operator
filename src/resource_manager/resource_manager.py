@@ -14,7 +14,6 @@ import lightkube.resources.apps_v1
 import lightkube.resources.core_v1
 import lightkube.resources.discovery_v1
 
-from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 
 logger = logging.getLogger(__name__)
@@ -65,12 +64,12 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _gen_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
+    def _gen_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
             definition: Ingress definition to use for generating the resource.
-            config: The charm's configuration.
+            args: Additional arguments.
         """
 
     @abc.abstractmethod
@@ -102,12 +101,12 @@ class ResourceManager(typing.Protocol[AnyResource]):
             name: The name of the resource to delete.
         """
 
-    def define_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
+    def define_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:
         """Create or update a resource in kubernetes.
 
         Args:
             definition: The ingress definition
-            config: The charm's configuration.
+            args: Additional arguments.
 
         Returns:
             The name of the created or modified resource.
@@ -116,7 +115,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             InvalidResourceError: If the generated resource is invalid.
         """
         resource_list = self._list_resource()
-        resource = self._gen_resource(definition, config)
+        resource = self._gen_resource(definition, *args)
         res_name = resource_name(resource)
         if not res_name:
             raise InvalidResourceError("Missing resource name.")

@@ -23,3 +23,12 @@ If there’s a particular area of documentation that you’d like to see that’
 |-----------------|----------------|
 | [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator ||
 | [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |
+
+# Contents
+
+1. [Explanation](explanation)
+  1. [The charm's workflow](explanation/workflow.md)
+1. [Reference](reference)
+  1. [Actions](reference/actions.md)
+1. [Tutorial](tutorial)
+  1. [Tutorial: Deploy the Gateway API integrator charm](tutorial/getting-started.md)

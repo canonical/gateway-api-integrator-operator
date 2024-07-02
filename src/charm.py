@@ -28,8 +28,8 @@ from ops.model import (
     WaitingStatus,
 )
 
-from resource_manager.permission import InsufficientPermissionError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
+from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition

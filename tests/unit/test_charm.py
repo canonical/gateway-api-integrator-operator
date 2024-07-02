@@ -11,6 +11,7 @@ from lightkube.core.exceptions import ConfigError
 from ops.testing import Harness
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+from charm import LightKubeInitializationError
 
 
 def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dict):
@@ -60,7 +61,7 @@ def test_deploy_lightkube_error(
     lightkube_get_sa_mock.from_service_account = MagicMock(side_effect=ConfigError)
     monkeypatch.setattr("charm.KubeConfig", lightkube_get_sa_mock)
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(LightKubeInitializationError):
         harness.update_config(
             {
                 "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,

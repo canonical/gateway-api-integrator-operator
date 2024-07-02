@@ -45,17 +45,6 @@ class CharmConfig:
         min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )
 
-
-@dataclasses.dataclass(frozen=True)
-class CharmConfig:
-    """Component of charmstate that holds config data.
-
-    Attrs:
-        data (str): The charm's config data
-    """
-
-    data: Config
-
     @classmethod
     @map_k8s_auth_exception
     def from_charm(cls, charm: ops.CharmBase, client: Client) -> "CharmConfig":
@@ -105,7 +94,6 @@ class CharmConfig:
                 gateway_class=gateway_class,
                 external_hostname=typing.cast(str, charm.config.get("external-hostname")),
             )
-            return cls(data=config)
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
             raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc

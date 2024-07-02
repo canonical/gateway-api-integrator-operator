@@ -3,13 +3,14 @@
 
 """Unit tests for charm file."""
 
+from unittest.mock import MagicMock
+
 import ops
 import ops.testing
 import pytest
 from ops.testing import Harness
-from unittest.mock import MagicMock
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
-from lightkube.core.exceptions import ConfigError
+
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_on_get_certificates_action(harness: Harness, monkeypatch: pytest.MonkeyPatch):
@@ -47,7 +48,7 @@ def test_on_get_certificates_action_invalid_hostname(
     assert: the charm stays in blocked state.
     """
     harness.begin()
-    mock_relation_data_missing = {harness.charm.app: {}}
+    mock_relation_data_missing: dict = {harness.charm.app: {}}
 
     tls_information_mock = MagicMock()
     tls_information_mock.tls_requirer_integration.data = mock_relation_data_missing

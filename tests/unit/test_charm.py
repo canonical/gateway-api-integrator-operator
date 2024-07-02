@@ -3,12 +3,14 @@
 
 """Unit tests for charm file."""
 
+from unittest.mock import MagicMock
+
 import ops
 import pytest
-from ops.testing import Harness
-from unittest.mock import MagicMock
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 from lightkube.core.exceptions import ConfigError
+from ops.testing import Harness
+
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dict):

@@ -11,6 +11,15 @@ from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedR
 from ops.model import Secret
 from ops.testing import Harness
 
+import resource_manager
+import resource_manager.decorator
+import resource_manager.gateway
+import resource_manager.resource_manager
+from state.config import CharmConfig
+from state.gateway import GatewayResourceDefinition
+from state.secret import SecretResourceDefinition
+from tls_relation import TLSRelationService
+
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
@@ -42,6 +51,51 @@ def test_create_gateway(  # pylint: disable=too-many-arguments
         "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",
         MagicMock(),
     )
+    monkeypatch.setattr(
+        "resource_manager.secret.SecretResourceManager.define_resource",
+        MagicMock(),
+    )
+
+    harness.update_config(
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+    )
+
+    config = CharmConfig.from_charm(harness.charm, MagicMock())
+    if not gateway_address:
+        assert harness.charm.unit.status.name == ops.WaitingStatus.name
+
+    gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
+    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
+    define_resource_mock.assert_called_once_with(
+        gateway_resource_definition, config, secret_resource_definition
+    )
+
+
+@pytest.mark.usefixtures("patch_lightkube_client")
+@pytest.mark.parametrize(
+    "exc",
+    [
+        pytest.param(
+            resource_manager.gateway.CreateGatewayError, id="Error creating gateway(k8s api)"
+        ),
+        pytest.param(
+            resource_manager.resource_manager.InvalidResourceError,
+            id="Invalid resource definition error.",
+        ),
+    ],
+)
+def test_gateway_resource_definition_create_gateway_error(
+    harness: Harness,
+    certificates_relation_data: Dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    exc: type[Exception],
+):
+    """
+    arrange: given a charm with mocked lightkube client and resource manager
+    that raises CreateGatewayError and InvalidResourceError.
+    act: when agent reconciliation triggers.
+    assert: the gateway resource is created with the expected values.
+    """
     harness.add_relation(
         "gateway",
         "ingress-requirer",
@@ -52,6 +106,45 @@ def test_create_gateway(  # pylint: disable=too-many-arguments
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.set_leader()
     harness.begin()
+    monkeypatch.setattr("charm.TLSRelationService", MagicMock(spec=TLSRelationService))
+
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.define_resource",
+        MagicMock(side_effect=exc("Error message.")),
+    )
+    with pytest.raises(RuntimeError):
+        harness.update_config(
+            {
+                "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+                "gateway-class": GATEWAY_CLASS_CONFIG,
+            }
+        )
+
+
+@pytest.mark.usefixtures("patch_lightkube_client")
+def test_gateway_resource_definition_insufficient_permission(
+    harness: Harness,
+    certificates_relation_data: Dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    arrange: given a charm with mocked lightkube client and resource manager
+    that raises InsufficientPermissionError.
+    act: when agent reconciliation triggers.
+    assert: the gateway resource is created with the expected values.
+    """
+    harness.add_relation(
+        "certificates", "self-signed-certificates", app_data=certificates_relation_data
+    )
+    harness.begin()
+    monkeypatch.setattr("charm.TLSRelationService", MagicMock(spec=TLSRelationService))
+
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.define_resource",
+        MagicMock(
+            side_effect=resource_manager.decorator.InsufficientPermissionError("Error message.")
+        ),
+    )
 
     harness.update_config(
         {

@@ -6,7 +6,6 @@
 
 import logging
 import typing
-from functools import lru_cache
 
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
@@ -29,8 +28,8 @@ from ops.model import (
     WaitingStatus,
 )
 
-from resource_manager.decorator import InsufficientPermissionError
 from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
+from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import CreateSecretError, SecretResourceManager
 from state.config import CharmConfig, InvalidCharmConfigError
@@ -45,13 +44,12 @@ logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
-@lru_cache(maxsize=1)
-def get_client(field_manager: str, namespace: str) -> Client:
+def _get_client(field_manager: str, namespace: str) -> Client:
     """Initialize the lightkube client with the correct namespace and field_manager.
 
     Args:
-        field_manager (str): field manager for server side apply when patching resources.
-        namespace (str): The k8s namespace in which resources are managed.
+        field_manager: field manager for server side apply when patching resources.
+        namespace: The k8s namespace in which resources are managed.
 
     Raises:
         LightKubeInitializationError: When initialization of the lightkube client fails
@@ -131,9 +129,7 @@ class GatewayAPICharm(CharmBase):
             RuntimeError: when initializing the lightkube client fails,
             or when creating the gateway resource fails.
         """
-        field_manager = self.app.name
-        namespace = self.model.name
-        client = get_client(field_manager, namespace)
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
 
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
@@ -211,9 +207,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation created event."""
         tls_information = TLSInformation.from_charm(self)
 
-        field_manager = self.app.name
-        namespace = self.model.name
-        client = get_client(field_manager, namespace)
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
 
         self._tls.certificate_relation_created(
@@ -225,9 +219,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation joined event."""
         tls_information = TLSInformation.from_charm(self)
 
-        field_manager = self.app.name
-        namespace = self.model.name
-        client = get_client(field_manager, namespace)
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
 
         self._tls.certificate_relation_joined(
@@ -335,9 +327,7 @@ class GatewayAPICharm(CharmBase):
         tls_information = TLSInformation.from_charm(self)
         tls_information.tls_requirer_integration.data[self.app].clear()
 
-        field_manager = self.app.name
-        namespace = self.model.name
-        client = get_client(field_manager, namespace)
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
 
         if JujuVersion.from_environ().has_secrets:

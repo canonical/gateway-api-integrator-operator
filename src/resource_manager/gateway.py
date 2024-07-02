@@ -18,7 +18,7 @@ from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 from state.secret import SecretResourceDefinition
 
-from .decorator import map_k8s_auth_exception
+from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
@@ -169,7 +169,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         Poll the address for 100 seconds.
 
         Args:
-            name (str): name of the gateway resource.
+            name: name of the gateway resource.
 
         Returns:
             Optional[str]: The addresses assigned to the gateway object, or none.

@@ -12,7 +12,7 @@ import ops
 import state
 import state.config
 import state.tls
-from resource_manager.decorator import InsufficientPermissionError
+from resource_manager.permission import InsufficientPermissionError
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def validate_config_and_integration(
                     event: ops.EventBase
                     event, *_ = args
                     event.defer()
-                logger.exception(str(exc))
+                logger.exception("Error setting up charm state.")
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
 

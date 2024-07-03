@@ -14,6 +14,7 @@ from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 from charm import LightKubeInitializationError
 
 
+@pytest.mark.usefixtures("patch_lightkube_client")
 def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dict):
     """
     arrange: given a stock gateway-api-integrator charm.
@@ -29,6 +30,7 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
 
+@pytest.mark.usefixtures("patch_lightkube_client")
 def test_deploy_missing_tls(harness: Harness):
     """
     arrange: given a stock gateway-api-integrator charm.
@@ -70,6 +72,7 @@ def test_deploy_lightkube_error(
         )
 
 
+@pytest.mark.usefixtures("patch_lightkube_client")
 def test_deploy_with_initial_hooks(harness: Harness):
     """
     arrange: given a gateway-api-integrator charm with valid tls relation

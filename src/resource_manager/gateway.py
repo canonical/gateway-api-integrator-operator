@@ -144,7 +144,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     def gateway_address(self, name: str) -> typing.Optional[str]:  # pragma: no cover
         """Return the LB address of the gateway resource.
 
-        Poll the address for 100 seconds.
+        Poll the address for 60 seconds.
 
         Args:
             name: name of the gateway resource.
@@ -166,7 +166,8 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                 ]
                 if gateway_addresses:
                     gateway_address = ",".join(gateway_addresses)
-            except (ApiError, AttributeError, TypeError, KeyError):
+            except (AttributeError, TypeError, KeyError):
+                logger.exception("Error retrieving the gateway address.")
                 pass
             if gateway_address:
                 break

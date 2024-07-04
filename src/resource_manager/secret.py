@@ -17,7 +17,7 @@ from state.config import CharmConfig
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation
 
-from .decorator import map_k8s_auth_exception
+from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)

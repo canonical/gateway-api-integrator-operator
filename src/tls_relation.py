@@ -3,6 +3,7 @@
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
 """Gateway API TLS relation business logic."""
+import logging
 import secrets
 import string
 from typing import Dict, Union
@@ -21,6 +22,11 @@ from ops.jujuversion import JujuVersion
 from ops.model import Model, Relation, SecretNotFoundError
 
 TLS_CERT = "certificates"
+logger = logging.getLogger()
+
+
+class SecretNotSupportedException(Exception):
+    """Exception raised when the juju version does not support secrets."""
 
 
 class TLSRelationService:
@@ -104,8 +110,7 @@ class TLSRelationService:
 
         return str(common_name_attribute[0].value)
 
-    # The charm will not have annotations to avoid circular imports.
-    def certificate_relation_joined(  # type: ignore[no-untyped-def]
+    def certificate_relation_joined(
         self,
         hostname: str,
         certificates: TLSCertificatesRequiresV3,
@@ -141,15 +146,19 @@ class TLSRelationService:
             "password": private_key_password.decode(),
             "key": private_key.decode(),
         }
-        if JujuVersion.from_environ().has_secrets:
-            try:
-                secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
-                secret.set_content(private_key_dict)
-            except SecretNotFoundError:
-                secret = self.charm_app.add_secret(
-                    content=private_key_dict, label=f"private-key-{hostname}"
-                )
-                secret.grant(tls_integration)
+        if not JujuVersion.from_environ().has_secrets:
+            raise SecretNotSupportedException(
+                "The charm requires the 'secrets' feature to be supported."
+            )
+
+        try:
+            secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
+            secret.set_content(private_key_dict)
+        except SecretNotFoundError:
+            secret = self.charm_app.add_secret(
+                content=private_key_dict, label=f"private-key-{hostname}"
+            )
+            secret.grant(tls_integration)
 
     def certificate_relation_available(
         self, event: CertificateAvailableEvent, tls_integration: Relation
@@ -208,8 +217,13 @@ class TLSRelationService:
             The encrypted private key.
         """
         private_key_dict = {}
-        if JujuVersion.from_environ().has_secrets:
-            secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
-            private_key_dict["key"] = secret.get_content()["key"]
-            private_key_dict["password"] = secret.get_content()["password"]
+        if not JujuVersion.from_environ().has_secrets:
+            raise SecretNotSupportedException(
+                "The charm requires the 'secrets' feature to be supported."
+            )
+
+        secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
+        private_key_dict["key"] = secret.get_content()["key"]
+        private_key_dict["password"] = secret.get_content()["password"]
+
         return private_key_dict

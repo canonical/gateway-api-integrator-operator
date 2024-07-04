@@ -13,6 +13,9 @@ from ops.testing import Harness
 
 from charm import GatewayAPICharm
 from tls_relation import TLSRelationService, generate_private_key
+from lightkube.core.client import Client
+from lightkube.generic_resource import GenericGlobalResource
+from lightkube.models.meta_v1 import ObjectMeta
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -35,6 +38,24 @@ def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
         f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
         f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
     }
+
+
+@pytest.fixture(scope="function", name="gateway_relation_application_data")
+def gateway_relation_application_data_fixture() -> dict[str, str]:
+    """Mock gateway relation application data."""
+    return {
+        "name": '"gateway-api-integrator"',
+        "model": '"testing"',
+        "port": "8080",
+        "strip_prefix": "false",
+        "redirect_https": "false",
+    }
+
+
+@pytest.fixture(scope="function", name="gateway_relation_unit_data")
+def gateway_relation_unit_data_fixture() -> dict[str, str]:
+    """Mock gateway relation unit data."""
+    return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
 
 
 @pytest.fixture(scope="function", name="patch_lightkube_client")
@@ -95,21 +116,3 @@ def mock_certificate_fixture() -> str:
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
         "-----END CERTIFICATE-----"
     )
-
-
-@pytest.fixture(scope="function", name="gateway_relation_application_data")
-def gateway_relation_application_data_fixture() -> dict[str, str]:
-    """Mock gateway relation application data."""
-    return {
-        "name": '"gateway-api-integrator"',
-        "model": '"testing"',
-        "port": "8080",
-        "strip_prefix": "false",
-        "redirect_https": "false",
-    }
-
-
-@pytest.fixture(scope="function", name="gateway_relation_unit_data")
-def gateway_relation_unit_data_fixture() -> dict[str, str]:
-    """Mock gateway relation unit data."""
-    return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}

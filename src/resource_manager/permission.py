@@ -44,10 +44,8 @@ def map_k8s_auth_exception(func: typing.Callable) -> typing.Callable:
             InsufficientPermissionError: if the Python kubernetes raised a permission error
         """
         try:
-            logger.info("wrapping: %r", func)
             return func(*args, **kwargs)
         except ApiError as exc:
-            logger.info("exception: %r", exc)
             if exc.status.code == 403:
                 logger.error(
                     "Insufficient permissions to create the k8s service, "

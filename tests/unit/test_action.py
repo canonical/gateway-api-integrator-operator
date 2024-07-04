@@ -9,7 +9,6 @@ import ops
 import ops.testing
 import pytest
 from ops.testing import Harness
-
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 

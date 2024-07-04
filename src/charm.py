@@ -31,13 +31,13 @@ from resource_manager.http_route import HTTPRouteResourceManager
 from resource_manager.secret import SecretResourceManager
 from resource_manager.service import ServiceResourceManager
 from state.base import State
-from state.config import CharmConfig, InvalidCharmConfigError
+from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
 from state.secret import SecretResourceDefinition
-from state.tls import TLSInformation, TlsIntegrationMissingError
+from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import TLSRelationService
+from tls_relation import SecretNotSupportedException, TLSRelationService
 
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
@@ -291,20 +291,24 @@ class GatewayAPICharm(CharmBase):
             )
             if not old_csr:
                 continue
-            if JujuVersion.from_environ().has_secrets:
-                try:
-                    secret = self.model.get_secret(label=f"private-key-{hostname}")
-                    secret.remove_all_revisions()
-                except SecretNotFoundError:
-                    logger.warning("Juju secret for %s already does not exist", hostname)
-                    continue
+            if not JujuVersion.from_environ().has_secrets:
+                raise SecretNotSupportedException(
+                    "The charm requires the 'secrets' feature to be supported."
+                )
+
             try:
+                secret = self.model.get_secret(label=f"private-key-{hostname}")
+                secret.remove_all_revisions()
                 self._tls.pop_relation_data_fields(
                     [f"key-{hostname}", f"password-{hostname}"],
                     tls_requirer_integration,  # type: ignore[arg-type]
                 )
+            except SecretNotFoundError:
+                logger.warning("Juju secret for %s already does not exist", hostname)
+                continue
             except KeyError:
                 logger.warning("Relation data for %s already does not exist", hostname)
+
             self.certificates.request_certificate_revocation(
                 certificate_signing_request=old_csr.encode()
             )
@@ -316,15 +320,7 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        try:
-            tls_information = TLSInformation.from_charm(self)
-        except (TlsIntegrationMissingError, InvalidCharmConfigError) as exc:
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            logger.error(
-                "(%s) charm is not ready to handle this event, deferring: %s.", event, exc
-            )
-            event.defer()
-            return
+        tls_information = TLSInformation.from_charm(self)
 
         if event.reason == "revoked":
             hostname = self._tls.get_hostname_from_cert(event.certificate)
@@ -344,13 +340,17 @@ class GatewayAPICharm(CharmBase):
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
 
-        if JujuVersion.from_environ().has_secrets:
-            hostname = config.external_hostname
-            try:
-                secret = self.model.get_secret(label=f"private-key-{hostname}")
-                secret.remove_all_revisions()
-            except SecretNotFoundError:
-                logger.warning("Juju secret for %s already does not exist", hostname)
+        if not JujuVersion.from_environ().has_secrets:
+            raise SecretNotSupportedException(
+                "The charm requires the 'secrets' feature to be supported."
+            )
+
+        hostname = config.external_hostname
+        try:
+            secret = self.model.get_secret(label=f"private-key-{hostname}")
+            secret.remove_all_revisions()
+        except SecretNotFoundError:
+            logger.warning("Juju secret for %s already does not exist", hostname)
 
     def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event."""

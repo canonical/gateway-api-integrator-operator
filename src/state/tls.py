@@ -10,6 +10,7 @@ from ops.jujuversion import JujuVersion
 from ops.model import Relation
 
 from exception import CharmStateValidationBaseError
+from tls_relation import SecretNotSupportedException
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 
@@ -60,12 +61,15 @@ class TLSInformation:
                 hostname = key.split("-", maxsplit=1)[1]
                 tls_certs[hostname] = value
 
-                if JujuVersion.from_environ().has_secrets:
-                    secret = charm.model.get_secret(label=f"private-key-{hostname}")
-                    tls_keys[hostname] = {
-                        "key": secret.get_content()["key"],
-                        "password": secret.get_content()["password"],
-                    }
+                if not JujuVersion.from_environ().has_secrets:
+                    raise SecretNotSupportedException(
+                        "The charm requires the 'secrets' feature to be supported."
+                    )
+                secret = charm.model.get_secret(label=f"private-key-{hostname}")
+                tls_keys[hostname] = {
+                    "key": secret.get_content()["key"],
+                    "password": secret.get_content()["password"],
+                }
 
         return cls(
             tls_requirer_integration=tls_requirer_integration,

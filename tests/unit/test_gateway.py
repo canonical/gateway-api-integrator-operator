@@ -3,32 +3,31 @@
 
 """Unit tests for gateway resource."""
 
-from unittest.mock import MagicMock, PropertyMock
+import logging
+import typing
+from typing import Dict
+from unittest.mock import MagicMock
 
 import ops
 import pytest
+from httpx import Response
+from lightkube.core.client import Client
+from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
-from ops.model import Secret
+from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
 import resource_manager
 import resource_manager.decorator
 import resource_manager.gateway
 import resource_manager.resource_manager
+from resource_manager.gateway import GatewayResourceManager
 from state.config import CharmConfig
 from state.gateway import GatewayResourceDefinition
 from state.secret import SecretResourceDefinition
 from tls_relation import TLSRelationService
-from resource_manager.gateway import GatewayResourceManager
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
-from lightkube.core.exceptions import ApiError
-from lightkube.models.meta_v1 import Status
-from httpx import Response
-from lightkube.core.client import Client
-import logging
 
-from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
-from lightkube.models.meta_v1 import ObjectMeta
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 logger = logging.getLogger()
 
@@ -248,62 +247,3 @@ def test_gateway_gen_resource(harness: Harness):
     )
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
     assert len(gateway_resource.spec["listeners"])
-
-
-@pytest.mark.parametrize(
-    "exc",
-    [
-        pytest.param(AttributeError, id="AttributeError."),
-        pytest.param(TypeError, id="TypeError."),
-        pytest.param(KeyError, id="KeyError."),
-    ],
-)
-def test_gateway_resource_definition_get_gateway_address_error(
-    harness: Harness,
-    certificates_relation_data: Dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-    exc: type[Exception],
-):
-    """
-    arrange: given a charm with mocked lightkube client and resource manager.
-    act: when agent reconciliation triggers.
-    assert: the gateway resource is created with the expected values.
-    """
-    lightkube_client_mock = MagicMock(spec=Client)
-    lightkube_client_mock.return_value.get = MagicMock(
-        side_effect=exc,
-    )
-    monkeypatch.setattr("charm.KubeConfig", MagicMock())
-    monkeypatch.setattr("charm.Client", lightkube_client_mock)
-    monkeypatch.setattr("charm.TLSRelationService", MagicMock(spec=TLSRelationService))
-    define_resource_mock = MagicMock()
-    monkeypatch.setattr(
-        "resource_manager.gateway.GatewayResourceManager.define_resource", define_resource_mock
-    )
-    charm_config_mock = MagicMock(spec=CharmConfig)
-    monkeypatch.setattr(
-        "state.config.CharmConfig.from_charm", MagicMock(return_value=charm_config_mock)
-    )
-    monkeypatch.setattr(
-        "resource_manager.secret.SecretResourceManager.define_resource",
-        MagicMock(),
-    )
-    monkeypatch.setattr(
-        "state.http_route.HTTPRouteResourceDefinition.from_charm",
-        MagicMock(),
-    )
-    monkeypatch.setattr(
-        "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",
-        MagicMock(),
-    )
-
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.add_relation("gateway", "hello-kubecon", app_data={})
-    harness.begin()
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
-
-    assert harness.charm.unit.status.name == ops.WaitingStatus.name

@@ -23,18 +23,15 @@ def test_create_gateway(
     private_key_and_password: tuple[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ):
-    # lightkube client
     mock_lightkube_client.list = MagicMock(return_value=[gateway_class_resource])
     mock_lightkube_client.get = MagicMock(
         return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),
     )
-    # juju secret
     monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
     password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
     juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
-    # harness
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.set_leader()

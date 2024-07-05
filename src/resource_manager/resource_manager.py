@@ -58,7 +58,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """Abstract method to generate a resource from ingress definition.
 
         Args:
-            state: Fragment of charm state consists of several components.
+            state: Part of charm state consisting of one or several components.
         """
 
     @abc.abstractmethod

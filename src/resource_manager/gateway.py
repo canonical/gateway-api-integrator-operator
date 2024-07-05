@@ -65,7 +65,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Fragment of charm state consists of 3 components:
+            state: Part of charm state consisting of 3 components:
                 - GatewayResourceManager
                 - CharmConfig
                 - SecretResourceManager

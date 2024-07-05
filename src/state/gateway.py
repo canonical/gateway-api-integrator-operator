@@ -10,7 +10,7 @@ import ops
 
 @dataclasses.dataclass(frozen=True)
 class GatewayResourceDefinition:
-    """Base class containing kubernetes resource definition.
+    """A component of charm state that contains gateway resource definition.
 
     Attrs:
         gateway_name: The gateway resource's name
@@ -24,7 +24,7 @@ class GatewayResourceDefinition:
         """Create a resource definition from charm instance.
 
         Args:
-            charm (ops.CharmBase): The charm instance.
+            charm: The charm instance.
 
         Returns:
             GatewayResourceDefinition: The gateway resource definition object.

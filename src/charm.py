@@ -28,10 +28,10 @@ from ops.model import (
     WaitingStatus,
 )
 
-from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
+from resource_manager.gateway import GatewayResourceManager
 from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
-from resource_manager.secret import CreateSecretError, SecretResourceManager
+from resource_manager.secret import SecretResourceManager
 from state.base import State
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
@@ -150,11 +150,7 @@ class GatewayAPICharm(CharmBase):
             gateway = gateway_resource_manager.define_resource(
                 State(gateway_resource_definition, config, secret_resource_definition)
             )
-        except (
-            CreateGatewayError,
-            InvalidResourceError,
-            CreateSecretError,
-        ) as exc:
+        except InvalidResourceError as exc:
             logger.exception("Error creating resource %r", exc)
             raise RuntimeError("Error creating resource.") from exc
         except InsufficientPermissionError as exc:

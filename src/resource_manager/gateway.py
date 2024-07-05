@@ -26,10 +26,6 @@ GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 
 
-class CreateGatewayError(Exception):
-    """Represents an error when creating the gateway resource."""
-
-
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     """Kubernetes Ingress resource controller."""
 
@@ -150,7 +146,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name=name,
         )
 
-    def gateway_address(self, name: str) -> typing.Optional[str]:
+    def gateway_address(self, name: str) -> typing.Optional[str]:  # pragma: no cover
         """Return the LB address of the gateway resource.
 
         Poll the address for 100 seconds.

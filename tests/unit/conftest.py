@@ -47,7 +47,8 @@ def patch_lightkube_client_fixture(
 
 
 @pytest.fixture(scope="function", name="mock_lightkube_client")
-def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> Client:
+def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Mock lightkube client."""
     lightkube_client_mock = MagicMock(spec=Client)
     monkeypatch.setattr("charm._get_client", MagicMock(return_value=lightkube_client_mock))
     return lightkube_client_mock
@@ -55,12 +56,13 @@ def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> Client:
 
 @pytest.fixture(scope="function", name="gateway_class_resource")
 def gateway_class_resource_fixture():
+    """Mock gateway class global resource."""
     return GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))
 
 
 @pytest.fixture(scope="function", name="private_key_and_password")
 def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
-    """Patch lightkube cluster initialization."""
+    """Mock private key juju secret."""
     tls = TLSRelationService(harness.model)
     password = tls.generate_password().encode()
     private_key = generate_private_key(password=password)
@@ -69,6 +71,7 @@ def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
 
 @pytest.fixture(scope="function", name="mock_certificate")
 def mock_certificate_fixture() -> str:
+    """Mock tls certificate from a tls provider charm."""
     return (
         "-----BEGIN CERTIFICATE-----"
         "MIIDgDCCAmigAwIBAgIUa32Vp4pS2WjrTNG7SZJ66SdMs2YwDQYJKoZIhvcNAQEL"

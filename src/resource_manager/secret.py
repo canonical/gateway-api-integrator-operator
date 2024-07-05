@@ -21,10 +21,6 @@ from .resource_manager import ResourceManager
 logger = logging.getLogger(__name__)
 
 
-class CreateSecretError(Exception):
-    """Represents an error when creating the secret resource."""
-
-
 def _get_decrypted_key(private_key: str, password: str) -> str:
     """Decrypted the provided private key using the provided password.
 

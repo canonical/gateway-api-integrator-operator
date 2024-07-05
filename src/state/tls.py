@@ -18,7 +18,7 @@ class TlsIntegrationMissingError(Exception):
 
 @dataclasses.dataclass(frozen=True)
 class TLSInformation:
-    """A component of charm state containing resource definition for kubernetes secret.
+    """A component of charm state containing information about TLS.
 
     Attrs:
         tls_requirer_integration: The integration instance with a TLS provider.
@@ -35,7 +35,7 @@ class TLSInformation:
         """Get TLS information from a charm instance.
 
         Args:
-            charm (ops.CharmBase): The gateway-api-integrator charm.
+            charm: The gateway-api-integrator charm.
 
         Raises:
             TlsIntegrationMissingError: When integration is not ready.

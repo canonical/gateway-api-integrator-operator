@@ -7,7 +7,6 @@ from unittest.mock import MagicMock, PropertyMock
 
 import ops
 import pytest
-from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from ops.model import Secret
 from ops.testing import Harness
@@ -15,14 +14,19 @@ from ops.testing import Harness
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-def test_create_gateway(
+def test_create_gateway(  # pylint: disable=too-many-arguments
     harness: Harness,
-    mock_lightkube_client: Client,
+    mock_lightkube_client: MagicMock,
     gateway_class_resource: GenericGlobalResource,
     certificates_relation_data: dict[str, str],
     private_key_and_password: tuple[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """
+    arrange: Given a charm with mocked lightkube client, juju secret, relations and gateway ip.
+    act: update the charm's config with the correct values.
+    assert: the charm goes into active status with the message showing the correct gateway ip.
+    """
     mock_lightkube_client.list = MagicMock(return_value=[gateway_class_resource])
     mock_lightkube_client.get = MagicMock(
         return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),

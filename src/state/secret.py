@@ -10,16 +10,10 @@ import ops
 
 @dataclasses.dataclass(frozen=True)
 class SecretResourceDefinition:
-    """_summary_.
-
-    Raises:
-        InvalidCharmConfigError: _description_
+    """A component of charm state that contains secret resource definition.
 
     Attrs:
         secret_resource_name_prefix (str):
-
-    Returns:
-        _type_: _description_
     """
 
     secret_resource_name_prefix: str
@@ -29,10 +23,10 @@ class SecretResourceDefinition:
         """Create a resource definition from charm instance.
 
         Args:
-            charm (ops.CharmBase): _description_
+            charm: The charm instance.
 
         Returns:
-            ResourceDefinition: _description_
+            SecretResourceDefinition: The secret resource definition object.
         """
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 

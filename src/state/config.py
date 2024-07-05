@@ -50,8 +50,8 @@ class CharmConfig:
         """Create a CharmConfig class from a charm instance.
 
         Args:
-            charm (ops.CharmBase): The gateway-api-integrator charm.
-            client (lightkube.Client): The lightkube client
+            charm: The gateway-api-integrator charm.
+            client: The lightkube client
 
         Raises:
             InvalidCharmConfigError: When the chamr's config is invalid.

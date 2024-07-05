@@ -2,4 +2,4 @@ lightkube==0.15.3
 ops==2.14.1
 jsonschema==4.22.0
 cryptography==42.0.8
-pydantic==2.8.0
+pydantic==2.8.1

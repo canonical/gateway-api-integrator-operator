@@ -13,9 +13,9 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Service
 from lightkube.types import PatchType
 
-from state.http_route import HTTPRouteResourceDefinition
+from state.base import State
 
-from .decorator import map_k8s_auth_exception
+from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
@@ -35,11 +35,12 @@ class ServiceResourceManager(ResourceManager[Service]):
         self._labels = labels
 
     @map_k8s_auth_exception
-    def _gen_resource(self, definition: HTTPRouteResourceDefinition, *_: typing.Any) -> Service:
+    def _gen_resource(self, state: State) -> Service:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            definition: The gateway resoucre definition to use.
+            state: Part of charm state consisting of 1 component:
+                - HTTPRouteResourceManager
 
         Returns:
             A dictionary representing the gateway custom resource.
@@ -47,16 +48,16 @@ class ServiceResourceManager(ResourceManager[Service]):
         service = Service(
             apiVersion="v1",
             kind="Service",
-            metadata=ObjectMeta(name=definition.service_name, labels=self._labels),
+            metadata=ObjectMeta(name=state.service_name, labels=self._labels),
             spec=ServiceSpec(
                 ports=[
                     ServicePort(
-                        port=definition.service_port,
-                        name=definition.service_port_name,
-                        targetPort=definition.service_port,
+                        port=state.service_port,
+                        name=state.service_port_name,
+                        targetPort=state.service_port,
                     )
                 ],
-                selector={"app.kubernetes.io/name": definition.application_name},
+                selector={"app.kubernetes.io/name": state.application_name},
             ),
         )
 

@@ -4,6 +4,7 @@
 """gateway-api-integrator ingress charm state component."""
 
 import dataclasses
+from enum import Enum
 
 import ops
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
@@ -19,6 +20,29 @@ class IngressIntegrationMissingError(CharmStateValidationBaseError):
 
 class IngressIntegrationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
+
+
+class HTTPRouteType(Enum):
+    """Enum of possible http_route types.
+
+    Attrs:
+        HTTP: http.
+        HTTPS: https.
+    """
+
+    HTTP = "http"
+    HTTPS = "https"
+
+
+@dataclasses.dataclass(frozen=True)
+class HTTPRouteResourceType:
+    """Dataclass containing the type of the HTTPRoute resource.
+
+    Attrs:
+        http_route_type: the type of the HTTPRoute resource.
+    """
+
+    http_route_type: HTTPRouteType
 
 
 @dataclasses.dataclass(frozen=True)

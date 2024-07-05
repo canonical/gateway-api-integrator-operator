@@ -95,3 +95,21 @@ def mock_certificate_fixture() -> str:
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
         "-----END CERTIFICATE-----"
     )
+
+
+@pytest.fixture(scope="function", name="gateway_relation_application_data")
+def gateway_relation_application_data_fixture() -> dict[str, str]:
+    """Mock gateway relation application data."""
+    return {
+        "name": '"gateway-api-integrator"',
+        "model": '"testing"',
+        "port": "8080",
+        "strip_prefix": "false",
+        "redirect_https": "false",
+    }
+
+
+@pytest.fixture(scope="function", name="gateway_relation_unit_data")
+def gateway_relation_unit_data_fixture() -> dict[str, str]:
+    """Mock gateway relation unit data."""
+    return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}

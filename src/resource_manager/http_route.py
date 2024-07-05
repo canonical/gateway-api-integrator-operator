@@ -5,7 +5,6 @@
 
 import logging
 import typing
-from enum import Enum
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
@@ -14,10 +13,10 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
 from exception import ResourceManagementBaseError
-from state.gateway import GatewayResourceDefinition
-from state.http_route import HTTPRouteResourceDefinition
+from state.base import State
+from state.http_route import HTTPRouteType
 
-from .decorator import map_k8s_auth_exception
+from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
@@ -29,18 +28,6 @@ HTTP_ROUTE_PLURAL = "httproutes"
 
 class CreateHTTPRouteError(ResourceManagementBaseError):
     """Represents an error when creating the secret resource."""
-
-
-class HTTPRouteType(Enum):
-    """_summary_.
-
-    Attrs:
-        HTTP: _description_
-        HTTPS: _description_
-    """
-
-    HTTP = "http"
-    HTTPS = "https"
 
 
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -60,52 +47,35 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
     @map_k8s_auth_exception
-    def _gen_resource(
-        self, definition: HTTPRouteResourceDefinition, *args: typing.Any
-    ) -> GenericNamespacedResource:
+    def _gen_resource(self, state: State) -> GenericNamespacedResource:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            definition: The gateway resoucre definition to use.
-            args: Additional arguments.
+            state: Part of charm state consisting of 3 components:
+                - HTTPRouteResourceDefinition
+                - GatewayResourceDefinition
+                - HTTPRouteResourceType
 
         Returns:
             A dictionary representing the gateway custom resource.
-
-        Raises:
-            CreateHTTPRouteError: if the method is not called with the correct arguments.
         """
-        if (
-            len(args) != 2
-            or not isinstance(args[0], GatewayResourceDefinition)
-            or not isinstance(args[1], HTTPRouteType)
-        ):
-            raise CreateHTTPRouteError("_gen_resource called with the wrong parameters.")
-
-        http_route_type: HTTPRouteType
-        gateway_resource_definition: GatewayResourceDefinition
-        gateway_resource_definition, http_route_type = args
-        listener_id = (
-            f"{gateway_resource_definition.gateway_name}-{http_route_type.value}-listener"
-        )
+        listener_id = f"{state.gateway_name}-{state.http_route_type}-listener"
         spec = {
             "parentRefs": [
                 {
-                    "name": gateway_resource_definition.gateway_name,
+                    "name": state.gateway_name,
                     "namespace": self._client.namespace,
                     "sectionName": listener_id,
                 }
             ],
         }
-        if http_route_type == HTTPRouteType.HTTPS:
+        if state.http_route_type == HTTPRouteType.HTTPS:
             spec["rules"] = [
                 {
                     "matches": [
-                        {"path": {"type": "PathPrefix", "value": f"/{definition.service_name}"}}
+                        {"path": {"type": "PathPrefix", "value": f"/{state.service_name}"}}
                     ],
-                    "backendRefs": [
-                        {"name": definition.service_name, "port": definition.service_port}
-                    ],
+                    "backendRefs": [{"name": state.service_name, "port": state.service_port}],
                 }
             ]
         else:
@@ -123,7 +93,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
-                name=f"{definition.service_name}-{http_route_type.value}", labels=self._labels
+                name=f"{state.service_name}-{state.http_route_type}", labels=self._labels
             ),
             spec=spec,
         )

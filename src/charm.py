@@ -33,20 +33,16 @@ from ops.model import (
     WaitingStatus,
 )
 
-from resource_manager.permission import InsufficientPermissionError
 from resource_manager.gateway import GatewayResourceManager
-from resource_manager.http_route import (
-    CreateHTTPRouteError,
-    HTTPRouteResourceManager,
-    HTTPRouteType,
-)
+from resource_manager.http_route import CreateHTTPRouteError, HTTPRouteResourceManager
+from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import SecretResourceManager
 from resource_manager.service import ServiceResourceManager
 from state.base import State
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
-from state.http_route import HTTPRouteResourceDefinition
+from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
 from state.validation import validate_config_and_integration
@@ -183,12 +179,23 @@ class GatewayAPICharm(CharmBase):
         service_resource_manager = ServiceResourceManager(self._labels, client)
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
         try:
-            service = service_resource_manager.define_resource(http_route_resource_definition)
+            service = service_resource_manager.define_resource(
+                State(http_route_resource_definition)
+            )
+
             http_route_resource_manager.define_resource(
-                http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTP
+                State(
+                    http_route_resource_definition,
+                    gateway_resource_definition,
+                    HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
+                )
             )
             http_route_resource_manager.define_resource(
-                http_route_resource_definition, gateway_resource_definition, HTTPRouteType.HTTPS
+                State(
+                    http_route_resource_definition,
+                    gateway_resource_definition,
+                    HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
+                )
             )
         except CreateHTTPRouteError as exc:
             logger.exception("Error creating resource.")

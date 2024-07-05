@@ -1,8 +1,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-# pylint: disable=redefined-outer-name,unused-argument,duplicate-code
-
 """Integration test for certificates relation."""
 
 import logging

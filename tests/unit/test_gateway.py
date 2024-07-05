@@ -3,57 +3,49 @@
 
 """Unit tests for gateway resource."""
 
-from typing import Dict
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
+import ops
 import pytest
+from lightkube.core.client import Client
+from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
+from ops.model import Secret
 from ops.testing import Harness
-
-from state.config import CharmConfig
-from state.gateway import GatewayResourceDefinition
-from state.secret import SecretResourceDefinition
-from tls_relation import TLSRelationService
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
-def test_gateway_resource_definition(
-    harness: Harness, certificates_relation_data: Dict[str, str], monkeypatch: pytest.MonkeyPatch
+def test_create_gateway(
+    harness: Harness,
+    mock_lightkube_client: Client,
+    gateway_class_resource: GenericGlobalResource,
+    certificates_relation_data: dict[str, str],
+    private_key_and_password: tuple[str, str],
+    monkeypatch: pytest.MonkeyPatch,
 ):
-    """
-    arrange: given a charm with mocked lightkube client and resource manager.
-    act: when agent reconciliation triggers.
-    assert: the gateway resource is created with the expected values.
-    """
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
+    # lightkube client
+    mock_lightkube_client.list = MagicMock(return_value=[gateway_class_resource])
+    mock_lightkube_client.get = MagicMock(
+        return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),
     )
+    # juju secret
+    monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
+    password, private_key = private_key_and_password
+    juju_secret_mock = MagicMock(spec=Secret)
+    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
+    # harness
+    relation_id = harness.add_relation("certificates", "self-signed-certificates")
+    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
+    harness.set_leader()
     harness.begin()
-    monkeypatch.setattr("charm.TLSRelationService", MagicMock(spec=TLSRelationService))
-    define_resource_mock = MagicMock()
-    monkeypatch.setattr(
-        "resource_manager.gateway.GatewayResourceManager.define_resource", define_resource_mock
-    )
-    monkeypatch.setattr(
-        "state.config.CharmConfig.from_charm", MagicMock(return_value=MagicMock(spec=CharmConfig))
-    )
-    monkeypatch.setattr(
-        "resource_manager.gateway.GatewayResourceManager.gateway_address",
-        MagicMock(return_value=TEST_EXTERNAL_HOSTNAME_CONFIG),
-    )
-    monkeypatch.setattr(
-        "resource_manager.secret.SecretResourceManager.define_resource",
-        MagicMock(),
-    )
 
     harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+        {
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        }
     )
 
-    config = CharmConfig.from_charm(harness.charm, MagicMock())
-    gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
-    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
-    define_resource_mock.assert_called_once_with(
-        gateway_resource_definition, config, secret_resource_definition
-    )
+    assert harness.charm.unit.status.name == ops.ActiveStatus.name
+    assert "Gateway addresses: 10.0.0.0" == harness.charm.unit.status.message

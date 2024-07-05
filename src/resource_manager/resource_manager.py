@@ -6,29 +6,19 @@ import abc
 import logging
 import typing
 
-import lightkube
-import lightkube.generic_resource
-import lightkube.resources
-import lightkube.resources.apiextensions_v1
-import lightkube.resources.apps_v1
-import lightkube.resources.core_v1
-import lightkube.resources.discovery_v1
+from lightkube.generic_resource import GenericNamespacedResource
+from lightkube.resources.core_v1 import Secret, Service
 
-from state.gateway import GatewayResourceDefinition
+from state.base import State
 
 logger = logging.getLogger(__name__)
 
 AnyResource = typing.TypeVar(
     "AnyResource",
-    lightkube.resources.core_v1.Endpoints,
-    lightkube.resources.discovery_v1.EndpointSlice,
-    lightkube.resources.core_v1.Service,
-    lightkube.resources.core_v1.Secret,
-    lightkube.generic_resource.GenericNamespacedResource,
+    Service,
+    Secret,
+    GenericNamespacedResource,
 )
-
-ResourceDefinition: typing.TypeAlias = GatewayResourceDefinition
-
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
@@ -64,12 +54,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """
 
     @abc.abstractmethod
-    def _gen_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:
+    def _gen_resource(self, state: State) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
-            definition: Ingress definition to use for generating the resource.
-            args: Additional arguments.
+            state: Fragment of charm state consists of several components.
         """
 
     @abc.abstractmethod
@@ -101,12 +90,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
             name: The name of the resource to delete.
         """
 
-    def define_resource(self, definition: ResourceDefinition, *args: typing.Any) -> AnyResource:
+    def define_resource(self, state: State) -> AnyResource:
         """Create or update a resource in kubernetes.
 
         Args:
-            definition: The ingress definition
-            args: Additional arguments.
+            state: Fragment of charm state consists of several components.
 
         Returns:
             The name of the created or modified resource.
@@ -115,7 +103,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             InvalidResourceError: If the generated resource is invalid.
         """
         resource_list = self._list_resource()
-        resource = self._gen_resource(definition, *args)
+        resource = self._gen_resource(state)
         res_name = resource_name(resource)
         if not res_name:
             raise InvalidResourceError("Missing resource name.")

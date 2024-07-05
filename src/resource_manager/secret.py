@@ -13,9 +13,7 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
 
-from state.config import CharmConfig
-from state.secret import SecretResourceDefinition
-from state.tls import TLSInformation
+from state.base import State
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -68,46 +66,34 @@ class SecretResourceManager(ResourceManager[Secret]):
         return "gateway"
 
     @map_k8s_auth_exception
-    def _gen_resource(self, definition: SecretResourceDefinition, *args: typing.Any) -> Secret:
+    def _gen_resource(self, state: State) -> Secret:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            definition: The gateway resoucre definition to use.
-            args: Additional arguments.
+            state: Fragment of charm state consists of 3 components:
+                - SecretResourceManager
+                - CharmConfig
+                - TLSInformation
 
         Returns:
-            A dictionary representing the gateway custom resource.
-
-        Raises:
-            CreateSecretError: if the method is not called with the correct arguments.
+            A Secret resource object.
         """
-        if (
-            len(args) != 2
-            or not isinstance(args[0], CharmConfig)
-            or not isinstance(args[1], TLSInformation)
-        ):
-            raise CreateSecretError("_gen_resource called with the wrong parameters.")
-
-        config: CharmConfig
-        tls_information: TLSInformation
-        config, tls_information = args
-        tls_secret_name = f"{definition.secret_resource_name_prefix}-{config.external_hostname}"
+        tls_secret_name = f"{state.secret_resource_name_prefix}-{state.external_hostname}"
 
         secret = Secret(
             apiVersion="v1",
             kind="Secret",
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
-                "tls.crt": tls_information.tls_certs[config.external_hostname],
+                "tls.crt": state.tls_certs[state.external_hostname],
                 "tls.key": _get_decrypted_key(
-                    tls_information.tls_keys[config.external_hostname]["key"],
-                    tls_information.tls_keys[config.external_hostname]["password"],
+                    state.tls_keys[state.external_hostname]["key"],
+                    state.tls_keys[state.external_hostname]["password"],
                 ),
             },
             type="kubernetes.io/tls",
         )
 
-        logger.info("Generated secret resource: %s", secret)
         return secret
 
     @map_k8s_auth_exception

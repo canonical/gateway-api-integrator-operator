@@ -32,6 +32,7 @@ from resource_manager.gateway import CreateGatewayError, GatewayResourceManager
 from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import CreateSecretError, SecretResourceManager
+from state.base import State
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceDefinition
 from state.secret import SecretResourceDefinition
@@ -144,10 +145,10 @@ class GatewayAPICharm(CharmBase):
 
         try:
             secret = secret_resource_manager.define_resource(
-                secret_resource_definition, config, tls_information
+                State(secret_resource_definition, config, tls_information)
             )
             gateway = gateway_resource_manager.define_resource(
-                gateway_resource_definition, config, secret_resource_definition
+                State(gateway_resource_definition, config, secret_resource_definition)
             )
         except (
             CreateGatewayError,

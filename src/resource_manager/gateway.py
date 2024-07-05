@@ -14,9 +14,7 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from state.config import CharmConfig
-from state.gateway import GatewayResourceDefinition
-from state.secret import SecretResourceDefinition
+from state.base import State
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -63,49 +61,38 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @map_k8s_auth_exception
-    def _gen_resource(self, definition: GatewayResourceDefinition, *args: typing.Any) -> dict:
+    def _gen_resource(self, state: State) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            definition: The gateway resoucre definition to use.
-            args: Additional arguments.
+            state: Fragment of charm state consists of 3 components:
+                - GatewayResourceManager
+                - CharmConfig
+                - SecretResourceManager
 
         Returns:
             A dictionary representing the gateway custom resource.
-
-        Raises:
-            CreateGatewayError: if the method is not called with the correct arguments.
         """
-        if (
-            len(args) != 2
-            or not isinstance(args[0], CharmConfig)
-            or not isinstance(args[1], SecretResourceDefinition)
-        ):
-            raise CreateGatewayError("_gen_resource called with the wrong parameters.")
-
-        config: CharmConfig
-        secret: SecretResourceDefinition
-        config, secret = args
-        tls_secret_name = f"{secret.secret_resource_name_prefix}-{config.external_hostname}"
+        tls_secret_name = f"{state.secret_resource_name_prefix}-{state.external_hostname}"
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(name=definition.gateway_name, labels=self._labels),
+            metadata=ObjectMeta(name=state.gateway_name, labels=self._labels),
             spec={
-                "gatewayClassName": config.gateway_class,
+                "gatewayClassName": state.gateway_class,
                 "listeners": [
                     {
                         "protocol": "HTTP",
                         "port": 80,
-                        "name": f"{definition.gateway_name}-http-listener",
-                        "hostname": config.external_hostname,
+                        "name": f"{state.gateway_name}-http-listener",
+                        "hostname": state.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                     {
                         "protocol": "HTTPS",
                         "port": 443,
-                        "name": f"{definition.gateway_name}-https-listener",
-                        "hostname": config.external_hostname,
+                        "name": f"{state.gateway_name}-https-listener",
+                        "hostname": state.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                         "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
                     },

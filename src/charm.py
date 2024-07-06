@@ -34,7 +34,7 @@ from ops.model import (
 )
 
 from resource_manager.gateway import GatewayResourceManager
-from resource_manager.http_route import CreateHTTPRouteError, HTTPRouteResourceManager
+from resource_manager.http_route import HTTPRouteResourceManager
 from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import SecretResourceManager
@@ -197,9 +197,6 @@ class GatewayAPICharm(CharmBase):
                     HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
                 )
             )
-        except CreateHTTPRouteError as exc:
-            logger.exception("Error creating resource.")
-            raise RuntimeError("Error creating resource.") from exc
         except InsufficientPermissionError as exc:
             self.unit.status = BlockedStatus(str(exc))
             return

@@ -26,10 +26,6 @@ HTTP_ROUTE_RESOURCE_NAME = "HTTPRoute"
 HTTP_ROUTE_PLURAL = "httproutes"
 
 
-class CreateHTTPRouteError(ResourceManagementBaseError):
-    """Represents an error when creating the secret resource."""
-
-
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
     """service resource manager."""
 

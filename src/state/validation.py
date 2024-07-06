@@ -10,6 +10,7 @@ import typing
 import ops
 
 from exception import CharmStateValidationBaseError
+from resource_manager.resource_manager import InvalidResourceError
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ def validate_config_and_integration(
 
             Returns:
                 The value returned from the original function. That is, None.
+
+            Raises:
+                RuntimeError: when creation of k8s resources fails.
             """
             try:
                 return method(instance, *args)
@@ -63,6 +67,9 @@ def validate_config_and_integration(
                 logger.exception("Error setting up charm state.")
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
+            except InvalidResourceError as exc:
+                logger.exception("Error creating kubernetes resource")
+                raise RuntimeError("Error creating kubernetes resource.") from exc
 
         return wrapper
 

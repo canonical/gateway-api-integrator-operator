@@ -24,19 +24,10 @@ from lightkube.core.exceptions import ConfigError
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.jujuversion import JujuVersion
 from ops.main import main
-from ops.model import (
-    ActiveStatus,
-    BlockedStatus,
-    MaintenanceStatus,
-    Relation,
-    SecretNotFoundError,
-    WaitingStatus,
-)
+from ops.model import ActiveStatus, MaintenanceStatus, Relation, SecretNotFoundError, WaitingStatus
 
 from resource_manager.gateway import GatewayResourceManager
 from resource_manager.http_route import HTTPRouteResourceManager
-from resource_manager.permission import InsufficientPermissionError
-from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import SecretResourceManager
 from resource_manager.service import ServiceResourceManager
 from state.base import State
@@ -137,39 +128,24 @@ class GatewayAPICharm(CharmBase):
 
     @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:  # pylint: disable=too-many-locals
-        """Reconcile charm status based on configuration and integrations.
-
-        Raises:
-            RuntimeError: when initializing the lightkube client fails,
-            or when creating the gateway resource fails.
-        """
+        """Reconcile charm status based on configuration and integrations."""
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
 
+        config = CharmConfig.from_charm(self, client)
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         tls_information = TLSInformation.from_charm(self)
         secret_resource_definition = SecretResourceDefinition.from_charm(self)
-
+        secret_resource_manager = SecretResourceManager(self._labels, client)
+        secret = secret_resource_manager.define_resource(
+            State(secret_resource_definition, config, tls_information)
+        )
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
-        secret_resource_manager = SecretResourceManager(self._labels, client)
-
-        try:
-            secret = secret_resource_manager.define_resource(
-                State(secret_resource_definition, config, tls_information)
-            )
-            gateway = gateway_resource_manager.define_resource(
-                State(gateway_resource_definition, config, secret_resource_definition)
-            )
-        except InvalidResourceError as exc:
-            logger.exception("Error creating resource %r", exc)
-            raise RuntimeError("Error creating resource.") from exc
-        except InsufficientPermissionError as exc:
-            self.unit.status = BlockedStatus(str(exc))
-            return
-
+        gateway = gateway_resource_manager.define_resource(
+            State(gateway_resource_definition, config, secret_resource_definition)
+        )
         gateway_resource_manager.cleanup_resources(exclude=gateway)
         secret_resource_manager.cleanup_resources(exclude=secret)
 
@@ -177,33 +153,25 @@ class GatewayAPICharm(CharmBase):
             self, self._ingress_provider
         )
         service_resource_manager = ServiceResourceManager(self._labels, client)
+        service = service_resource_manager.define_resource(State(http_route_resource_definition))
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
-        try:
-            service = service_resource_manager.define_resource(
-                State(http_route_resource_definition)
+        http_route_resource_manager.define_resource(
+            State(
+                http_route_resource_definition,
+                gateway_resource_definition,
+                HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
             )
-
-            http_route_resource_manager.define_resource(
-                State(
-                    http_route_resource_definition,
-                    gateway_resource_definition,
-                    HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
-                )
+        )
+        http_route_resource_manager.define_resource(
+            State(
+                http_route_resource_definition,
+                gateway_resource_definition,
+                HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
             )
-            http_route_resource_manager.define_resource(
-                State(
-                    http_route_resource_definition,
-                    gateway_resource_definition,
-                    HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
-                )
-            )
-        except InsufficientPermissionError as exc:
-            self.unit.status = BlockedStatus(str(exc))
-            return
+        )
         service_resource_manager.cleanup_resources(service)
 
         relation = self.model.get_relation(INGRESS_RELATION)
-        assert relation  # Let mypy know that relation always exists here
         self._ingress_provider.publish_url(
             relation,
             f"https://{config.external_hostname}/{http_route_resource_definition.service_name}",

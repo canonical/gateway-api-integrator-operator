@@ -59,7 +59,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        listener_id = f"{state.gateway_name}-{state.http_route_type}-listener"
+        listener_id = f"{state.gateway_name}-{state.http_route_type.value}-listener"
         spec = {
             "parentRefs": [
                 {
@@ -93,7 +93,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
-                name=f"{state.service_name}-{state.http_route_type}", labels=self._labels
+                name=f"{state.service_name}-{state.http_route_type.value}", labels=self._labels
             ),
             spec=spec,
         )

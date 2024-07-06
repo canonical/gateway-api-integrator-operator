@@ -12,7 +12,6 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from exception import ResourceManagementBaseError
 from state.base import State
 from state.http_route import HTTPRouteType
 

@@ -140,6 +140,24 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name=name,
         )
 
+    def gateway_hostname(self) -> typing.Optional[str]:
+        """Return hostname for existing gateway resource.
+
+        Returns:
+            typing.Optional[str]: The hostname of the existing gateway resource
+            or None if error.
+        """
+        gateway_resources = self._list_resource()
+        if not gateway_resources:
+            return None
+        gateway = gateway_resources[0]  # There should only be one gateway
+        gateway_listeners = gateway.spec["listeners"]
+        listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
+        if len(listener_hostnames) != 2 or len(set(listener_hostnames)) != 1:
+            # 2 listeners with different hostnames
+            return None
+        return listener_hostnames[0]
+
     def gateway_address(self, name: str) -> typing.Optional[str]:  # pragma: no cover
         """Return the LB address of the gateway resource.
 

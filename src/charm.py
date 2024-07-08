@@ -129,7 +129,6 @@ class GatewayAPICharm(CharmBase):
     def _reconcile(self) -> None:  # pylint: disable=too-many-locals
         """Reconcile charm status based on configuration and integrations."""
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
-
         config = CharmConfig.from_charm(self, client)
         gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
         tls_information = TLSInformation.from_charm(self)
@@ -138,10 +137,23 @@ class GatewayAPICharm(CharmBase):
         secret = secret_resource_manager.define_resource(
             State(secret_resource_definition, config, tls_information)
         )
+
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
+        # Re-request TLS certificate when the current hostname changed
+        gateway_hostname = gateway_resource_manager.gateway_hostname()
+        if gateway_hostname != config.external_hostname:
+            # Revoke old certificate
+            self._certificate_revoked([gateway_hostname], tls_information.tls_requirer_integration)
+            # Request new certificate
+            self._tls.certificate_relation_joined(
+                config.external_hostname,
+                self.certificates,
+                tls_information.tls_requirer_integration,
+            )
+
         gateway = gateway_resource_manager.define_resource(
             State(gateway_resource_definition, config, secret_resource_definition)
         )

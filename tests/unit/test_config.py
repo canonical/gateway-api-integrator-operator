@@ -24,6 +24,11 @@ from .conftest import GATEWAY_CLASS_CONFIG
     ],
 )
 def test_config(harness: Harness, available_gateway_classes: str):
+    """
+    arrange: Given a charm with unavailable gateway class/invalid config.
+    act: Initialize the CharmConfig state component.
+    assert: InvalidCharmConfigError is raised in both cases.
+    """
     harness.update_config(
         {
             "gateway-class": GATEWAY_CLASS_CONFIG,

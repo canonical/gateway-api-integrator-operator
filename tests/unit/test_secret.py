@@ -1,22 +1,20 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+# Disable protected access rules due to the need to test charm._labels
+# pylint: disable=protected-access
 """Unit tests for secret resource."""
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
-import pytest
-from lightkube.core.client import Client
-from lightkube.generic_resource import GenericGlobalResource
-from lightkube.models.meta_v1 import ObjectMeta
-from ops.model import Secret
 from ops.testing import Harness
 
 from resource_manager.secret import SecretResourceManager, _get_decrypted_key
+from state.base import State
 from state.config import CharmConfig
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation
 
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_secret_get_decrypted_key(harness: Harness, private_key_and_password: tuple[str, str]):
@@ -34,6 +32,11 @@ def test_secret_get_decrypted_key(harness: Harness, private_key_and_password: tu
 
 
 def test_get_hostname_from_cert(harness: Harness, mock_certificate: str):
+    """
+    arrange: Given a GatewayApiIntegrator charm.
+    act: Get the hostname from an already generated cert.
+    assert: The hostname is correct.
+    """
     harness.begin()
     assert (
         harness.charm._tls.get_hostname_from_cert(mock_certificate)
@@ -44,41 +47,29 @@ def test_get_hostname_from_cert(harness: Harness, mock_certificate: str):
 def test_secret_gen_resource(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-    private_key_and_password: tuple[str, str],
+    client_with_mock_external: MagicMock,
+    config: dict[str, str],
 ):
-    password, private_key = private_key_and_password
-    client_mock = MagicMock(spec=Client)
-    client_mock.list = MagicMock(
-        return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
-    )
-    monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
-    juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
-
-    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
-
-    harness.update_config(
-        {
-            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
-            "gateway-class": GATEWAY_CLASS_CONFIG,
-        }
-    )
+    """
+    arrange: Given a charm with valid config and mocked client.
+    act: Call _gen_resource from the required state components.
+    assert: The k8s resource is correctly generated.
+    """
+    harness.update_config(config)
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
 
     harness.begin()
-    charm = harness.charm
-    secret_resource_definition = SecretResourceDefinition.from_charm(charm)
+    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
     secret_resource_manager = SecretResourceManager(
         labels=harness.charm._labels,
-        client=client_mock,
+        client=client_with_mock_external,
     )
     secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
-    tls_information = TLSInformation.from_charm(charm)
-    config = CharmConfig.from_charm(harness.charm, client_mock)
+    tls_information = TLSInformation.from_charm(harness.charm)
+    config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
     secret_resource = secret_resource_manager._gen_resource(
-        secret_resource_definition, config, tls_information
+        State(secret_resource_definition, config, tls_information)
     )
     assert (
         secret_resource.metadata.name

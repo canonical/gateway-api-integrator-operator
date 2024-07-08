@@ -67,3 +67,6 @@ async def test_deploy(
     assert secret.data
     assert secret.data["tls.crt"]
     assert secret.data["tls.key"]
+
+    gateway_address = gateway.status["addresses"][0]["value"]
+    assert gateway_address

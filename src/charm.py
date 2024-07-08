@@ -22,7 +22,6 @@ from charms.traefik_k8s.v2.ingress import (
 from lightkube import Client, KubeConfig
 from lightkube.core.exceptions import ConfigError
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
-from ops.jujuversion import JujuVersion
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, Relation, SecretNotFoundError, WaitingStatus
 
@@ -37,7 +36,7 @@ from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType,
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import SecretNotSupportedException, TLSRelationService
+from tls_relation import TLSRelationService
 
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
@@ -291,10 +290,6 @@ class GatewayAPICharm(CharmBase):
             )
             if not old_csr:
                 continue
-            if not JujuVersion.from_environ().has_secrets:
-                raise SecretNotSupportedException(
-                    "The charm requires the 'secrets' feature to be supported."
-                )
 
             try:
                 secret = self.model.get_secret(label=f"private-key-{hostname}")
@@ -339,11 +334,6 @@ class GatewayAPICharm(CharmBase):
 
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-
-        if not JujuVersion.from_environ().has_secrets:
-            raise SecretNotSupportedException(
-                "The charm requires the 'secrets' feature to be supported."
-            )
 
         hostname = config.external_hostname
         try:

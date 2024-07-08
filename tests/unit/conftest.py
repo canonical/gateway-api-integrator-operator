@@ -3,19 +3,17 @@
 
 """Fixtures for gateway-api-integrator charm unit tests."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from lightkube.core.client import Client
-from lightkube.generic_resource import GenericGlobalResource
+from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta
+from ops.model import Secret
 from ops.testing import Harness
 
 from charm import GatewayAPICharm
 from tls_relation import TLSRelationService, generate_private_key
-from lightkube.core.client import Client
-from lightkube.generic_resource import GenericGlobalResource
-from lightkube.models.meta_v1 import ObjectMeta
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -116,3 +114,36 @@ def mock_certificate_fixture() -> str:
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
         "-----END CERTIFICATE-----"
     )
+
+
+@pytest.fixture(scope="function", name="config")
+def config_fixture() -> dict[str, str]:
+    """Valid charm config fixture."""
+    return {
+        "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+        "gateway-class": GATEWAY_CLASS_CONFIG,
+    }
+
+
+@pytest.fixture(scope="function", name="client_with_mock_external")
+def client_with_mock_external_fixture(
+    mock_lightkube_client: MagicMock,
+    gateway_class_resource: GenericGlobalResource,
+    private_key_and_password: tuple[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> MagicMock:
+    """Mock necessary external methods for the charm to work properly with harness."""
+    mock_lightkube_client.list = MagicMock(return_value=[gateway_class_resource])
+    mock_lightkube_client.get = MagicMock(
+        return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),
+    )
+    monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
+    password, private_key = private_key_and_password
+    juju_secret_mock = MagicMock(spec=Secret)
+    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
+    monkeypatch.setattr(
+        "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",
+        MagicMock(),
+    )
+    return mock_lightkube_client

@@ -3,7 +3,6 @@
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
 """Gateway API TLS relation business logic."""
-import logging
 import secrets
 import string
 from typing import Dict, Union
@@ -18,15 +17,9 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from ops.jujuversion import JujuVersion
 from ops.model import Model, Relation, SecretNotFoundError
 
 TLS_CERT = "certificates"
-logger = logging.getLogger()
-
-
-class SecretNotSupportedException(Exception):
-    """Exception raised when the juju version does not support secrets."""
 
 
 class TLSRelationService:
@@ -146,10 +139,6 @@ class TLSRelationService:
             "password": private_key_password.decode(),
             "key": private_key.decode(),
         }
-        if not JujuVersion.from_environ().has_secrets:
-            raise SecretNotSupportedException(
-                "The charm requires the 'secrets' feature to be supported."
-            )
 
         try:
             secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
@@ -217,10 +206,6 @@ class TLSRelationService:
             The encrypted private key.
         """
         private_key_dict = {}
-        if not JujuVersion.from_environ().has_secrets:
-            raise SecretNotSupportedException(
-                "The charm requires the 'secrets' feature to be supported."
-            )
 
         secret = self.charm_model.get_secret(label=f"private-key-{hostname}")
         private_key_dict["key"] = secret.get_content()["key"]

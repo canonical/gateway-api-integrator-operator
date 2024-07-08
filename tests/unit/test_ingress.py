@@ -1,18 +1,25 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+# Disable protected access rules due to the need to test charm._ingress_provider
+# pylint: disable=protected-access
+
 """Unit tests for ingress."""
 from unittest.mock import MagicMock
 
 import pytest
 from ops.testing import Harness
-from ops.model import Relation
 
 
 def test_ingress_ipa_provided(
     harness: Harness,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """
+    arrange: Given a charm with mocked _reconcile method.
+    act: Fire the ingress_data_provided event.
+    assert: the charm correctly calls the _reconcile method.
+    """
     reconcile_mock = MagicMock()
     monkeypatch.setattr("charm.GatewayAPICharm._reconcile", reconcile_mock)
     relation_id = harness.add_relation(
@@ -35,6 +42,11 @@ def test_ingress_ipa_removed(
     harness: Harness,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    """
+    arrange: Given a charm with mocked _reconcile method.
+    act: Fire the ingress_data_removed event.
+    assert: the charm correctly calls the _reconcile method.
+    """
     reconcile_mock = MagicMock()
     monkeypatch.setattr("charm.GatewayAPICharm._reconcile", reconcile_mock)
     relation_id = harness.add_relation(

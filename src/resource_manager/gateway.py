@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 """Gateway resource manager."""
 
-
+import dataclasses
 import logging
 import time
 import typing
@@ -24,6 +24,28 @@ logger = logging.getLogger(__name__)
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
+
+
+@dataclasses.dataclass
+class GatewayState(State):
+    """A part of charm state with information required to manage gateway resource.
+
+    It consists of 3 components:
+        - GatewayResourceDefinition
+        - CharmConfig
+        - SecretResourceDefinition
+
+    Attrs:
+        gateway_name: The gateway resource's name
+        external_hostname: The configured gateway hostname.
+        gateway_class: The configured gateway class.
+        secret_resource_name_prefix: Prefix of the secret resource name.
+    """
+
+    gateway_name: str
+    external_hostname: str
+    gateway_class: str
+    secret_resource_name_prefix: str
 
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -61,34 +83,34 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 3 components:
-                - GatewayResourceManager
-                - CharmConfig
-                - SecretResourceManager
+            state: Part of charm state.
 
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        tls_secret_name = f"{state.secret_resource_name_prefix}-{state.external_hostname}"
+        gateway_state = typing.cast(GatewayState, state)
+        tls_secret_name = (
+            f"{gateway_state.secret_resource_name_prefix}-{gateway_state.external_hostname}"
+        )
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(name=state.gateway_name, labels=self._labels),
+            metadata=ObjectMeta(name=gateway_state.gateway_name, labels=self._labels),
             spec={
-                "gatewayClassName": state.gateway_class,
+                "gatewayClassName": gateway_state.gateway_class,
                 "listeners": [
                     {
                         "protocol": "HTTP",
                         "port": 80,
-                        "name": f"{state.gateway_name}-http-listener",
-                        "hostname": state.external_hostname,
+                        "name": f"{gateway_state.gateway_name}-http-listener",
+                        "hostname": gateway_state.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                     {
                         "protocol": "HTTPS",
                         "port": 443,
-                        "name": f"{state.gateway_name}-https-listener",
-                        "hostname": state.external_hostname,
+                        "name": f"{gateway_state.gateway_name}-https-listener",
+                        "hostname": gateway_state.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                         "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
                     },

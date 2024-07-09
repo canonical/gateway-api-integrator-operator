@@ -13,7 +13,7 @@ class SecretResourceDefinition:
     """A component of charm state that contains secret resource definition.
 
     Attrs:
-        secret_resource_name_prefix (str):
+        secret_resource_name_prefix: Prefix of the secret resource name.
     """
 
     secret_resource_name_prefix: str

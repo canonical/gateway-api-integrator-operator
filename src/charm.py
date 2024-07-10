@@ -31,7 +31,7 @@ from ops.model import (
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
-from resource_manager.secret import SecretResourceDefinition, SecretResourceManager
+from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation, TlsIntegrationMissingError
@@ -137,7 +137,7 @@ class GatewayAPICharm(CharmBase):
             labels=self._labels,
             client=client,
         )
-        secret_resource_manager = SecretResourceManager(self._labels, client)
+        secret_resource_manager = TLSSecretResourceManager(self._labels, client)
 
         try:
             secret = secret_resource_manager.define_resource(

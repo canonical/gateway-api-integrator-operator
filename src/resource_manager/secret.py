@@ -86,11 +86,11 @@ def _get_decrypted_key(private_key: str, password: str) -> str:
     ).decode()
 
 
-class SecretResourceManager(ResourceManager[Secret]):
+class TLSSecretResourceManager(ResourceManager[Secret]):
     """Kubernetes Ingress resource controller."""
 
     def __init__(self, labels: LabelSelector, client: Client) -> None:
-        """Initialize the SecretResourceManager.
+        """Initialize the TLSSecretResourceManager.
 
         Args:
             labels: Label to be added to created resources.

@@ -181,7 +181,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name=name,
         )
 
-    def gateway_address(self, name: str) -> typing.Optional[str]:  # pragma: no cover
+    def gateway_address(self, name: str) -> typing.Optional[str]:
         """Return the LB address of the gateway resource.
 
         Poll the address for 100 seconds.

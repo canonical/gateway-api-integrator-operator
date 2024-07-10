@@ -14,7 +14,10 @@ from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
 from ops.model import Relation
 
-from state.base import State
+from state.base import ResourceDefinition
+from state.config import CharmConfig
+from state.gateway import GatewayResourceInformation
+from state.tls import TLSInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclasses.dataclass
-class SecretState(State):
+class SecretResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage secret resource.
 
     It consistS of 3 components:
@@ -32,7 +35,6 @@ class SecretState(State):
         - TLSInformation
 
     Attrs:
-        gateway_class: The configured gateway class.
         external_hostname: The configured gateway hostname.
         tls_requirer_integration: The integration instance with a TLS provider.
         tls_certs: A dict of hostname: certificate obtained from the relation.
@@ -40,12 +42,26 @@ class SecretState(State):
         secret_resource_name_prefix: Prefix of the secret resource name.
     """
 
-    gateway_class: str
     external_hostname: str
     tls_requirer_integration: Relation
     tls_certs: dict[str, str]
     tls_keys: dict[str, dict[str, str]]
     secret_resource_name_prefix: str
+
+    def __init__(
+        self,
+        gateway_resource_information: GatewayResourceInformation,
+        charm_config: CharmConfig,
+        tls_information: TLSInformation,
+    ):
+        """Create the state object with state components.
+
+        Args:
+            gateway_resource_information: GatewayResourceInformation state component.
+            charm_config: CharmConfig state component.
+            tls_information: TLSInformation state component.
+        """
+        super.__init__(gateway_resource_information, charm_config, tls_information)
 
 
 def _get_decrypted_key(private_key: str, password: str) -> str:
@@ -83,13 +99,8 @@ class SecretResourceManager(ResourceManager[Secret]):
         self._client = client
         self._labels = labels
 
-    @property
-    def _name(self) -> str:
-        """Returns "gateway"."""
-        return "gateway"
-
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> Secret:
+    def _gen_resource(self, state: ResourceDefinition) -> Secret:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
@@ -98,7 +109,7 @@ class SecretResourceManager(ResourceManager[Secret]):
         Returns:
             A Secret resource object.
         """
-        secret_state = typing.cast(SecretState, state)
+        secret_state = typing.cast(SecretResourceDefinition, state)
 
         tls_secret_name = (
             f"{secret_state.secret_resource_name_prefix}-{secret_state.external_hostname}"

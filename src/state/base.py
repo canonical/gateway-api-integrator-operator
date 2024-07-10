@@ -6,16 +6,18 @@ import dataclasses
 import typing
 
 from .config import CharmConfig
-from .gateway import GatewayResourceDefinition
-from .secret import SecretResourceDefinition
+from .gateway import GatewayResourceInformation
 from .tls import TLSInformation
 
 Components = typing.TypeVar(
-    "Components", GatewayResourceDefinition, CharmConfig, SecretResourceDefinition, TLSInformation
+    "Components",
+    GatewayResourceInformation,
+    CharmConfig,
+    TLSInformation,
 )
 
 
-class State:  # pylint: disable=too-few-public-methods
+class ResourceDefinition:  # pylint: disable=too-few-public-methods
     """Fragment of charmstate that consists of one or several state components."""
 
     def __init__(self, *components: Components):

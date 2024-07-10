@@ -35,11 +35,11 @@ class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
     Attrs:
-        gateway_class: The configured gateway class.
+        gateway_class_name: The configured gateway class.
         external_hostname: The configured gateway hostname.
     """
 
-    gateway_class: str = Field(min_length=1)
+    gateway_class_name: str = Field(min_length=1)
     external_hostname: str = Field(
         min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )

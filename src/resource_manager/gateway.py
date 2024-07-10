@@ -14,7 +14,10 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from state.base import State
+from state.base import ResourceDefinition
+from state.config import CharmConfig
+from state.gateway import GatewayResourceInformation
+from state.tls import TLSInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -27,25 +30,40 @@ GATEWAY_PLURAL = "gateways"
 
 
 @dataclasses.dataclass
-class GatewayState(State):
+class GatewayResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage gateway resource.
 
     It consists of 3 components:
-        - GatewayResourceDefinition
+        - GatewayResourceInformation
         - CharmConfig
-        - SecretResourceDefinition
+        - TLSInformation
 
     Attrs:
         gateway_name: The gateway resource's name
         external_hostname: The configured gateway hostname.
-        gateway_class: The configured gateway class.
+        gateway_class_name: The configured gateway class.
         secret_resource_name_prefix: Prefix of the secret resource name.
     """
 
     gateway_name: str
     external_hostname: str
-    gateway_class: str
+    gateway_class_name: str
     secret_resource_name_prefix: str
+
+    def __init__(
+        self,
+        gateway_resource_information: GatewayResourceInformation,
+        charm_config: CharmConfig,
+        tls_information: TLSInformation,
+    ):
+        """Create the state object with state components.
+
+        Args:
+            gateway_resource_information: GatewayResourceInformation state component.
+            charm_config: CharmConfig state component.
+            tls_information: TLSInformation state component.
+        """
+        super.__init__(gateway_resource_information, charm_config, tls_information)
 
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -65,11 +83,6 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
     @property
-    def _name(self) -> str:
-        """Returns "gateway"."""
-        return "gateway"
-
-    @property
     def _label_selector(self) -> str:
         """Return the label selector for resources managed by this controller.
 
@@ -79,7 +92,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> dict:
+    def _gen_resource(self, state: ResourceDefinition) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
@@ -88,7 +101,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        gateway_state = typing.cast(GatewayState, state)
+        gateway_state = typing.cast(GatewayResourceDefinition, state)
         tls_secret_name = (
             f"{gateway_state.secret_resource_name_prefix}-{gateway_state.external_hostname}"
         )
@@ -97,7 +110,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             kind="Gateway",
             metadata=ObjectMeta(name=gateway_state.gateway_name, labels=self._labels),
             spec={
-                "gatewayClassName": gateway_state.gateway_class,
+                "gatewayClassName": gateway_state.gateway_class_name,
                 "listeners": [
                     {
                         "protocol": "HTTP",

@@ -61,7 +61,7 @@ class SecretResourceDefinition(ResourceDefinition):
             charm_config: CharmConfig state component.
             tls_information: TLSInformation state component.
         """
-        super.__init__(gateway_resource_information, charm_config, tls_information)
+        super().__init__(gateway_resource_information, charm_config, tls_information)
 
 
 def _get_decrypted_key(private_key: str, password: str) -> str:

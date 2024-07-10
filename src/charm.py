@@ -28,10 +28,10 @@ from ops.model import (
     WaitingStatus,
 )
 
-from resource_manager.gateway import GatewayResourceManager, GatewayResourceDefinition
+from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.permission import InsufficientPermissionError
 from resource_manager.resource_manager import InvalidResourceError
-from resource_manager.secret import SecretResourceManager, SecretResourceDefinition
+from resource_manager.secret import SecretResourceDefinition, SecretResourceManager
 from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation, TlsIntegrationMissingError

@@ -63,7 +63,7 @@ class GatewayResourceDefinition(ResourceDefinition):
             charm_config: CharmConfig state component.
             tls_information: TLSInformation state component.
         """
-        super.__init__(gateway_resource_information, charm_config, tls_information)
+        super().__init__(gateway_resource_information, charm_config, tls_information)
 
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):

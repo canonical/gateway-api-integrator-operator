@@ -6,30 +6,19 @@ import abc
 import logging
 import typing
 
-import lightkube
-import lightkube.generic_resource
-import lightkube.resources
-import lightkube.resources.apiextensions_v1
-import lightkube.resources.apps_v1
-import lightkube.resources.core_v1
-import lightkube.resources.discovery_v1
+from lightkube.generic_resource import GenericNamespacedResource
+from lightkube.resources.core_v1 import Secret, Service
 
-from state.config import CharmConfig
-from state.gateway import GatewayResourceDefinition
+from state.base import ResourceDefinition
 
 logger = logging.getLogger(__name__)
 
 AnyResource = typing.TypeVar(
     "AnyResource",
-    lightkube.resources.core_v1.Endpoints,
-    lightkube.resources.discovery_v1.EndpointSlice,
-    lightkube.resources.core_v1.Service,
-    lightkube.resources.core_v1.Secret,
-    lightkube.generic_resource.GenericNamespacedResource,
+    Service,
+    Secret,
+    GenericNamespacedResource,
 )
-
-ResourceDefinition: typing.TypeAlias = GatewayResourceDefinition
-
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 
@@ -55,22 +44,12 @@ def resource_name(resource: AnyResource | None) -> typing.Optional[str]:
 class ResourceManager(typing.Protocol[AnyResource]):
     """Abstract base class for a generic Kubernetes resource controller."""
 
-    @property
     @abc.abstractmethod
-    def _name(self) -> str:
-        """Abstract property that returns the name of the resource type.
-
-        Returns:
-            Name of the resource type.
-        """
-
-    @abc.abstractmethod
-    def _gen_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
+    def _gen_resource(self, state: ResourceDefinition) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
-            definition: Ingress definition to use for generating the resource.
-            config: The charm's configuration.
+            state: Part of charm state consisting of one or several components.
         """
 
     @abc.abstractmethod
@@ -102,12 +81,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
             name: The name of the resource to delete.
         """
 
-    def define_resource(self, definition: ResourceDefinition, config: CharmConfig) -> AnyResource:
+    def define_resource(self, state: ResourceDefinition) -> AnyResource:
         """Create or update a resource in kubernetes.
 
         Args:
-            definition: The ingress definition
-            config: The charm's configuration.
+            state: Fragment of charm state consists of several components.
 
         Returns:
             The name of the created or modified resource.
@@ -116,7 +94,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             InvalidResourceError: If the generated resource is invalid.
         """
         resource_list = self._list_resource()
-        resource = self._gen_resource(definition, config)
+        resource = self._gen_resource(state)
         res_name = resource_name(resource)
         if not res_name:
             raise InvalidResourceError("Missing resource name.")

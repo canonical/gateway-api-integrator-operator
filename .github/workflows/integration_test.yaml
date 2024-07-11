@@ -9,6 +9,8 @@ jobs:
     secrets: inherit
     with:
       provider: k8s
+      extra-arguments: |
+        --kube-config=~/.kube/config
       use-canonical-k8s: true
       self-hosted-runner: true
       self-hosted-runner-label: "large"

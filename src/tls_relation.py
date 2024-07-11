@@ -16,7 +16,6 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_private_key,
 )
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
 from cryptography.x509.oid import NameOID
 from ops.jujuversion import JujuVersion
 from ops.model import Model, Relation, SecretNotFoundError
@@ -198,27 +197,6 @@ class TLSRelationService:
             new_certificate_signing_request=new_csr,
         )
         self.update_relation_data_fields({f"csr-{hostname}": new_csr.decode()}, tls_integration)
-
-    def _get_decrypted_key(self, private_key: str, password: str) -> str:
-        """Decrypted the provided private key using the provided password.
-
-        Args:
-            private_key: The encrypted private key.
-            password: The password to decrypt the private key.
-
-        Returns:
-            The decrypted private key.
-        """
-        decrypted_key = serialization.load_pem_private_key(
-            private_key.encode(), password=password.encode()
-        )
-
-        # There are multiple representation PKCS8 is the default supported by nginx controller
-        return decrypted_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption(),
-        ).decode()
 
     def _get_private_key(self, hostname: str) -> Dict[str, str]:
         """Return the private key and its password from either juju secrets or the relation data.

@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 """gateway-api-integrator secret resource manager."""
 
-
+import dataclasses
 import logging
 import typing
 
@@ -12,13 +12,56 @@ from lightkube.core.client import LabelSelector
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
+from ops.model import Relation
 
-from state.base import State
+from state.base import ResourceDefinition
+from state.config import CharmConfig
+from state.gateway import GatewayResourceInformation
+from state.tls import TLSInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass
+class SecretResourceDefinition(ResourceDefinition):
+    """A part of charm state with information required to manage secret resource.
+
+    It consistS of 3 components:
+        - SecretResourceInfomation
+        - CharmConfig
+        - TLSInformation
+
+    Attrs:
+        external_hostname: The configured gateway hostname.
+        tls_requirer_integration: The integration instance with a TLS provider.
+        tls_certs: A dict of hostname: certificate obtained from the relation.
+        tls_keys: A dict of hostname: private_key stored in juju secrets.
+        secret_resource_name_prefix: Prefix of the secret resource name.
+    """
+
+    external_hostname: str
+    tls_requirer_integration: Relation
+    tls_certs: dict[str, str]
+    tls_keys: dict[str, dict[str, str]]
+    secret_resource_name_prefix: str
+
+    def __init__(
+        self,
+        gateway_resource_information: GatewayResourceInformation,
+        charm_config: CharmConfig,
+        tls_information: TLSInformation,
+    ):
+        """Create the state object with state components.
+
+        Args:
+            gateway_resource_information: GatewayResourceInformation state component.
+            charm_config: CharmConfig state component.
+            tls_information: TLSInformation state component.
+        """
+        super().__init__(gateway_resource_information, charm_config, tls_information)
 
 
 def _get_decrypted_key(private_key: str, password: str) -> str:
@@ -43,11 +86,11 @@ def _get_decrypted_key(private_key: str, password: str) -> str:
     ).decode()
 
 
-class SecretResourceManager(ResourceManager[Secret]):
+class TLSSecretResourceManager(ResourceManager[Secret]):
     """Kubernetes Ingress resource controller."""
 
     def __init__(self, labels: LabelSelector, client: Client) -> None:
-        """Initialize the SecretResourceManager.
+        """Initialize the TLSSecretResourceManager.
 
         Args:
             labels: Label to be added to created resources.
@@ -57,29 +100,30 @@ class SecretResourceManager(ResourceManager[Secret]):
         self._labels = labels
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> Secret:
+    def _gen_resource(self, state: ResourceDefinition) -> Secret:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 3 components:
-                - SecretResourceManager
-                - CharmConfig
-                - TLSInformation
+            state: Part of charm state.
 
         Returns:
             A Secret resource object.
         """
-        tls_secret_name = f"{state.secret_resource_name_prefix}-{state.external_hostname}"
+        secret_state = typing.cast(SecretResourceDefinition, state)
+
+        tls_secret_name = (
+            f"{secret_state.secret_resource_name_prefix}-{secret_state.external_hostname}"
+        )
 
         secret = Secret(
             apiVersion="v1",
             kind="Secret",
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
-                "tls.crt": state.tls_certs[state.external_hostname],
+                "tls.crt": secret_state.tls_certs[secret_state.external_hostname],
                 "tls.key": _get_decrypted_key(
-                    state.tls_keys[state.external_hostname]["key"],
-                    state.tls_keys[state.external_hostname]["password"],
+                    secret_state.tls_keys[secret_state.external_hostname]["key"],
+                    secret_state.tls_keys[secret_state.external_hostname]["password"],
                 ),
             },
             type="kubernetes.io/tls",

@@ -36,11 +36,11 @@ class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
     Attrs:
-        gateway_class: The configured gateway class.
+        gateway_class_name: The configured gateway class.
         external_hostname: The configured gateway hostname.
     """
 
-    gateway_class: str = Field(min_length=1)
+    gateway_class_name: str = Field(min_length=1)
     external_hostname: str = Field(
         min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )
@@ -61,7 +61,7 @@ class CharmConfig:
         Returns:
             CharmConfig: Instance of the charm config state component.
         """
-        gateway_class = typing.cast(str, charm.config.get("gateway-class"))
+        gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
         gateway_class_generic_resource = create_global_resource(
             CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_CLASS_RESOURCE_NAME, GATEWAY_CLASS_PLURAL
         )
@@ -75,14 +75,14 @@ class CharmConfig:
             for gateway_class in gateway_classes
             if gateway_class.metadata and gateway_class.metadata.name
         )
-        if gateway_class not in gateway_class_names:
+        if gateway_class_name not in gateway_class_names:
             available_gateway_classes = ",".join(gateway_class_names)
             logger.error(
                 (
                     "Configured gateway class %s not present on the cluster."
                     "Available ones are: %r"
                 ),
-                gateway_class,
+                gateway_class_name,
                 available_gateway_classes,
             )
             raise InvalidCharmConfigError(
@@ -91,7 +91,7 @@ class CharmConfig:
 
         try:
             return cls(
-                gateway_class=gateway_class,
+                gateway_class_name=gateway_class_name,
                 external_hostname=typing.cast(str, charm.config.get("external-hostname")),
             )
         except ValidationError as exc:

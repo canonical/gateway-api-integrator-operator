@@ -3,24 +3,24 @@
 
 """gateway-api-integrator charm state constructor."""
 import dataclasses
-from typing import Any, ClassVar, Protocol
+import typing
+
+from .config import CharmConfig
+from .gateway import GatewayResourceInformation
+from .tls import TLSInformation
+
+Components = typing.TypeVar(
+    "Components",
+    GatewayResourceInformation,
+    CharmConfig,
+    TLSInformation,
+)
 
 
-class Dataclass(Protocol):  # pylint: disable=too-few-public-methods
-    """Definition of dataclass."""
+class ResourceDefinition:  # pylint: disable=too-few-public-methods
+    """Fragment of charmstate that consists of one or several state components."""
 
-    # Checking for this attribute is currently
-    # the most reliable way to ascertain that something is a dataclass
-    __dataclass_fields__: ClassVar[dict[str, Any]]
-
-
-class State:  # pylint: disable=too-few-public-methods
-    """Fragment of charmstate that consists of one or several state components.
-
-    A state component should always be a dataclass.
-    """
-
-    def __init__(self, *components: Dataclass):
+    def __init__(self, *components: Components):
         """Create the state object with state components.
 
         Args:

@@ -9,7 +9,7 @@ import typing
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Secret, Service
 
-from state.base import State
+from state.base import ResourceDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
     """Abstract base class for a generic Kubernetes resource controller."""
 
     @abc.abstractmethod
-    def _gen_resource(self, state: State) -> AnyResource:
+    def _gen_resource(self, state: ResourceDefinition) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
@@ -81,7 +81,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             name: The name of the resource to delete.
         """
 
-    def define_resource(self, state: State) -> AnyResource:
+    def define_resource(self, state: ResourceDefinition) -> AnyResource:
         """Create or update a resource in kubernetes.
 
         Args:

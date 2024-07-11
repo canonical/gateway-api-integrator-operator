@@ -26,13 +26,14 @@ from ops.jujuversion import JujuVersion
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, Relation, SecretNotFoundError, WaitingStatus
 
-from resource_manager.gateway import GatewayResourceManager
+from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import HTTPRouteResourceManager
-from resource_manager.secret import SecretResourceManager
+from resource_manager.resource_manager import InvalidResourceError
+from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceManager
 from state.base import State
 from state.config import CharmConfig, InvalidCharmConfigError
-from state.gateway import GatewayResourceDefinition
+from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
 from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation, TlsIntegrationMissingError
@@ -132,20 +133,27 @@ class GatewayAPICharm(CharmBase):
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
 
         config = CharmConfig.from_charm(self, client)
-        gateway_resource_definition = GatewayResourceDefinition.from_charm(self)
+        gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self)
-        secret_resource_definition = SecretResourceDefinition.from_charm(self)
-        secret_resource_manager = SecretResourceManager(self._labels, client)
-        secret = secret_resource_manager.define_resource(
-            State(secret_resource_definition, config, tls_information)
-        )
+
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
-        gateway = gateway_resource_manager.define_resource(
-            State(gateway_resource_definition, config, secret_resource_definition)
+        secret_resource_manager = TLSSecretResourceManager(self._labels, client)
+
+        secret = secret_resource_manager.define_resource(
+            SecretResourceDefinition(gateway_resource_information, config, tls_information)
         )
+        gateway = gateway_resource_manager.define_resource(
+            GatewayResourceDefinition(gateway_resource_information, config, tls_information)
+        )
+
+        self.unit.status = WaitingStatus("Waiting for gateway address")
+        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
+            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
+        else:
+            self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=gateway)
         secret_resource_manager.cleanup_resources(exclude=secret)
 
@@ -158,14 +166,14 @@ class GatewayAPICharm(CharmBase):
         http_route_resource_manager.define_resource(
             State(
                 http_route_resource_definition,
-                gateway_resource_definition,
+                gateway_resource_information,
                 HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
             )
         )
         http_route_resource_manager.define_resource(
             State(
                 http_route_resource_definition,
-                gateway_resource_definition,
+                gateway_resource_information,
                 HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
             )
         )
@@ -176,11 +184,6 @@ class GatewayAPICharm(CharmBase):
             relation,
             f"https://{config.external_hostname}/{http_route_resource_definition.service_name}",
         )
-        self.unit.status = WaitingStatus("Waiting for gateway address")
-        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
-            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
-        else:
-            self.unit.status = WaitingStatus("Gateway address unavailable")
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""

@@ -21,10 +21,15 @@ from charms.traefik_k8s.v2.ingress import (
 )
 from lightkube import Client, KubeConfig
 from lightkube.core.exceptions import ConfigError
-from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
-from ops.jujuversion import JujuVersion
+from ops.charm import (
+    ActionEvent,
+    CharmBase,
+    RelationBrokenEvent,
+    RelationCreatedEvent,
+    RelationJoinedEvent,
+)
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, Relation, SecretNotFoundError, WaitingStatus
+from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import HTTPRouteResourceManager
@@ -32,13 +37,13 @@ from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceManager
 from state.base import State
-from state.config import CharmConfig, InvalidCharmConfigError
+from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
 from state.secret import SecretResourceDefinition
-from state.tls import TLSInformation, TlsIntegrationMissingError
+from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import TLSRelationService
+from tls_relation import TLSRelationService, get_hostname_from_cert
 
 TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
@@ -89,8 +94,8 @@ class GatewayAPICharm(CharmBase):
         super().__init__(*args)
 
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
-        self._tls = TLSRelationService(self.model)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
+        self._tls = TLSRelationService(self.certificates)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -134,7 +139,7 @@ class GatewayAPICharm(CharmBase):
 
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
-        tls_information = TLSInformation.from_charm(self)
+        tls_information = TLSInformation.from_charm(self, self.certificates)
 
         gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
@@ -142,12 +147,18 @@ class GatewayAPICharm(CharmBase):
         )
         secret_resource_manager = TLSSecretResourceManager(self._labels, client)
 
-        secret = secret_resource_manager.define_resource(
-            SecretResourceDefinition(gateway_resource_information, config, tls_information)
-        )
-        gateway = gateway_resource_manager.define_resource(
-            GatewayResourceDefinition(gateway_resource_information, config, tls_information)
-        )
+        try:
+            secret = secret_resource_manager.define_resource(
+                SecretResourceDefinition.from_tls_information(
+                    tls_information, config.external_hostname
+                )
+            )
+            gateway = gateway_resource_manager.define_resource(
+                GatewayResourceDefinition(gateway_resource_information, config, tls_information)
+            )
+        except InvalidResourceError as exc:
+            logger.exception("Error creating resource")
+            raise RuntimeError("Error creating resource.") from exc
 
         self.unit.status = WaitingStatus("Waiting for gateway address")
         if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
@@ -201,116 +212,55 @@ class GatewayAPICharm(CharmBase):
             event: Juju event
         """
         hostname = event.params["hostname"]
-        tls_information = TLSInformation.from_charm(self)
+        TLSInformation.from_charm(self, self.certificates)
 
-        tls_rel_data = tls_information.tls_requirer_integration.data[self.app]
-        if any(
-            not tls_rel_data.get(key)
-            for key in [f"certificate-{hostname}", f"ca-{hostname}", f"chain-{hostname}"]
-        ):
-            event.fail("Missing or incomplete certificate data")
-            return
+        for cert in self.certificates.get_provider_certificates():
+            if get_hostname_from_cert(cert.certificate) == hostname:
+                event.set_results(
+                    {
+                        "certificate": cert.certificate,
+                        "ca": cert.ca,
+                        "chain": cert.chain_as_pem(),
+                    }
+                )
+                return
 
-        event.set_results(
-            {
-                f"certificate-{hostname}": tls_rel_data[f"certificate-{hostname}"],
-                f"ca-{hostname}": tls_rel_data[f"ca-{hostname}"],
-                f"chain-{hostname}": tls_rel_data[f"chain-{hostname}"],
-            }
-        )
+        event.fail(f"Missing or incomplete certificate data for {hostname}")
 
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event."""
-        tls_information = TLSInformation.from_charm(self)
-
+        TLSInformation.from_charm(self, self.certificates)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-
-        self._tls.certificate_relation_created(
-            config.external_hostname, tls_information.tls_requirer_integration
-        )
+        self._tls.certificate_relation_created(config.external_hostname)
 
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
-        tls_information = TLSInformation.from_charm(self)
-
+        TLSInformation.from_charm(self, self.certificates)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
+        self._tls.certificate_relation_joined(config.external_hostname)
 
-        self._tls.certificate_relation_joined(
-            config.external_hostname,
-            self.certificates,
-            tls_information.tls_requirer_integration,
-        )
-
-    def _on_certificates_relation_broken(self, _: typing.Any) -> None:
+    def _on_certificates_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
         self._reconcile()
 
-    @validate_config_and_integration(defer=True)
-    def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
-        """Handle the TLS Certificate available event.
-
-        Args:
-            event: The event that fires this method.
-        """
-        tls_information = TLSInformation.from_charm(self)
-
-        self._tls.certificate_relation_available(event, tls_information.tls_requirer_integration)
-        logger.info("TLS configured, creating kubernetes resources.")
+    def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
+        """Handle the TLS Certificate available event."""
+        logger.info("TLS certificate available, creating resources.")
         self._reconcile()
 
     @validate_config_and_integration(defer=True)
-    def _on_certificate_expiring(
-        self,
-        event: typing.Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
-    ) -> None:
+    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Handle the TLS Certificate expiring event.
 
         Args:
             event: The event that fires this method.
         """
-        tls_information = TLSInformation.from_charm(self)
-        self._tls.certificate_expiring(
-            event, self.certificates, tls_information.tls_requirer_integration
-        )
-
-    # This method is too complex but hard to simplify.
-    def _certificate_revoked(
-        self, revoke_list: typing.List[str], tls_requirer_integration: Relation
-    ) -> None:  # noqa: C901
-        """Handle TLS Certificate revocation.
-
-        Args:
-            revoke_list: TLS Certificates list to revoke
-            tls_requirer_integration: The TLS certificate integration.
-        """
-        for hostname in revoke_list:
-            old_csr = self._tls.get_relation_data_field(
-                f"csr-{hostname}",
-                tls_requirer_integration,  # type: ignore[arg-type]
-            )
-            if not old_csr:
-                continue
-            if JujuVersion.from_environ().has_secrets:
-                try:
-                    secret = self.model.get_secret(label=f"private-key-{hostname}")
-                    secret.remove_all_revisions()
-                except SecretNotFoundError:
-                    logger.warning("Juju secret for %s already does not exist", hostname)
-                    continue
-            try:
-                self._tls.pop_relation_data_fields(
-                    [f"key-{hostname}", f"password-{hostname}"],
-                    tls_requirer_integration,  # type: ignore[arg-type]
-                )
-            except KeyError:
-                logger.warning("Relation data for %s already does not exist", hostname)
-            self.certificates.request_certificate_revocation(
-                certificate_signing_request=old_csr.encode()
-            )
+        TLSInformation.from_charm(self, self.certificates)
+        self._tls.certificate_expiring(event)
 
     @validate_config_and_integration(defer=True)
     def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
@@ -319,41 +269,26 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        try:
-            tls_information = TLSInformation.from_charm(self)
-        except (TlsIntegrationMissingError, InvalidCharmConfigError) as exc:
-            self.unit.status = WaitingStatus("Waiting for certificates relation to be created")
-            logger.error(
-                "(%s) charm is not ready to handle this event, deferring: %s.", event, exc
-            )
-            event.defer()
-            return
-
+        TLSInformation.from_charm(self, self.certificates)
         if event.reason == "revoked":
-            hostname = self._tls.get_hostname_from_cert(event.certificate)
-            self._certificate_revoked([hostname], tls_information.tls_requirer_integration)
+            self._tls.certificate_invalidated(event)
         if event.reason == "expired":
-            self._tls.certificate_expiring(
-                event, self.certificates, tls_information.tls_requirer_integration
-            )
+            self._tls.certificate_expiring(event)
         self.unit.status = MaintenanceStatus("Waiting for new certificate")
 
     @validate_config_and_integration(defer=True)
     def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
-        tls_information = TLSInformation.from_charm(self)
-        tls_information.tls_requirer_integration.data[self.app].clear()
-
+        TLSInformation.from_charm(self, self.certificates)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
+        hostname = config.external_hostname
 
-        if JujuVersion.from_environ().has_secrets:
-            hostname = config.external_hostname
-            try:
-                secret = self.model.get_secret(label=f"private-key-{hostname}")
-                secret.remove_all_revisions()
-            except SecretNotFoundError:
-                logger.warning("Juju secret for %s already does not exist", hostname)
+        try:
+            secret = self.model.get_secret(label=f"private-key-{hostname}")
+            secret.remove_all_revisions()
+        except SecretNotFoundError:
+            logger.warning("Juju secret for %s already does not exist", hostname)
 
     def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event."""

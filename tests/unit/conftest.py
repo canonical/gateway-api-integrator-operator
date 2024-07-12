@@ -61,18 +61,18 @@ def gateway_class_resource_fixture():
 
 
 @pytest.fixture(scope="function", name="private_key_and_password")
-def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
+def private_key_and_password_fixture() -> tuple[str, str]:
     """Mock private key juju secret."""
-    tls = TLSRelationService(harness.model)
+    tls = TLSRelationService(MagicMock())
     password = tls.generate_password().encode()
     private_key = generate_private_key(password=password)
     return (password.decode(), private_key.decode())
 
 
 @pytest.fixture(scope="function", name="mock_certificate")
-def mock_certificate_fixture() -> str:
+def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     """Mock tls certificate from a tls provider charm."""
-    return (
+    cert = (
         "-----BEGIN CERTIFICATE-----"
         "MIIDgDCCAmigAwIBAgIUa32Vp4pS2WjrTNG7SZJ66SdMs2YwDQYJKoZIhvcNAQEL"
         "BQAwOTELMAkGA1UEBhMCVVMxKjAoBgNVBAMMIXNlbGYtc2lnbmVkLWNlcnRpZmlj"
@@ -95,6 +95,16 @@ def mock_certificate_fixture() -> str:
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
         "-----END CERTIFICATE-----"
     )
+    provider_cert_mock = MagicMock()
+    provider_cert_mock.certificate = cert
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v3.tls_certificates"
+            ".TLSCertificatesRequiresV3.get_provider_certificates"
+        ),
+        MagicMock(return_value=[provider_cert_mock]),
+    )
+    return cert
 
 
 @pytest.fixture(scope="function", name="gateway_relation_application_data")

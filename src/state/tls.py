@@ -6,12 +6,20 @@
 import dataclasses
 
 import ops
+from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
 from ops.jujuversion import JujuVersion
-from ops.model import Relation
+
+from tls_relation import get_hostname_from_cert
+
+from .exception import CharmStateValidationBaseError
 
 from exception import CharmStateValidationBaseError
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
+
+
+class SecretNotSupportedError(CharmStateValidationBaseError):
+    """Exception raised when the juju version does not support secrets."""
 
 
 class TlsIntegrationMissingError(CharmStateValidationBaseError):
@@ -24,29 +32,36 @@ class TLSInformation:
 
     Attrs:
         secret_resource_name_prefix: Prefix of the secret resource name.
-        tls_requirer_integration: The integration instance with a TLS provider.
         tls_certs: A dict of hostname: certificate obtained from the relation.
         tls_keys: A dict of hostname: private_key stored in juju secrets.
     """
 
     secret_resource_name_prefix: str
-    tls_requirer_integration: Relation
     tls_certs: dict[str, str]
     tls_keys: dict[str, dict[str, str]]
 
     @classmethod
-    def from_charm(cls, charm: ops.CharmBase) -> "TLSInformation":
+    def from_charm(
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV3
+    ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
+            certificates: TLS certificates requirer library.
 
         Raises:
             TlsIntegrationMissingError: When integration is not ready.
+            SecretNotSupportedError: When running with incompatible juju version.
 
         Returns:
             TLSInformation: Information about configured TLS certs.
         """
+        if not JujuVersion.from_environ().has_secrets:
+            raise SecretNotSupportedError(
+                "The charm requires the 'secrets' feature to be supported (juju version >= 3.0.3)."
+            )
+
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
         if (
             tls_requirer_integration is None
@@ -58,21 +73,17 @@ class TLSInformation:
         tls_keys = {}
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 
-        for key, value in tls_requirer_integration.data[charm.app].items():
-            if key.startswith("chain-"):
-                hostname = key.split("-", maxsplit=1)[1]
-                tls_certs[hostname] = value
-
-                if JujuVersion.from_environ().has_secrets:
-                    secret = charm.model.get_secret(label=f"private-key-{hostname}")
-                    tls_keys[hostname] = {
-                        "key": secret.get_content()["key"],
-                        "password": secret.get_content()["password"],
-                    }
+        for cert in certificates.get_provider_certificates():
+            hostname = get_hostname_from_cert(cert.certificate)
+            tls_certs[hostname] = cert.certificate
+            secret = charm.model.get_secret(label=f"private-key-{hostname}")
+            tls_keys[hostname] = {
+                "key": secret.get_content()["key"],
+                "password": secret.get_content()["password"],
+            }
 
         return cls(
             secret_resource_name_prefix=secret_resource_name_prefix,
-            tls_requirer_integration=tls_requirer_integration,
             tls_certs=tls_certs,
             tls_keys=tls_keys,
         )

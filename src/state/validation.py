@@ -9,8 +9,7 @@ import typing
 
 import ops
 
-from exception import CharmStateValidationBaseError
-from resource_manager.resource_manager import InvalidResourceError
+from state.exception import CharmStateValidationBaseError
 
 logger = logging.getLogger(__name__)
 

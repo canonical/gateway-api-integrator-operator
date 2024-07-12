@@ -83,8 +83,6 @@ class LightKubeInitializationError(Exception):
 class GatewayAPICharm(CharmBase):
     """The main charm class for the gateway-api-integrator charm."""
 
-    _authed = False
-
     def __init__(self, *args) -> None:  # type: ignore[no-untyped-def]
         """Init method for the class.
 
@@ -95,7 +93,7 @@ class GatewayAPICharm(CharmBase):
 
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self._tls = TLSRelationService(self.certificates)
+        self._tls = TLSRelationService(self.model, self.certificates)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -212,7 +210,7 @@ class GatewayAPICharm(CharmBase):
             event: Juju event
         """
         hostname = event.params["hostname"]
-        TLSInformation.from_charm(self, self.certificates)
+        TLSInformation.validate(self)
 
         for cert in self.certificates.get_provider_certificates():
             if get_hostname_from_cert(cert.certificate) == hostname:
@@ -230,7 +228,7 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event."""
-        TLSInformation.from_charm(self, self.certificates)
+        TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         self._tls.certificate_relation_created(config.external_hostname)
@@ -238,7 +236,7 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
-        TLSInformation.from_charm(self, self.certificates)
+        TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         self._tls.certificate_relation_joined(config.external_hostname)
@@ -259,7 +257,7 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        TLSInformation.from_charm(self, self.certificates)
+        TLSInformation.validate(self)
         self._tls.certificate_expiring(event)
 
     @validate_config_and_integration(defer=True)
@@ -269,7 +267,7 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
-        TLSInformation.from_charm(self, self.certificates)
+        TLSInformation.validate(self)
         if event.reason == "revoked":
             self._tls.certificate_invalidated(event)
         if event.reason == "expired":
@@ -279,7 +277,7 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=True)
     def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
-        TLSInformation.from_charm(self, self.certificates)
+        TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         hostname = config.external_hostname

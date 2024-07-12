@@ -17,9 +17,21 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
 )
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from ops.model import Relation, SecretNotFoundError
+from ops.model import Model, Relation, SecretNotFoundError
 
 TLS_CERT = "certificates"
+
+
+class KeyPair(typing.NamedTuple):
+    """Stores a private key and encryption password.
+
+    Attrs:
+        private_key: The private key
+        password: The password used for encryption
+    """
+
+    private_key: str
+    password: str
 
 
 def get_hostname_from_cert(certificate: str) -> str:
@@ -43,14 +55,15 @@ def get_hostname_from_cert(certificate: str) -> str:
 class TLSRelationService:
     """TLS Relation service class."""
 
-    def __init__(self, certificates: TLSCertificatesRequiresV3) -> None:
+    def __init__(self, model: Model, certificates: TLSCertificatesRequiresV3) -> None:
         """Init method for the class.
 
         Args:
+            model: The charm's current model.
             certificates: The TLS certificates requirer library.
         """
         self.certificates = certificates
-        self.model = self.certificates.model
+        self.model = model
         self.application = self.model.app
         self.integration_name = self.certificates.relationship_name
 
@@ -85,7 +98,9 @@ class TLSRelationService:
             hostname: Certificate's hostname.
         """
         # At this point, TLSInformation state component should already be initialized
-        tls_integration = typing.cast(Relation, self.model.get_relation(self.integration_name))
+        tls_integration = self.model.get_relation(self.integration_name)
+        assert tls_integration
+        tls_integration = typing.cast(Relation, tls_integration)
 
         private_key_password = self.generate_password().encode()
         private_key = generate_private_key(password=private_key_password)
@@ -143,7 +158,7 @@ class TLSRelationService:
                 certificate_signing_request=invalidated_cert.csr.encode()
             )
 
-    def _get_private_key(self, hostname: str) -> tuple[str, str]:
+    def _get_private_key(self, hostname: str) -> KeyPair:
         """Return the private key and its password from either juju secrets or the relation data.
 
         Args:
@@ -155,7 +170,7 @@ class TLSRelationService:
         secret = self.model.get_secret(label=f"private-key-{hostname}")
         private_key = secret.get_content()["key"]
         password = secret.get_content()["password"]
-        return (private_key, password)
+        return KeyPair(private_key, password)
 
     def _get_cert(self, certificate: str) -> typing.Optional[ProviderCertificate]:
         """Get a cert from the provider's integration data that matches 'certificate'.

@@ -9,10 +9,7 @@ import typing
 
 import ops
 
-import state
-import state.config
-import state.tls
-from resource_manager.permission import InsufficientPermissionError
+from state.exception import CharmStateValidationBaseError
 
 logger = logging.getLogger(__name__)
 
@@ -58,12 +55,7 @@ def validate_config_and_integration(
             """
             try:
                 return method(instance, *args)
-            except (
-                state.config.InvalidCharmConfigError,
-                state.tls.TlsIntegrationMissingError,
-                state.config.GatewayClassUnavailableError,
-                InsufficientPermissionError,
-            ) as exc:
+            except CharmStateValidationBaseError as exc:
                 if defer:
                     event: ops.EventBase
                     event, *_ = args

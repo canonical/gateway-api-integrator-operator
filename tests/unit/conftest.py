@@ -6,7 +6,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
 from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource
 from lightkube.models.meta_v1 import ObjectMeta
@@ -64,7 +63,7 @@ def gateway_class_resource_fixture():
 @pytest.fixture(scope="function", name="private_key_and_password")
 def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
     """Mock private key juju secret."""
-    tls = TLSRelationService(harness.model, MagicMock(spec=TLSCertificatesRequiresV3))
+    tls = TLSRelationService(harness.model, MagicMock())
     password = tls.generate_password().encode()
     private_key = generate_private_key(password=password)
     return (password.decode(), private_key.decode())

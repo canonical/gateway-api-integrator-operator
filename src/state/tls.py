@@ -7,17 +7,12 @@ import dataclasses
 
 import ops
 from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
-from ops.jujuversion import JujuVersion
 
 from tls_relation import get_hostname_from_cert
 
 from .exception import CharmStateValidationBaseError
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
-
-
-class SecretNotSupportedError(CharmStateValidationBaseError):
-    """Exception raised when the juju version does not support secrets."""
 
 
 class TlsIntegrationMissingError(CharmStateValidationBaseError):
@@ -48,24 +43,10 @@ class TLSInformation:
             charm: The gateway-api-integrator charm.
             certificates: TLS certificates requirer library.
 
-        Raises:
-            TlsIntegrationMissingError: When integration is not ready.
-            SecretNotSupportedError: When running with incompatible juju version.
-
         Returns:
             TLSInformation: Information about configured TLS certs.
         """
-        if not JujuVersion.from_environ().has_secrets:
-            raise SecretNotSupportedError(
-                "The charm requires the 'secrets' feature to be supported (juju version >= 3.0.3)."
-            )
-
-        tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
-        if (
-            tls_requirer_integration is None
-            or tls_requirer_integration.data.get(charm.app) is None
-        ):
-            raise TlsIntegrationMissingError("Certificates integration not ready.")
+        cls.validate(charm)
 
         tls_certs = {}
         tls_keys = {}
@@ -85,3 +66,20 @@ class TLSInformation:
             tls_certs=tls_certs,
             tls_keys=tls_keys,
         )
+
+    @classmethod
+    def validate(cls, charm: ops.CharmBase) -> None:
+        """Validate the precondition to initialize this state component.
+
+        Args:
+            charm: The gateway-api-integrator charm.
+
+        Raises:
+            TlsIntegrationMissingError: When integration is not ready.
+        """
+        tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
+        if (
+            tls_requirer_integration is None
+            or tls_requirer_integration.data.get(charm.app) is None
+        ):
+            raise TlsIntegrationMissingError("Certificates integration not ready.")

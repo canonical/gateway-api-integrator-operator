@@ -61,7 +61,7 @@ class SecretResourceDefinition(ResourceDefinition):
         Returns:
             SecretResourceDefinition: Information about the certificate.
         """
-        if hostname not in tls_information.tls_certs.keys():
+        if hostname not in tls_information.tls_certs:
             raise CertificateDataNotReadyError("Certificate data missing or incomplete.")
 
         return SecretResourceDefinition(

@@ -8,8 +8,10 @@ import logging
 import typing
 
 import ops
+from ops.model import SecretNotFoundError
 
 from state.exception import CharmStateValidationBaseError
+from tls_relation import InvalidCertificateError
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +54,10 @@ def validate_config_and_integration(
 
             Returns:
                 The value returned from the original function. That is, None.
+
+            Raises:
+                InvalidCertificateError: When the provider certificate is invalid.
+                SecretNotFoundError: When the required juju secret is missing.
             """
             try:
                 return method(instance, *args)
@@ -63,6 +69,9 @@ def validate_config_and_integration(
                 logger.exception("Error setting up charm state.")
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
+            except (InvalidCertificateError, SecretNotFoundError):
+                logger.exception("TLS certificates error.")
+                raise
 
         return wrapper
 

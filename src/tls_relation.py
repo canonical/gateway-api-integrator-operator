@@ -22,6 +22,10 @@ from ops.model import Model, Relation, SecretNotFoundError
 TLS_CERT = "certificates"
 
 
+class InvalidCertificateError(Exception):
+    """Exception raised when certificates is invalid."""
+
+
 class KeyPair(typing.NamedTuple):
     """Stores a private key and encryption password.
 
@@ -42,12 +46,17 @@ def get_hostname_from_cert(certificate: str) -> str:
 
     Returns:
         The hostname the certificate is issue to.
+
+    Raises:
+        InvalidCertificateError: When hostname cannot be parsed from the given certificate.
     """
     decoded_cert = x509.load_pem_x509_certificate(certificate.encode())
 
     common_name_attribute = decoded_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
     if not common_name_attribute:
-        return ""
+        raise InvalidCertificateError(
+            f"Cannot parse hostname from x509 certificate: {certificate}"
+        )
 
     return str(common_name_attribute[0].value)
 

@@ -96,7 +96,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            resource_definition: Part of charm state.
+            resource_definition: The data necessary to create the gateway resource.
 
         Returns:
             A dictionary representing the gateway custom resource.

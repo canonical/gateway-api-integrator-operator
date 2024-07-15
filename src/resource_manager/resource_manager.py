@@ -49,7 +49,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
         """Abstract method to generate a resource from ingress definition.
 
         Args:
-            resource_definition: Part of charm state consisting of one or several components.
+            resource_definition: The data necessary to create the k8s resource.
         """
 
     @abc.abstractmethod

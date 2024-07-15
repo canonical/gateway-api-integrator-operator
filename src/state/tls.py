@@ -12,8 +12,6 @@ from tls_relation import get_hostname_from_cert
 
 from .exception import CharmStateValidationBaseError
 
-from exception import CharmStateValidationBaseError
-
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 

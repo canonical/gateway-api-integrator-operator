@@ -36,7 +36,7 @@ class GatewayClassUnavailableError(CharmStateValidationBaseError):
 class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
-    Attrs:
+    Attributes:
         gateway_class_name: The configured gateway class.
         external_hostname: The configured gateway hostname.
     """

@@ -31,7 +31,7 @@ class CertificateDataNotReadyError(CharmStateValidationBaseError):
 class SecretResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage secret resource.
 
-    Attrs:
+    Attributes:
         hostname: The configured gateway hostname.
         secret_resource_name_prefix: Prefix of the secret resource name.
         certificate: TLS certificate.

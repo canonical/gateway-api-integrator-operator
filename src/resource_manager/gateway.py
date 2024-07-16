@@ -38,7 +38,7 @@ class GatewayResourceDefinition(ResourceDefinition):
         - CharmConfig
         - TLSInformation
 
-    Attrs:
+    Attributes:
         gateway_name: The gateway resource's name
         external_hostname: The configured gateway hostname.
         gateway_class_name: The configured gateway class.

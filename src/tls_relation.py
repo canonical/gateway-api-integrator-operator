@@ -29,7 +29,7 @@ class InvalidCertificateError(Exception):
 class KeyPair(typing.NamedTuple):
     """Stores a private key and encryption password.
 
-    Attrs:
+    Attributes:
         private_key: The private key
         password: The password used for encryption
     """
@@ -105,10 +105,15 @@ class TLSRelationService:
 
         Args:
             hostname: Certificate's hostname.
+
+        Raises:
+            AssertionError: If this method is called before the certificates integration is ready.
         """
         # At this point, TLSInformation state component should already be initialized
         tls_integration = self.model.get_relation(self.integration_name)
-        assert tls_integration
+        if not tls_integration:
+            raise AssertionError
+
         tls_integration = typing.cast(Relation, tls_integration)
 
         private_key_password = self.generate_password().encode()

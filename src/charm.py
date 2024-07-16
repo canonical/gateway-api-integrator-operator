@@ -33,14 +33,12 @@ from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, Wait
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import HTTPRouteResourceManager
-from resource_manager.resource_manager import InvalidResourceError
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceManager
-from state.base import State
+from state.base import ResourceDefinition
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
-from state.secret import SecretResourceDefinition
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService, get_hostname_from_cert
@@ -145,18 +143,14 @@ class GatewayAPICharm(CharmBase):
         )
         secret_resource_manager = TLSSecretResourceManager(self._labels, client)
 
-        try:
-            secret = secret_resource_manager.define_resource(
-                SecretResourceDefinition.from_tls_information(
-                    tls_information, config.external_hostname
-                )
+        secret = secret_resource_manager.define_resource(
+            SecretResourceDefinition.from_tls_information(
+                tls_information, config.external_hostname
             )
-            gateway = gateway_resource_manager.define_resource(
-                GatewayResourceDefinition(gateway_resource_information, config, tls_information)
-            )
-        except InvalidResourceError as exc:
-            logger.exception("Error creating resource")
-            raise RuntimeError("Error creating resource.") from exc
+        )
+        gateway = gateway_resource_manager.define_resource(
+            GatewayResourceDefinition(gateway_resource_information, config, tls_information)
+        )
 
         self.unit.status = WaitingStatus("Waiting for gateway address")
         if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
@@ -170,17 +164,19 @@ class GatewayAPICharm(CharmBase):
             self, self._ingress_provider
         )
         service_resource_manager = ServiceResourceManager(self._labels, client)
-        service = service_resource_manager.define_resource(State(http_route_resource_definition))
+        service = service_resource_manager.define_resource(
+            ResourceDefinition(http_route_resource_definition)
+        )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
         http_route_resource_manager.define_resource(
-            State(
+            ResourceDefinition(
                 http_route_resource_definition,
                 gateway_resource_information,
                 HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
             )
         )
         http_route_resource_manager.define_resource(
-            State(
+            ResourceDefinition(
                 http_route_resource_definition,
                 gateway_resource_information,
                 HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),

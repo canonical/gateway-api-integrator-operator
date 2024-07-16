@@ -12,7 +12,7 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from state.base import State
+from state.base import ResourceDefinition
 from state.http_route import HTTPRouteType
 
 from .permission import map_k8s_auth_exception
@@ -42,11 +42,11 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> GenericNamespacedResource:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> GenericNamespacedResource:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 3 components:
+            resource_definition: Part of charm state consisting of 3 components:
                 - HTTPRouteResourceDefinition
                 - GatewayResourceDefinition
                 - HTTPRouteResourceType
@@ -54,23 +54,37 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        listener_id = f"{state.gateway_name}-{state.http_route_type.value}-listener"
+        listener_id = (
+            f"{resource_definition.gateway_name}"
+            f"-{resource_definition.http_route_type.value}"
+            "-listener"
+        )
         spec = {
             "parentRefs": [
                 {
-                    "name": state.gateway_name,
+                    "name": resource_definition.gateway_name,
                     "namespace": self._client.namespace,
                     "sectionName": listener_id,
                 }
             ],
         }
-        if state.http_route_type == HTTPRouteType.HTTPS:
+        if resource_definition.http_route_type == HTTPRouteType.HTTPS:
             spec["rules"] = [
                 {
                     "matches": [
-                        {"path": {"type": "PathPrefix", "value": f"/{state.service_name}"}}
+                        {
+                            "path": {
+                                "type": "PathPrefix",
+                                "value": f"/{resource_definition.service_name}",
+                            }
+                        }
                     ],
-                    "backendRefs": [{"name": state.service_name, "port": state.service_port}],
+                    "backendRefs": [
+                        {
+                            "name": resource_definition.service_name,
+                            "port": resource_definition.service_port,
+                        }
+                    ],
                 }
             ]
         else:
@@ -88,7 +102,11 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
-                name=f"{state.service_name}-{state.http_route_type.value}", labels=self._labels
+                name=(
+                    f"{resource_definition.service_name}"
+                    f"-{resource_definition.http_route_type.value}"
+                ),
+                labels=self._labels,
             ),
             spec=spec,
         )

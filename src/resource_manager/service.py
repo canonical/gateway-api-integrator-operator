@@ -13,7 +13,7 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Service
 from lightkube.types import PatchType
 
-from state.base import State
+from state.base import ResourceDefinition
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -35,11 +35,11 @@ class ServiceResourceManager(ResourceManager[Service]):
         self._labels = labels
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> Service:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> Service:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 1 component:
+            resource_definition: Part of charm state consisting of 1 component:
                 - HTTPRouteResourceManager
 
         Returns:
@@ -48,16 +48,16 @@ class ServiceResourceManager(ResourceManager[Service]):
         service = Service(
             apiVersion="v1",
             kind="Service",
-            metadata=ObjectMeta(name=state.service_name, labels=self._labels),
+            metadata=ObjectMeta(name=resource_definition.service_name, labels=self._labels),
             spec=ServiceSpec(
                 ports=[
                     ServicePort(
-                        port=state.service_port,
-                        name=state.service_port_name,
-                        targetPort=state.service_port,
+                        port=resource_definition.service_port,
+                        name=resource_definition.service_port_name,
+                        targetPort=resource_definition.service_port,
                     )
                 ],
-                selector={"app.kubernetes.io/name": state.application_name},
+                selector={"app.kubernetes.io/name": resource_definition.application_name},
             ),
         )
 

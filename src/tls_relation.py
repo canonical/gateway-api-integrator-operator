@@ -29,7 +29,7 @@ class InvalidCertificateError(Exception):
 class KeyPair(typing.NamedTuple):
     """Stores a private key and encryption password.
 
-    Attrs:
+    Attributes:
         private_key: The private key
         password: The password used for encryption
     """

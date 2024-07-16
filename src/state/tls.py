@@ -23,7 +23,7 @@ class TlsIntegrationMissingError(CharmStateValidationBaseError):
 class TLSInformation:
     """A component of charm state containing information about TLS.
 
-    Attrs:
+    Attributes:
         secret_resource_name_prefix: Prefix of the secret resource name.
         tls_certs: A dict of hostname: certificate obtained from the relation.
         tls_keys: A dict of hostname: private_key stored in juju secrets.

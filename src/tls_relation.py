@@ -196,5 +196,7 @@ class TLSRelationService:
             typing.Optional[ProviderCertificate]: ProviderCertificate if exists, else None.
         """
         provider_certificates = self.certificates.get_provider_certificates()
-        matching_certs = [cert for cert in provider_certificates if cert == certificate]
+        matching_certs = [
+            cert for cert in provider_certificates if cert.certificate == certificate
+        ]
         return matching_certs[0] if matching_certs else None

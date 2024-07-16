@@ -36,14 +36,15 @@ Init method for the class.
 
 ---
 
-<a href="../src/tls_relation.py#L208"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L174"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_expiring`
 
 ```python
 certificate_expiring(
     event: Union[CertificateExpiringEvent, CertificateInvalidatedEvent],
-    certificates: TLSCertificatesRequiresV3
+    certificates: TLSCertificatesRequiresV3,
+    tls_integration: Relation
 ) → None
 ```
 
@@ -55,15 +56,19 @@ Handle the TLS Certificate expiring event.
  
  - <b>`event`</b>:  The event that fires this method. 
  - <b>`certificates`</b>:  The certificate requirer library instance. 
+ - <b>`tls_integration`</b>:  The tls certificates integration. 
 
 ---
 
-<a href="../src/tls_relation.py#L184"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L155"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_relation_available`
 
 ```python
-certificate_relation_available(event: CertificateAvailableEvent) → None
+certificate_relation_available(
+    event: CertificateAvailableEvent,
+    tls_integration: Relation
+) → None
 ```
 
 Handle the TLS Certificate available event. 
@@ -73,15 +78,16 @@ Handle the TLS Certificate available event.
 **Args:**
  
  - <b>`event`</b>:  The event that fires this method. 
+ - <b>`tls_integration`</b>:  The tls certificates integration. 
 
 ---
 
-<a href="../src/tls_relation.py#L157"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L132"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_relation_created`
 
 ```python
-certificate_relation_created(hostname: str) → None
+certificate_relation_created(hostname: str, tls_integration: Relation) → None
 ```
 
 Handle the TLS Certificate created event. 
@@ -91,17 +97,19 @@ Handle the TLS Certificate created event.
 **Args:**
  
  - <b>`hostname`</b>:  Certificate's hostname. 
+ - <b>`tls_integration`</b>:  The tls certificates integration. 
 
 ---
 
-<a href="../src/tls_relation.py#L132"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L109"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `certificate_relation_joined`
 
 ```python
 certificate_relation_joined(
     hostname: str,
-    certificates: TLSCertificatesRequiresV3
+    certificates: TLSCertificatesRequiresV3,
+    tls_integration: Relation
 ) → None
 ```
 
@@ -113,10 +121,11 @@ Handle the TLS Certificate joined event.
  
  - <b>`hostname`</b>:  Certificate's hostname. 
  - <b>`certificates`</b>:  The certificate requirer library instance. 
+ - <b>`tls_integration`</b>:  The tls certificates integration. 
 
 ---
 
-<a href="../src/tls_relation.py#L53"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L39"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `generate_password`
 
@@ -134,24 +143,7 @@ Generate a random 12 character password.
 
 ---
 
-<a href="../src/tls_relation.py#L238"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>function</kbd> `get_decrypted_keys`
-
-```python
-get_decrypted_keys() → Dict[str, str]
-```
-
-Return the list of decrypted private keys. 
-
-
-
-**Returns:**
-  A dictionary indexed by domain, containing the decrypted private keys. 
-
----
-
-<a href="../src/tls_relation.py#L105"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L91"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `get_hostname_from_cert`
 
@@ -174,7 +166,7 @@ Get the hostname from a certificate subject name.
 
 ---
 
-<a href="../src/tls_relation.py#L86"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `get_relation_data_field`
 
@@ -204,24 +196,7 @@ Get an item from the app relation databag.
 
 ---
 
-<a href="../src/tls_relation.py#L122"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
-
-### <kbd>function</kbd> `get_tls_relation`
-
-```python
-get_tls_relation() → Optional[Relation]
-```
-
-Get the TLS certificates relation. 
-
-
-
-**Returns:**
-  The TLS certificates relation of the charm. 
-
----
-
-<a href="../src/tls_relation.py#L72"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L58"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `pop_relation_data_fields`
 
@@ -240,7 +215,7 @@ Pop a list of items from the app relation databag.
 
 ---
 
-<a href="../src/tls_relation.py#L62"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/tls_relation.py#L48"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `update_relation_data_fields`
 

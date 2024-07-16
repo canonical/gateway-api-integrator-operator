@@ -20,7 +20,7 @@ Attrs:  gateway_class (_type_): _description_  external_hostname: The configured
 
 ---
 
-## <kbd>class</kbd> `GatewayResourceDefinition`
+## <kbd>class</kbd> `GatewayResourceInformation`
 Base class containing kubernetes resource definition. 
 
 Attrs:  config: The config data of the charm.  gateway_name: The gateway resource's name 
@@ -35,7 +35,7 @@ Attrs:  config: The config data of the charm.  gateway_name: The gateway resourc
 ### <kbd>classmethod</kbd> `from_charm`
 
 ```python
-from_charm(charm: CharmBase) → GatewayResourceDefinition
+from_charm(charm: CharmBase) → GatewayResourceInformation
 ```
 
 Create a resource definition from charm instance. 

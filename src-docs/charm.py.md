@@ -16,7 +16,7 @@ gateway-api-integrator charm file.
 ## <kbd>class</kbd> `GatewayAPICharm`
 The main charm class for the gateway-api-integrator charm. 
 
-<a href="../src/charm.py#L45"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/charm.py#L79"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `__init__`
 
@@ -68,6 +68,15 @@ Shortcut for more simple access the model.
 #### <kbd>property</kbd> unit
 
 Unit that this execution is responsible for. 
+
+
+
+
+---
+
+## <kbd>class</kbd> `LightKubeInitializationError`
+Exception raised when initialization of the lightkube client failed. 
+
 
 
 

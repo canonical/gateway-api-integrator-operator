@@ -13,29 +13,31 @@ TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 
 class TlsIntegrationMissingError(Exception):
-    """Exception raised when _situation_."""
+    """Exception raised when certificates relation is missing."""
 
 
 @dataclasses.dataclass(frozen=True)
 class TLSInformation:
-    """A component of charm state containing resource definition for kubernetes secret.
+    """A component of charm state containing information about TLS.
 
     Attrs:
+        secret_resource_name_prefix: Prefix of the secret resource name.
         tls_requirer_integration: The integration instance with a TLS provider.
         tls_certs: A dict of hostname: certificate obtained from the relation.
         tls_keys: A dict of hostname: private_key stored in juju secrets.
     """
 
+    secret_resource_name_prefix: str
     tls_requirer_integration: Relation
     tls_certs: dict[str, str]
-    tls_keys: dict[str, str]
+    tls_keys: dict[str, dict[str, str]]
 
     @classmethod
     def from_charm(cls, charm: ops.CharmBase) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
         Args:
-            charm (ops.CharmBase): The gateway-api-integrator charm.
+            charm: The gateway-api-integrator charm.
 
         Raises:
             TlsIntegrationMissingError: When integration is not ready.
@@ -52,6 +54,7 @@ class TLSInformation:
 
         tls_certs = {}
         tls_keys = {}
+        secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         for key, value in tls_requirer_integration.data[charm.app].items():
             if key.startswith("chain-"):
@@ -60,9 +63,13 @@ class TLSInformation:
 
                 if JujuVersion.from_environ().has_secrets:
                     secret = charm.model.get_secret(label=f"private-key-{hostname}")
-                    tls_keys[hostname] = secret.get_content()["key"]
+                    tls_keys[hostname] = {
+                        "key": secret.get_content()["key"],
+                        "password": secret.get_content()["password"],
+                    }
 
         return cls(
+            secret_resource_name_prefix=secret_resource_name_prefix,
             tls_requirer_integration=tls_requirer_integration,
             tls_certs=tls_certs,
             tls_keys=tls_keys,

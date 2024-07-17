@@ -108,13 +108,14 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     def cleanup_resources(
         self,
-        exclude: typing.Optional[AnyResource] = None,
+        exclude: list[AnyResource] = [],
     ) -> None:
         """Remove unused resources.
 
         Args:
             exclude: The name of resource to be excluded from the cleanup.
         """
+        excluded_resource_names = [resource_name(resource) for resource in exclude]
         for resource in self._list_resource():
             excluded_resource_name = resource_name(exclude)
             res_name = resource_name(resource)

@@ -49,12 +49,14 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         - GatewayResourceDefinition
 
     Attributes:
+        application_name: The requirer application name.
         gateway_name: The gateway resource's name
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
         http_route_type: Type of the HTTP route, can be http or https.
     """
 
+    application_name: str
     gateway_name: str
     service_name: str
     service_port: int
@@ -126,7 +128,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                         {
                             "path": {
                                 "type": "PathPrefix",
-                                "value": f"/{resource_definition.service_name}",
+                                "value": f"/{resource_definition.application_name}",
                             }
                         }
                     ],

@@ -160,8 +160,8 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
-        gateway_resource_manager.cleanup_resources(exclude=gateway)
-        secret_resource_manager.cleanup_resources(exclude=secret)
+        gateway_resource_manager.cleanup_resources(exclude=[gateway])
+        secret_resource_manager.cleanup_resources(exclude=[secret])
 
         http_route_resource_definition = HTTPRouteResourceInformation.from_charm(
             self, self._ingress_provider
@@ -171,21 +171,22 @@ class GatewayAPICharm(CharmBase):
             ServiceResourceDefinition(http_route_resource_definition)
         )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
-        http_route_resource_manager.define_resource(
+        http_route = http_route_resource_manager.define_resource(
             HTTPRouteResourceDefinition(
                 http_route_resource_definition,
                 gateway_resource_information,
                 HTTPRouteType.HTTP,
             )
         )
-        http_route_resource_manager.define_resource(
+        https_route = http_route_resource_manager.define_resource(
             HTTPRouteResourceDefinition(
                 http_route_resource_definition,
                 gateway_resource_information,
                 HTTPRouteType.HTTPS,
             )
         )
-        service_resource_manager.cleanup_resources(service)
+        service_resource_manager.cleanup_resources(exclude=[service])
+        http_route_resource_manager.cleanup_resources(exclude=[http_route, https_route])
 
         relation = self.model.get_relation(INGRESS_RELATION)
         self._ingress_provider.publish_url(

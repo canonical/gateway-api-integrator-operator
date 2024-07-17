@@ -15,6 +15,8 @@ from pydantic.dataclasses import dataclass
 
 from resource_manager.permission import map_k8s_auth_exception
 
+from .exception import CharmStateValidationBaseError
+
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
@@ -22,11 +24,11 @@ GATEWAY_CLASS_PLURAL = "gatewayclasses"
 logger = logging.getLogger()
 
 
-class InvalidCharmConfigError(Exception):
+class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 
-class GatewayClassUnavailableError(Exception):
+class GatewayClassUnavailableError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
 
 
@@ -34,7 +36,7 @@ class GatewayClassUnavailableError(Exception):
 class CharmConfig:
     """A component of charm state that contains the charm's configuration.
 
-    Attrs:
+    Attributes:
         gateway_class_name: The configured gateway class.
         external_hostname: The configured gateway hostname.
     """

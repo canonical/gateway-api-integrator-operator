@@ -38,7 +38,7 @@ class GatewayResourceDefinition(ResourceDefinition):
         - CharmConfig
         - TLSInformation
 
-    Attrs:
+    Attributes:
         gateway_name: The gateway resource's name
         external_hostname: The configured gateway hostname.
         gateway_class_name: The configured gateway class.
@@ -92,38 +92,39 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: ResourceDefinition) -> dict:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state.
+            resource_definition: The data necessary to create the gateway resource.
 
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        gateway_state = typing.cast(GatewayResourceDefinition, state)
-        tls_secret_name = (
-            f"{gateway_state.secret_resource_name_prefix}-{gateway_state.external_hostname}"
-        )
+        gateway_resource_definition = typing.cast(GatewayResourceDefinition, resource_definition)
+        prefix = gateway_resource_definition.secret_resource_name_prefix
+        tls_secret_name = f"{prefix}-{gateway_resource_definition.external_hostname}"
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(name=gateway_state.gateway_name, labels=self._labels),
+            metadata=ObjectMeta(
+                name=gateway_resource_definition.gateway_name, labels=self._labels
+            ),
             spec={
-                "gatewayClassName": gateway_state.gateway_class_name,
+                "gatewayClassName": gateway_resource_definition.gateway_class_name,
                 "listeners": [
                     {
                         "protocol": "HTTP",
                         "port": 80,
-                        "name": f"{gateway_state.gateway_name}-http-listener",
-                        "hostname": gateway_state.external_hostname,
+                        "name": f"{gateway_resource_definition.gateway_name}-http-listener",
+                        "hostname": gateway_resource_definition.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                     {
                         "protocol": "HTTPS",
                         "port": 443,
-                        "name": f"{gateway_state.gateway_name}-https-listener",
-                        "hostname": gateway_state.external_hostname,
+                        "name": f"{gateway_resource_definition.gateway_name}-https-listener",
+                        "hostname": gateway_resource_definition.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                         "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
                     },

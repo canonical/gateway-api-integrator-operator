@@ -108,7 +108,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     def cleanup_resources(
         self,
-        exclude: list[AnyResource] = [],
+        exclude: list[AnyResource],
     ) -> None:
         """Remove unused resources.
 

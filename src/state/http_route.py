@@ -4,7 +4,6 @@
 """gateway-api-integrator ingress charm state component."""
 
 import dataclasses
-from enum import Enum
 
 import ops
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
@@ -22,31 +21,8 @@ class IngressIntegrationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
 
 
-class HTTPRouteType(Enum):
-    """Enum of possible http_route types.
-
-    Attrs:
-        HTTP: http.
-        HTTPS: https.
-    """
-
-    HTTP = "http"
-    HTTPS = "https"
-
-
 @dataclasses.dataclass(frozen=True)
-class HTTPRouteResourceType:
-    """Dataclass containing the type of the HTTPRoute resource.
-
-    Attrs:
-        http_route_type: the type of the HTTPRoute resource.
-    """
-
-    http_route_type: HTTPRouteType
-
-
-@dataclasses.dataclass(frozen=True)
-class HTTPRouteResourceDefinition:
+class HTTPRouteResourceInformation:
     """A component of charm state containing resource definition for kubernetes secret.
 
     Attrs:
@@ -64,7 +40,7 @@ class HTTPRouteResourceDefinition:
     @classmethod
     def from_charm(
         cls, charm: ops.CharmBase, ingress_provider: IngressPerAppProvider
-    ) -> "HTTPRouteResourceDefinition":
+    ) -> "HTTPRouteResourceInformation":
         """Get TLS information from a charm instance.
 
         Args:
@@ -77,7 +53,7 @@ class HTTPRouteResourceDefinition:
             IngressIntegrationDataValidationError: When data validation failed.
 
         Returns:
-            HTTPRouteResourceDefinition: Information about configured TLS certs.
+            HTTPRouteResourceInformation: Information about configured TLS certs.
         """
         ingress_integration = charm.model.get_relation(INGRESS_RELATION)
         if ingress_integration is None:

@@ -3,6 +3,7 @@
 """gateway-api-integrator service resource manager."""
 
 
+import dataclasses
 import logging
 import typing
 
@@ -14,11 +15,43 @@ from lightkube.resources.core_v1 import Service
 from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
+from state.http_route import HTTPRouteResourceInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
+
+
+@dataclasses.dataclass
+class ServiceResourceDefinition(ResourceDefinition):
+    """A part of charm state with information required to manage gateway resource.
+
+    It consists of 1 components:
+        - ServiceResourceDefinition
+
+    Attributes:
+        service_name: The gateway resource's name
+        service_port: The configured gateway hostname.
+        service_port_name: The configured gateway class.
+        application_name: The application name.
+    """
+
+    service_name: str
+    service_port: int
+    service_port_name: str
+    application_name: str
+
+    def __init__(
+        self,
+        http_route_resource_information: HTTPRouteResourceInformation,
+    ):
+        """Create the state object with state components.
+
+        Args:
+            http_route_resource_information: HTTPRouteResourceInformation state component.
+        """
+        super().__init__(http_route_resource_information)
 
 
 class ServiceResourceManager(ResourceManager[Service]):
@@ -45,19 +78,23 @@ class ServiceResourceManager(ResourceManager[Service]):
         Returns:
             A dictionary representing the gateway custom resource.
         """
+        service_resource_definition = typing.cast(ServiceResourceDefinition, resource_definition)
+
         service = Service(
             apiVersion="v1",
             kind="Service",
-            metadata=ObjectMeta(name=resource_definition.service_name, labels=self._labels),
+            metadata=ObjectMeta(
+                name=service_resource_definition.service_name, labels=self._labels
+            ),
             spec=ServiceSpec(
                 ports=[
                     ServicePort(
-                        port=resource_definition.service_port,
-                        name=resource_definition.service_port_name,
-                        targetPort=resource_definition.service_port,
+                        port=service_resource_definition.service_port,
+                        name=service_resource_definition.service_port_name,
+                        targetPort=service_resource_definition.service_port,
                     )
                 ],
-                selector={"app.kubernetes.io/name": resource_definition.application_name},
+                selector={"app.kubernetes.io/name": service_resource_definition.application_name},
             ),
         )
 

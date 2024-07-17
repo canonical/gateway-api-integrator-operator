@@ -32,13 +32,16 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
-from resource_manager.http_route import HTTPRouteResourceManager
+from resource_manager.http_route import (
+    HTTPRouteResourceDefinition,
+    HTTPRouteResourceManager,
+    HTTPRouteType,
+)
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
-from resource_manager.service import ServiceResourceManager
-from state.base import ResourceDefinition
+from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
-from state.http_route import HTTPRouteResourceDefinition, HTTPRouteResourceType, HTTPRouteType
+from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService, get_hostname_from_cert
@@ -160,26 +163,26 @@ class GatewayAPICharm(CharmBase):
         gateway_resource_manager.cleanup_resources(exclude=gateway)
         secret_resource_manager.cleanup_resources(exclude=secret)
 
-        http_route_resource_definition = HTTPRouteResourceDefinition.from_charm(
+        http_route_resource_definition = HTTPRouteResourceInformation.from_charm(
             self, self._ingress_provider
         )
         service_resource_manager = ServiceResourceManager(self._labels, client)
         service = service_resource_manager.define_resource(
-            ResourceDefinition(http_route_resource_definition)
+            ServiceResourceDefinition(http_route_resource_definition)
         )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
         http_route_resource_manager.define_resource(
-            ResourceDefinition(
+            HTTPRouteResourceDefinition(
                 http_route_resource_definition,
                 gateway_resource_information,
-                HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
+                HTTPRouteType.HTTP,
             )
         )
         http_route_resource_manager.define_resource(
-            ResourceDefinition(
+            HTTPRouteResourceDefinition(
                 http_route_resource_definition,
                 gateway_resource_information,
-                HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
+                HTTPRouteType.HTTPS,
             )
         )
         service_resource_manager.cleanup_resources(service)

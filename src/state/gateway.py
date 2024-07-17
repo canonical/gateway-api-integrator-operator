@@ -12,7 +12,7 @@ import ops
 class GatewayResourceInformation:
     """A component of charm state that contains gateway resource definition.
 
-    Attrs:
+    Attributes:
         gateway_name: The gateway resource's name
     """
 

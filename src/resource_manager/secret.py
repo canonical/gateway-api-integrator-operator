@@ -12,11 +12,9 @@ from lightkube.core.client import LabelSelector
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
-from ops.model import Relation
 
 from state.base import ResourceDefinition
-from state.config import CharmConfig
-from state.gateway import GatewayResourceInformation
+from state.exception import CharmStateValidationBaseError
 from state.tls import TLSInformation
 
 from .permission import map_k8s_auth_exception
@@ -25,43 +23,54 @@ from .resource_manager import ResourceManager
 logger = logging.getLogger(__name__)
 
 
+class CertificateDataNotReadyError(CharmStateValidationBaseError):
+    """Exception raised when certificates data is not set on the tls provider."""
+
+
 @dataclasses.dataclass
 class SecretResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage secret resource.
 
-    It consistS of 3 components:
-        - SecretResourceInfomation
-        - CharmConfig
-        - TLSInformation
-
-    Attrs:
-        external_hostname: The configured gateway hostname.
-        tls_requirer_integration: The integration instance with a TLS provider.
-        tls_certs: A dict of hostname: certificate obtained from the relation.
-        tls_keys: A dict of hostname: private_key stored in juju secrets.
+    Attributes:
+        hostname: The configured gateway hostname.
         secret_resource_name_prefix: Prefix of the secret resource name.
+        certificate: TLS certificate.
+        private_key: Password-ecrypted private key.
+        password: Private key password.
     """
 
-    external_hostname: str
-    tls_requirer_integration: Relation
-    tls_certs: dict[str, str]
-    tls_keys: dict[str, dict[str, str]]
+    hostname: str
     secret_resource_name_prefix: str
+    certificate: str
+    private_key: str
+    password: str
 
-    def __init__(
-        self,
-        gateway_resource_information: GatewayResourceInformation,
-        charm_config: CharmConfig,
-        tls_information: TLSInformation,
-    ):
-        """Create the state object with state components.
+    @classmethod
+    def from_tls_information(
+        cls, tls_information: TLSInformation, hostname: str
+    ) -> "SecretResourceDefinition":
+        """Get certificate information for a given hostname.
 
         Args:
-            gateway_resource_information: GatewayResourceInformation state component.
-            charm_config: CharmConfig state component.
             tls_information: TLSInformation state component.
+            hostname: The requested hostname.
+
+        Raises:
+            CertificateDataNotReadyError: When the certificate data is not ready.
+
+        Returns:
+            SecretResourceDefinition: Information about the certificate.
         """
-        super().__init__(gateway_resource_information, charm_config, tls_information)
+        if hostname not in tls_information.tls_certs:
+            raise CertificateDataNotReadyError("Certificate data missing or incomplete.")
+
+        return SecretResourceDefinition(
+            hostname=hostname,
+            secret_resource_name_prefix=tls_information.secret_resource_name_prefix,
+            certificate=tls_information.tls_certs[hostname],
+            private_key=tls_information.tls_keys[hostname]["key"],
+            password=tls_information.tls_keys[hostname]["password"],
+        )
 
 
 def _get_decrypted_key(private_key: str, password: str) -> str:
@@ -100,30 +109,28 @@ class TLSSecretResourceManager(ResourceManager[Secret]):
         self._labels = labels
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: ResourceDefinition) -> Secret:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> Secret:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state.
+            resource_definition: Part of charm state.
 
         Returns:
             A Secret resource object.
         """
-        secret_state = typing.cast(SecretResourceDefinition, state)
-
-        tls_secret_name = (
-            f"{secret_state.secret_resource_name_prefix}-{secret_state.external_hostname}"
-        )
+        secret_resource_definition = typing.cast(SecretResourceDefinition, resource_definition)
+        prefix = secret_resource_definition.secret_resource_name_prefix
+        tls_secret_name = f"{prefix}-{secret_resource_definition.hostname}"
 
         secret = Secret(
             apiVersion="v1",
             kind="Secret",
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
-                "tls.crt": secret_state.tls_certs[secret_state.external_hostname],
+                "tls.crt": secret_resource_definition.certificate,
                 "tls.key": _get_decrypted_key(
-                    secret_state.tls_keys[secret_state.external_hostname]["key"],
-                    secret_state.tls_keys[secret_state.external_hostname]["password"],
+                    secret_resource_definition.private_key,
+                    secret_resource_definition.password,
                 ),
             },
             type="kubernetes.io/tls",

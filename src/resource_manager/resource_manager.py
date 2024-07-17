@@ -45,11 +45,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
     """Abstract base class for a generic Kubernetes resource controller."""
 
     @abc.abstractmethod
-    def _gen_resource(self, state: ResourceDefinition) -> AnyResource:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
-            state: Part of charm state consisting of one or several components.
+            resource_definition: The data necessary to create the k8s resource.
         """
 
     @abc.abstractmethod

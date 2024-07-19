@@ -33,6 +33,7 @@ from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, Wait
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
+    HTTPRouteRedirectResourceManager,
     HTTPRouteResourceDefinition,
     HTTPRouteResourceManager,
     HTTPRouteType,
@@ -145,7 +146,6 @@ class GatewayAPICharm(CharmBase):
             client=client,
         )
         secret_resource_manager = TLSSecretResourceManager(self._labels, client)
-
         secret = secret_resource_manager.define_resource(
             SecretResourceDefinition.from_tls_information(
                 tls_information, config.external_hostname
@@ -154,12 +154,6 @@ class GatewayAPICharm(CharmBase):
         gateway = gateway_resource_manager.define_resource(
             GatewayResourceDefinition(gateway_resource_information, config, tls_information)
         )
-
-        self.unit.status = WaitingStatus("Waiting for gateway address")
-        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
-            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
-        else:
-            self.unit.status = WaitingStatus("Gateway address unavailable")
         gateway_resource_manager.cleanup_resources(exclude=[gateway])
         secret_resource_manager.cleanup_resources(exclude=[secret])
 
@@ -171,7 +165,8 @@ class GatewayAPICharm(CharmBase):
             ServiceResourceDefinition(http_route_resource_information)
         )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
-        http_route = http_route_resource_manager.define_resource(
+        redirect_resource_manager = HTTPRouteRedirectResourceManager(self._labels, client)
+        redirect_route = redirect_resource_manager.define_resource(
             HTTPRouteResourceDefinition(
                 http_route_resource_information,
                 gateway_resource_information,
@@ -186,16 +181,24 @@ class GatewayAPICharm(CharmBase):
             )
         )
         service_resource_manager.cleanup_resources(exclude=[service])
-        http_route_resource_manager.cleanup_resources(exclude=[http_route, https_route])
+        http_route_resource_manager.cleanup_resources(exclude=[https_route])
+        redirect_resource_manager.cleanup_resources(exclude=[redirect_route])
 
         relation = self.model.get_relation(INGRESS_RELATION)
         self._ingress_provider.publish_url(
             relation,
             (
                 f"https://{config.external_hostname}"
-                f"/{http_route_resource_information.application_name}"
+                f"/{http_route_resource_information.requirer_model_name}"
+                f"-{http_route_resource_information.application_name}"
             ),
         )
+
+        self.unit.status = WaitingStatus("Waiting for gateway address")
+        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
+            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
+        else:
+            self.unit.status = WaitingStatus("Gateway address unavailable")
 
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""

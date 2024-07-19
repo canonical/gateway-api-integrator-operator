@@ -82,7 +82,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
 
 
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
-    """service resource manager."""
+    """HTTP route resource manager."""
 
     def __init__(self, labels: LabelSelector, client: Client) -> None:
         """Initialize the HTTPRouteResourceManager.
@@ -126,9 +126,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                     "sectionName": listener_id,
                 }
             ],
-        }
-        if http_route_resource_definition.http_route_type == HTTPRouteType.HTTPS:
-            spec["rules"] = [
+            "rules": [
                 {
                     "matches": [
                         {
@@ -148,18 +146,9 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                         }
                     ],
                 }
-            ]
-        else:
-            spec["rules"] = [
-                {
-                    "filters": [
-                        {
-                            "type": "RequestRedirect",
-                            "requestRedirect": {"scheme": "https", "statusCode": 301},
-                        }
-                    ]
-                }
-            ]
+            ],
+        }
+
         http_route = self._http_route_generic_resource_class(
             apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
             kind=HTTP_ROUTE_RESOURCE_NAME,
@@ -222,3 +211,62 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             name: The name of the secret resource to delete.
         """
         self._client.delete(res=self._http_route_generic_resource_class, name=name)
+
+
+class HTTPRouteRedirectResourceManager(HTTPRouteResourceManager):
+    """HTTP route resource manager that handles rediection."""
+
+    @map_k8s_auth_exception
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> GenericNamespacedResource:
+        """Generate a Gateway resource from a gateway resource definition.
+
+        Args:
+            resource_definition: Part of charm state consisting of 2 components:
+                - HTTPRouteResourceInformation
+                - GatewayResourceDefinition
+
+        Returns:
+            A dictionary representing the gateway custom resource.
+        """
+        http_route_resource_definition = typing.cast(
+            HTTPRouteResourceDefinition, resource_definition
+        )
+
+        listener_id = (
+            f"{http_route_resource_definition.gateway_name}"
+            f"-{http_route_resource_definition.http_route_type}"
+            "-listener"
+        )
+        spec = {
+            "parentRefs": [
+                {
+                    "name": http_route_resource_definition.gateway_name,
+                    "namespace": self._client.namespace,
+                    "sectionName": listener_id,
+                }
+            ],
+            "rules": [
+                {
+                    "filters": [
+                        {
+                            "type": "RequestRedirect",
+                            "requestRedirect": {"scheme": "https", "statusCode": 301},
+                        }
+                    ]
+                }
+            ],
+        }
+        http_route = self._http_route_generic_resource_class(
+            apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
+            kind=HTTP_ROUTE_RESOURCE_NAME,
+            metadata=ObjectMeta(
+                name=(
+                    f"{http_route_resource_definition.service_name}"
+                    f"-{http_route_resource_definition.http_route_type}"
+                ),
+                labels=self._labels,
+            ),
+            spec=spec,
+        )
+
+        return http_route

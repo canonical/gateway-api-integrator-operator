@@ -235,30 +235,95 @@ class GatewayAPICharm(CharmBase):
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
-    def _reconcile(self) -> None:  # pylint: disable=too-many-locals
-        """Reconcile charm status based on configuration and integrations."""
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+    def _reconcile(self) -> None:
+        """Reconcile charm status based on configuration and integrations.
 
+        Actions performed in this method:
+            1. Initialize charm state components.
+            2. Create the gateway and secret resources.
+            3. Create ingress-related resources:
+                - service
+                - http_route (HTTPS)
+                - http_route (HTTPtoHTTPS redirect)
+            4. Publish the ingress URL to the requirer charm.
+            5. Set the gateway LB address in the charm's status message.
+        """
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
 
-        gateway_resource_manager = GatewayResourceManager(
+        self.unit.status = MaintenanceStatus("Creating resources.")
+        self._define_gateway_resource(
+            client, gateway_resource_information, config, tls_information
+        )
+        self._define_secret_resources(client, config, tls_information)
+        self._define_ingress_resources_and_publish_url(
+            client, config, gateway_resource_information
+        )
+        self._set_status_gateway_address(client, gateway_resource_information)
+
+    def _define_gateway_resource(
+        self,
+        client: Client,
+        gateway_resource_information: GatewayResourceInformation,
+        config: CharmConfig,
+        tls_information: TLSInformation,
+    ) -> None:
+        """Define the charm's gateway resource.
+
+        Args:
+            client: Lightkube client.
+            gateway_resource_information: Information needed to create the gateway resource.
+            config: Charm config.
+            tls_information: Information needed to create TLS secret resources.
+        """
+        resource_definition = GatewayResourceDefinition(
+            gateway_resource_information, config, tls_information
+        )
+        resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
-        secret_resource_manager = TLSSecretResourceManager(self._labels, client)
-        secret = secret_resource_manager.define_resource(
-            SecretResourceDefinition.from_tls_information(
-                tls_information, config.external_hostname
-            )
-        )
-        gateway = gateway_resource_manager.define_resource(
-            GatewayResourceDefinition(gateway_resource_information, config, tls_information)
-        )
-        gateway_resource_manager.cleanup_resources(exclude=[gateway])
-        secret_resource_manager.cleanup_resources(exclude=[secret])
+        gateway = resource_manager.define_resource(resource_definition)
+        resource_manager.cleanup_resources(exclude=[gateway])
 
+    def _define_secret_resources(
+        self,
+        client: Client,
+        config: CharmConfig,
+        tls_information: TLSInformation,
+    ) -> None:
+        """Define TLS secret resources.
+
+        Args:
+            client: Lightkube client.
+            config: Charm config.
+            tls_information: TLS-related information needed to create secret resources.
+        """
+        resource_definition = SecretResourceDefinition.from_tls_information(
+            tls_information, config.external_hostname
+        )
+        resource_manager = TLSSecretResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        secret = resource_manager.define_resource(resource_definition)
+        resource_manager.cleanup_resources(exclude=[secret])
+
+    def _define_ingress_resources_and_publish_url(
+        self,
+        client: Client,
+        config: CharmConfig,
+        gateway_resource_information: GatewayResourceInformation,
+    ) -> None:
+        """Define ingress-relation resources and publish the ingress URL.
+
+        Args:
+            client: Lightkube client.
+            config: Charm config.
+            gateway_resource_information: Information needed to attach http_route resources.
+        """
         http_route_resource_information = HTTPRouteResourceInformation.from_charm(
             self, self._ingress_provider
         )
@@ -284,7 +349,6 @@ class GatewayAPICharm(CharmBase):
         )
         service_resource_manager.cleanup_resources(exclude=[service])
         http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
-
         relation = self.model.get_relation(INGRESS_RELATION)
         self._ingress_provider.publish_url(
             relation,
@@ -295,8 +359,23 @@ class GatewayAPICharm(CharmBase):
             ),
         )
 
+    def _set_status_gateway_address(
+        self, client: Client, gateway_resource_information: GatewayResourceInformation
+    ) -> None:
+        """Set the gateway address in the charm's status message.
+
+        Args:
+            client: Lightkube client
+            gateway_resource_information: Information about the created gateway resource.
+        """
+        resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
         self.unit.status = WaitingStatus("Waiting for gateway address")
-        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
+        if gateway_address := resource_manager.gateway_address(
+            gateway_resource_information.gateway_name
+        ):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")

@@ -27,12 +27,14 @@ class HTTPRouteResourceInformation:
 
     Attrs:
         application_name: The name of the application we're providing routing to.
+        requirer_model_name: The name of the requirer model.
         service_name: The name of the service we're creating.
         service_port: The port of the service.
         service_port_name: The port name of the service.
     """
 
     application_name: str
+    requirer_model_name: str
     service_name: str
     service_port: int
     service_port_name: str
@@ -61,12 +63,14 @@ class HTTPRouteResourceInformation:
         try:
             integration_data = ingress_provider.get_data(ingress_integration)
             application_name = integration_data.app.name
+            requirer_model_name = integration_data.app.model
             service_name = f"{application_name}-gateway-service"
             service_port = integration_data.app.port
             service_port_name = f"tcp-{service_port}"
 
             return cls(
                 application_name=application_name,
+                requirer_model_name=requirer_model_name,
                 service_name=service_name,
                 service_port=service_port,
                 service_port_name=service_port_name,

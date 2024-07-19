@@ -50,6 +50,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
 
     Attributes:
         application_name: The requirer application name.
+        requirer_model_name: The name of the requirer model.
         gateway_name: The gateway resource's name.
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
@@ -57,6 +58,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     """
 
     application_name: str
+    requirer_model_name: str
     gateway_name: str
     service_name: str
     service_port: int
@@ -107,35 +109,42 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         Returns:
             A dictionary representing the gateway custom resource.
         """
+        http_route_resource_definition = typing.cast(
+            HTTPRouteResourceDefinition, resource_definition
+        )
+
         listener_id = (
-            f"{resource_definition.gateway_name}"
-            f"-{resource_definition.http_route_type}"
+            f"{http_route_resource_definition.gateway_name}"
+            f"-{http_route_resource_definition.http_route_type}"
             "-listener"
         )
         spec = {
             "parentRefs": [
                 {
-                    "name": resource_definition.gateway_name,
+                    "name": http_route_resource_definition.gateway_name,
                     "namespace": self._client.namespace,
                     "sectionName": listener_id,
                 }
             ],
         }
-        if resource_definition.http_route_type == HTTPRouteType.HTTPS:
+        if http_route_resource_definition.http_route_type == HTTPRouteType.HTTPS:
             spec["rules"] = [
                 {
                     "matches": [
                         {
                             "path": {
                                 "type": "PathPrefix",
-                                "value": f"/{resource_definition.application_name}",
+                                "value": (
+                                    f"/{http_route_resource_definition.requirer_model_name}"
+                                    f"-{http_route_resource_definition.application_name}"
+                                ),
                             }
                         }
                     ],
                     "backendRefs": [
                         {
-                            "name": resource_definition.service_name,
-                            "port": resource_definition.service_port,
+                            "name": http_route_resource_definition.service_name,
+                            "port": http_route_resource_definition.service_port,
                         }
                     ],
                 }
@@ -156,7 +165,8 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
                 name=(
-                    f"{resource_definition.service_name}" f"-{resource_definition.http_route_type}"
+                    f"{http_route_resource_definition.service_name}"
+                    f"-{http_route_resource_definition.http_route_type}"
                 ),
                 labels=self._labels,
             ),

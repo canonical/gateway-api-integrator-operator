@@ -163,24 +163,24 @@ class GatewayAPICharm(CharmBase):
         gateway_resource_manager.cleanup_resources(exclude=[gateway])
         secret_resource_manager.cleanup_resources(exclude=[secret])
 
-        http_route_resource_definition = HTTPRouteResourceInformation.from_charm(
+        http_route_resource_information = HTTPRouteResourceInformation.from_charm(
             self, self._ingress_provider
         )
         service_resource_manager = ServiceResourceManager(self._labels, client)
         service = service_resource_manager.define_resource(
-            ServiceResourceDefinition(http_route_resource_definition)
+            ServiceResourceDefinition(http_route_resource_information)
         )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
         http_route = http_route_resource_manager.define_resource(
             HTTPRouteResourceDefinition(
-                http_route_resource_definition,
+                http_route_resource_information,
                 gateway_resource_information,
                 HTTPRouteType.HTTP,
             )
         )
         https_route = http_route_resource_manager.define_resource(
             HTTPRouteResourceDefinition(
-                http_route_resource_definition,
+                http_route_resource_information,
                 gateway_resource_information,
                 HTTPRouteType.HTTPS,
             )
@@ -191,7 +191,10 @@ class GatewayAPICharm(CharmBase):
         relation = self.model.get_relation(INGRESS_RELATION)
         self._ingress_provider.publish_url(
             relation,
-            f"https://{config.external_hostname}/{http_route_resource_definition.application_name}",
+            (
+                f"https://{config.external_hostname}"
+                f"/{http_route_resource_information.application_name}"
+            ),
         )
 
     def _on_config_changed(self, _: typing.Any) -> None:

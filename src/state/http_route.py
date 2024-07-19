@@ -8,7 +8,7 @@ import dataclasses
 import ops
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
-from exception import CharmStateValidationBaseError
+from .exception import CharmStateValidationBaseError
 
 INGRESS_RELATION = "gateway"
 

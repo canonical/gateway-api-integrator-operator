@@ -6,7 +6,7 @@
 import dataclasses
 import logging
 import typing
-from enum import Enum
+from enum import StrEnum
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
@@ -28,8 +28,8 @@ HTTP_ROUTE_RESOURCE_NAME = "HTTPRoute"
 HTTP_ROUTE_PLURAL = "httproutes"
 
 
-class HTTPRouteType(Enum):
-    """Enum of possible http_route types.
+class HTTPRouteType(StrEnum):
+    """StrEnum of possible http_route types.
 
     Attrs:
         HTTP: http.
@@ -50,7 +50,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
 
     Attributes:
         application_name: The requirer application name.
-        gateway_name: The gateway resource's name
+        gateway_name: The gateway resource's name.
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
         http_route_type: Type of the HTTP route, can be http or https.
@@ -109,7 +109,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         listener_id = (
             f"{resource_definition.gateway_name}"
-            f"-{resource_definition.http_route_type.value}"
+            f"-{resource_definition.http_route_type}"
             "-listener"
         )
         spec = {
@@ -156,8 +156,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
                 name=(
-                    f"{resource_definition.service_name}"
-                    f"-{resource_definition.http_route_type.value}"
+                    f"{resource_definition.service_name}" f"-{resource_definition.http_route_type}"
                 ),
                 labels=self._labels,
             ),

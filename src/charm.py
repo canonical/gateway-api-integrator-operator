@@ -46,10 +46,10 @@ from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService, get_hostname_from_cert
 
-TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 INGRESS_RELATION = "gateway"
+TLS_CERT_RELATION = "certificates"
 
 
 def _get_client(field_manager: str, namespace: str) -> Client:
@@ -92,7 +92,7 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
-        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
+        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
 
@@ -191,7 +191,7 @@ class GatewayAPICharm(CharmBase):
         relation = self.model.get_relation(INGRESS_RELATION)
         self._ingress_provider.publish_url(
             relation,
-            f"https://{config.external_hostname}/{http_route_resource_definition.service_name}",
+            f"https://{config.external_hostname}/{http_route_resource_definition.application_name}",
         )
 
     def _on_config_changed(self, _: typing.Any) -> None:

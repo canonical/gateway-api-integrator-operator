@@ -3,7 +3,7 @@
 
 """Unit tests for certificates integration."""
 
-from unittest.mock import MagicMock, PropertyMock
+from unittest.mock import MagicMock
 
 import ops
 import pytest
@@ -11,7 +11,7 @@ from ops.model import Secret, SecretNotFoundError
 from ops.testing import Harness
 
 import tls_relation
-from state.tls import SecretNotSupportedError, TLSInformation, TlsIntegrationMissingError
+from state.tls import TLSInformation, TlsIntegrationMissingError
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
@@ -59,31 +59,6 @@ def test_cert_relation_secret_not_found_error(
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
-def test_cert_relation_secret_not_supported_error(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
-):
-    """
-    arrange: Given a charm with mocked tls module methods and valid config.
-    act: when relation with a TLS provider is established.
-    assert: the charm correctly generates a password and a CSR.
-    """
-    monkeypatch.setattr(
-        "ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=False)
-    )
-    harness.set_leader()
-    harness.update_config(config)
-    harness.begin()
-
-    with pytest.raises(SecretNotSupportedError):
-        harness.add_relation(
-            "certificates", "self-signed-certificates", app_data=certificates_relation_data
-        )
-
-
-@pytest.mark.usefixtures("client_with_mock_external")
 def test_tls_information_integration_missing(harness: Harness):
     """
     arrange: Given a charm with tls integration missing.
@@ -92,27 +67,7 @@ def test_tls_information_integration_missing(harness: Harness):
     """
     harness.begin()
     with pytest.raises(TlsIntegrationMissingError):
-        TLSInformation.from_charm(harness.charm)
-
-
-def test_tls_information_no_secret(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """
-    arrange: Given a charm deployed by juju that does not support secrets.
-    act: Initialize TLSInformation state component.
-    assert: SecretNotSupportedError is raised.
-    """
-    monkeypatch.setattr(
-        "ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=False)
-    )
-    relation_id = harness.add_relation("certificates", "self-signed-certificates")
-    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.begin()
-    with pytest.raises(SecretNotSupportedError):
-        TLSInformation.from_charm(harness.charm)
+        TLSInformation.from_charm(harness.charm, harness.charm.certificates)
 
 
 @pytest.mark.usefixtures("client_with_mock_external")

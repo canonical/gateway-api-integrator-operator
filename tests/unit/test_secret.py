@@ -8,11 +8,13 @@ from unittest.mock import MagicMock
 
 from ops.testing import Harness
 
-from resource_manager.secret import SecretResourceManager, _get_decrypted_key
-from state.base import State
-from state.config import CharmConfig
-from state.secret import SecretResourceDefinition
+from resource_manager.secret import (
+    SecretResourceDefinition,
+    TLSSecretResourceManager,
+    _get_decrypted_key,
+)
 from state.tls import TLSInformation
+from tls_relation import get_hostname_from_cert
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
@@ -38,10 +40,7 @@ def test_get_hostname_from_cert(harness: Harness, mock_certificate: str):
     assert: The hostname is correct.
     """
     harness.begin()
-    assert (
-        harness.charm._tls.get_hostname_from_cert(mock_certificate)
-        == TEST_EXTERNAL_HOSTNAME_CONFIG
-    )
+    assert get_hostname_from_cert(mock_certificate) == TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_secret_gen_resource(
@@ -60,22 +59,20 @@ def test_secret_gen_resource(
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
 
     harness.begin()
-    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
-    secret_resource_manager = SecretResourceManager(
+    secret_resource_manager = TLSSecretResourceManager(
         labels=harness.charm._labels,
         client=client_with_mock_external,
     )
-    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
-    tls_information = TLSInformation.from_charm(harness.charm)
-    config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
+    tls_information = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
     secret_resource = secret_resource_manager._gen_resource(
-        State(secret_resource_definition, config, tls_information)
+        SecretResourceDefinition.from_tls_information(tls_information, config["external-hostname"])
     )
+
     assert (
         secret_resource.metadata.name
         == f"{harness.model.app.name}-secret-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
     )
     assert (
         secret_resource.stringData["tls.crt"]
-        == certificates_relation_data[f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}"]
+        == certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"]
     )

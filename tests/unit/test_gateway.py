@@ -5,7 +5,6 @@
 # pylint: disable=protected-access
 """Unit tests for gateway resource."""
 
-import logging
 from unittest.mock import MagicMock
 
 import ops
@@ -17,26 +16,12 @@ from lightkube.generic_resource import GenericGlobalResource
 from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
-from resource_manager.gateway import GatewayResourceManager
-from state.base import State
+from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from state.config import CharmConfig
-from state.gateway import GatewayResourceDefinition
-from state.secret import SecretResourceDefinition
+from state.gateway import GatewayResourceInformation
+from state.tls import TLSInformation
 
 from .conftest import GATEWAY_CLASS_CONFIG
-
-logger = logging.getLogger()
-
-
-from unittest.mock import MagicMock, PropertyMock
-
-import ops
-import pytest
-from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
-from ops.model import Secret
-from ops.testing import Harness
-
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
@@ -130,28 +115,31 @@ def test_gateway_resource_definition_api_error_4xx(
         harness.update_config(config)
 
 
-def test_gateway_gen_resource(harness: Harness, config: dict[str, str]):
+def test_gateway_gen_resource(
+    harness: Harness,
+    config: dict[str, str],
+    certificates_relation_data: dict[str, str],
+    client_with_mock_external: MagicMock,
+):
     """
     arrange: Given a charm with valid config and mocked client.
     act: Call _gen_resource from the required state components.
     assert: The k8s resource is correctly generated.
     """
-    client_mock = MagicMock(spec=Client)
-    client_mock.list = MagicMock(
-        return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
-    )
+    relation_id = harness.add_relation("certificates", "self-signed-certificates")
+    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.update_config(config)
     harness.begin()
 
-    gateway_resource_definition = GatewayResourceDefinition.from_charm(harness.charm)
+    gateway_resource_information = GatewayResourceInformation.from_charm(harness.charm)
     gateway_resource_manager = GatewayResourceManager(
         labels=harness.charm._labels,
-        client=client_mock,
+        client=client_with_mock_external,
     )
-    secret_resource_definition = SecretResourceDefinition.from_charm(harness.charm)
-    config = CharmConfig.from_charm(harness.charm, client_mock)
+    tls_information = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
+    config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
     gateway_resource = gateway_resource_manager._gen_resource(
-        State(gateway_resource_definition, config, secret_resource_definition)
+        GatewayResourceDefinition(gateway_resource_information, config, tls_information)
     )
 
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG

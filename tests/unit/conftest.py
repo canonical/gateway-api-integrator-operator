@@ -126,24 +126,6 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     return cert
 
 
-@pytest.fixture(scope="function", name="gateway_relation_application_data")
-def gateway_relation_application_data_fixture() -> dict[str, str]:
-    """Mock gateway relation application data."""
-    return {
-        "name": '"gateway-api-integrator"',
-        "model": '"testing"',
-        "port": "8080",
-        "strip_prefix": "false",
-        "redirect_https": "false",
-    }
-
-
-@pytest.fixture(scope="function", name="gateway_relation_unit_data")
-def gateway_relation_unit_data_fixture() -> dict[str, str]:
-    """Mock gateway relation unit data."""
-    return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
-
-
 @pytest.fixture(scope="function", name="config")
 def config_fixture() -> dict[str, str]:
     """Valid charm config fixture."""

@@ -10,33 +10,35 @@ import pytest
 from lightkube.core.client import Client
 from ops.testing import Harness
 
-from resource_manager.http_route import HTTPRouteResourceManager
-from state.base import State
-from state.gateway import GatewayResourceDefinition
-from state.http_route import (
+from resource_manager.http_route import (
+    HTTPRouteRedirectResourceManager,
     HTTPRouteResourceDefinition,
-    HTTPRouteResourceType,
+    HTTPRouteResourceManager,
     HTTPRouteType,
+)
+from state.gateway import GatewayResourceInformation
+from state.http_route import (
+    HTTPRouteResourceInformation,
     IngressIntegrationDataValidationError,
     IngressIntegrationMissingError,
 )
 
 
-def test_http_route_resource_definition_integration_missing(harness: Harness):
+def test_http_route_resource_information_integration_missing(harness: Harness):
     """
     arrange: Given a charm missing ingress integration.
-    act: Initialize HTTPRouteResourceDefinition state component.
+    act: Initialize HTTPRouteResourceInformation state component.
     assert: IngressIntegrationMissingError is raised.
     """
     harness.begin()
     with pytest.raises(IngressIntegrationMissingError):
-        HTTPRouteResourceDefinition.from_charm(harness.charm, harness.charm._ingress_provider)
+        HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
 
 
-def test_http_route_resource_definition_validation_error(harness: Harness):
+def test_http_route_resource_information_validation_error(harness: Harness):
     """
     arrange: Given a charm with ingress integration with invalid data.
-    act: Initialize HTTPRouteResourceDefinition state component.
+    act: Initialize HTTPRouteResourceInformation state component.
     assert: IngressIntegrationDataValidationError is raised.
     """
     harness.add_relation(
@@ -46,7 +48,7 @@ def test_http_route_resource_definition_validation_error(harness: Harness):
 
     harness.begin()
     with pytest.raises(IngressIntegrationDataValidationError):
-        HTTPRouteResourceDefinition.from_charm(harness.charm, harness.charm._ingress_provider)
+        HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
 
 
 def test_httproute_gen_resource(
@@ -71,30 +73,34 @@ def test_httproute_gen_resource(
 
     harness.begin()
     charm = harness.charm
-    http_route_resource_definition = HTTPRouteResourceDefinition.from_charm(
+    http_route_resource_information = HTTPRouteResourceInformation.from_charm(
         charm, charm._ingress_provider
     )
-    gateway_resource_definition = GatewayResourceDefinition.from_charm(charm)
+    gateway_resource_information = GatewayResourceInformation.from_charm(charm)
     http_route_resource_manager = HTTPRouteResourceManager(
         labels=harness.charm._labels,
         client=client_mock,
     )
-    http_route_resource = http_route_resource_manager._gen_resource(
-        State(
-            http_route_resource_definition,
-            gateway_resource_definition,
-            HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTP),
+    redirect_route_resource_manager = HTTPRouteRedirectResourceManager(
+        labels=harness.charm._labels,
+        client=client_mock,
+    )
+    redirect_route_resource = redirect_route_resource_manager._gen_resource(
+        HTTPRouteResourceDefinition(
+            http_route_resource_information,
+            gateway_resource_information,
+            HTTPRouteType.HTTP,
         )
     )
     https_route_resource = http_route_resource_manager._gen_resource(
-        State(
-            http_route_resource_definition,
-            gateway_resource_definition,
-            HTTPRouteResourceType(http_route_type=HTTPRouteType.HTTPS),
+        HTTPRouteResourceDefinition(
+            http_route_resource_information,
+            gateway_resource_information,
+            HTTPRouteType.HTTPS,
         )
     )
     assert (
-        http_route_resource.spec["parentRefs"][0]["sectionName"]
+        redirect_route_resource.spec["parentRefs"][0]["sectionName"]
         == f"{harness.model.app.name}-http-listener"
     )
     assert (

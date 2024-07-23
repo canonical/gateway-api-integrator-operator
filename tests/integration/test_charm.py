@@ -1,7 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration test for certificates relation."""
+"""Integration test for charm deploy."""
 
 import logging
 
@@ -9,11 +9,10 @@ import lightkube
 import pytest
 from juju.application import Application
 from lightkube.generic_resource import create_namespaced_resource
-from lightkube.resources.core_v1 import Secret
+
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 logger = logging.getLogger(__name__)
-TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
-GATEWAY_CLASS_CONFIG = "cilium"
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
@@ -22,8 +21,7 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 
 @pytest.mark.abort_on_fail
 async def test_deploy(
-    application: Application,
-    certificate_provider_application: Application,
+    configured_application_with_tls: Application,
     ingress_requirer_application: Application,
     lightkube_client: lightkube.Client,
 ):
@@ -31,21 +29,12 @@ async def test_deploy(
 
     Assert on the unit status before any relations/configurations take place.
     """
-    await application.set_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
-    await application.model.add_relation(application.name, certificate_provider_application.name)
-    await application.model.wait_for_idle(
-        apps=[certificate_provider_application.name],
-        idle_period=30,
-        status="active",
-    )
-
+    application = configured_application_with_tls
     await application.model.add_relation(
         application.name, f"{ingress_requirer_application.name}:ingress"
     )
     await application.model.wait_for_idle(
-        apps=[ingress_requirer_application.name],
+        apps=[ingress_requirer_application.name, application.name],
         idle_period=30,
         status="active",
     )
@@ -60,10 +49,6 @@ async def test_deploy(
         CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
     )
     gateway = lightkube_client.get(gateway_generic_resource_class, name=application.name)
-    assert len(gateway.spec["listeners"]) == 2
-    secret: Secret = lightkube_client.get(
-        Secret, name=f"{application.name}-secret-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
-    )
-    assert secret.data
-    assert secret.data["tls.crt"]
-    assert secret.data["tls.key"]
+    assert gateway.status["addresses"], "LB address not assigned to gateway"  # type: ignore
+
+    logger.info("Configured gateway address: %s", gateway.status["addresses"])  # type: ignore

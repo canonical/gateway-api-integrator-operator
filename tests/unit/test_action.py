@@ -3,8 +3,6 @@
 
 """Unit tests for charm file."""
 
-from unittest.mock import MagicMock
-
 import ops
 import ops.testing
 import pytest
@@ -13,9 +11,7 @@ from ops.testing import Harness
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-def test_on_get_certificates_action(
-    harness: Harness, monkeypatch: pytest.MonkeyPatch, certificates_relation_data: dict[str, str]
-):
+def test_on_get_certificates_action(harness: Harness, certificates_relation_data: dict[str, str]):
     """
     arrange: given a stock gateway-api-integrator charm.
     act: Add a relation to tls provider while config is invalid.
@@ -35,7 +31,7 @@ def test_on_get_certificates_action(
 
 
 def test_on_get_certificates_action_invalid_hostname(
-    harness: Harness, monkeypatch: pytest.MonkeyPatch, certificates_relation_data: dict[str, str]
+    harness: Harness, certificates_relation_data: dict[str, str]
 ):
     """
     arrange: given a stock gateway-api-integrator charm.

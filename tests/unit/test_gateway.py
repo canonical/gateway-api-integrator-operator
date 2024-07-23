@@ -12,8 +12,7 @@ import pytest
 from httpx import Response
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
-from lightkube.generic_resource import GenericGlobalResource
-from lightkube.models.meta_v1 import ObjectMeta, Status
+from lightkube.models.meta_v1 import Status
 from ops.testing import Harness
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager

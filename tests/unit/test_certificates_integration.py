@@ -72,14 +72,21 @@ def test_tls_information_integration_missing(harness: Harness):
 
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_cert_relation_certificate_expiring(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
+    harness: Harness, certificates_relation_data: dict[str, str], monkeypatch: pytest.MonkeyPatch
 ):
     """
     arrange: Given a charm with valid certificates integration data.
     act: Fire certificate_expiring event.
-    assert: No error is raised.
+    assert: request_certificate_renewal lib method is called once.
     """
+    request_certificate_renewal_mock = MagicMock()
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v3.tls_certificates"
+            ".TLSCertificatesRequiresV3.request_certificate_renewal"
+        ),
+        request_certificate_renewal_mock,
+    )
     harness.set_leader()
     harness.update_config(
         {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
@@ -90,12 +97,13 @@ def test_cert_relation_certificate_expiring(
     harness.update_relation_data(
         relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
     )
-
     harness.begin()
 
     harness.charm.certificates.on.certificate_expiring.emit(
         certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"], "now"
     )
+
+    request_certificate_renewal_mock.assert_called_once()
 
 
 @pytest.mark.usefixtures("client_with_mock_external")

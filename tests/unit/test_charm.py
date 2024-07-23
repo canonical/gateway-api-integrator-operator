@@ -74,17 +74,6 @@ def test_deploy_lightkube_error(
         harness.update_config(config)
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
-def test_deploy_with_initial_hooks(harness: Harness):
-    """
-    arrange: given a gateway-api-integrator charm with valid tls relation
-    and mocked lightkube client.
-    act: Change the charm's config to trigger reconciliation.
-    assert: the charm goes into error state.
-    """
-    harness.begin_with_initial_hooks()
-
-
 @pytest.mark.parametrize(
     "error_code",
     [

@@ -25,7 +25,7 @@ def test_generate_password(harness: Harness):
     """
     harness.begin()
 
-    tls_rel = tls_relation.TLSRelationService(harness.charm.model)
+    tls_rel = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
 
     password = tls_rel.generate_password()
     assert isinstance(password, str)

@@ -9,7 +9,7 @@ import typing
 
 from lightkube.core.exceptions import ApiError
 
-from exception import CharmStateValidationBaseError
+from state.exception import CharmStateValidationBaseError
 
 logger = logging.getLogger(__name__)
 

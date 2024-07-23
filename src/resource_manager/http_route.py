@@ -3,8 +3,10 @@
 """gateway-api-integrator http_route resource manager."""
 
 
+import dataclasses
 import logging
 import typing
+from enum import StrEnum
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
@@ -12,8 +14,9 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from state.base import State
-from state.http_route import HTTPRouteType
+from state.base import ResourceDefinition
+from state.gateway import GatewayResourceInformation
+from state.http_route import HTTPRouteResourceInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -25,8 +28,61 @@ HTTP_ROUTE_RESOURCE_NAME = "HTTPRoute"
 HTTP_ROUTE_PLURAL = "httproutes"
 
 
+class HTTPRouteType(StrEnum):
+    """StrEnum of possible http_route types.
+
+    Attrs:
+        HTTP: http.
+        HTTPS: https.
+    """
+
+    HTTP = "http"
+    HTTPS = "https"
+
+
+@dataclasses.dataclass
+class HTTPRouteResourceDefinition(ResourceDefinition):
+    """A part of charm state with information required to manage gateway resource.
+
+    It consists of 2 components:
+        - HTTPRouteResourceInformation
+        - GatewayResourceDefinition
+
+    Attributes:
+        application_name: The requirer application name.
+        requirer_model_name: The name of the requirer model.
+        gateway_name: The gateway resource's name.
+        service_name: The configured gateway hostname.
+        service_port: The configured gateway class.
+        http_route_type: Type of the HTTP route, can be http or https.
+    """
+
+    application_name: str
+    requirer_model_name: str
+    gateway_name: str
+    service_name: str
+    service_port: int
+    http_route_type: HTTPRouteType
+
+    def __init__(
+        self,
+        http_route_resource_information: HTTPRouteResourceInformation,
+        gateway_resource_information: GatewayResourceInformation,
+        http_route_type: HTTPRouteType,
+    ):
+        """Create the state object with state components.
+
+        Args:
+            http_route_resource_information: HTTPRouteResourceInformation state component.
+            gateway_resource_information: GatewayResourceInformation state component.
+            http_route_type: Type of the HTTP route, can be http or https.
+        """
+        super().__init__(http_route_resource_information, gateway_resource_information)
+        self.http_route_type = http_route_type
+
+
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
-    """service resource manager."""
+    """HTTP route resource manager."""
 
     def __init__(self, labels: LabelSelector, client: Client) -> None:
         """Initialize the HTTPRouteResourceManager.
@@ -42,53 +98,66 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> GenericNamespacedResource:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> GenericNamespacedResource:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 3 components:
-                - HTTPRouteResourceDefinition
+            resource_definition: Part of charm state consisting of 2 components:
+                - HTTPRouteResourceInformation
                 - GatewayResourceDefinition
-                - HTTPRouteResourceType
 
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        listener_id = f"{state.gateway_name}-{state.http_route_type.value}-listener"
+        http_route_resource_definition = typing.cast(
+            HTTPRouteResourceDefinition, resource_definition
+        )
+
+        listener_id = (
+            f"{http_route_resource_definition.gateway_name}"
+            f"-{http_route_resource_definition.http_route_type}"
+            "-listener"
+        )
         spec = {
             "parentRefs": [
                 {
-                    "name": state.gateway_name,
+                    "name": http_route_resource_definition.gateway_name,
                     "namespace": self._client.namespace,
                     "sectionName": listener_id,
                 }
             ],
-        }
-        if state.http_route_type == HTTPRouteType.HTTPS:
-            spec["rules"] = [
+            "rules": [
                 {
                     "matches": [
-                        {"path": {"type": "PathPrefix", "value": f"/{state.service_name}"}}
-                    ],
-                    "backendRefs": [{"name": state.service_name, "port": state.service_port}],
-                }
-            ]
-        else:
-            spec["rules"] = [
-                {
-                    "filters": [
                         {
-                            "type": "RequestRedirect",
-                            "requestRedirect": {"scheme": "https", "statusCode": 301},
+                            "path": {
+                                "type": "PathPrefix",
+                                "value": (
+                                    f"/{http_route_resource_definition.requirer_model_name}"
+                                    f"-{http_route_resource_definition.application_name}"
+                                ),
+                            }
                         }
-                    ]
+                    ],
+                    "backendRefs": [
+                        {
+                            "name": http_route_resource_definition.service_name,
+                            "port": http_route_resource_definition.service_port,
+                        }
+                    ],
                 }
-            ]
+            ],
+        }
+
         http_route = self._http_route_generic_resource_class(
             apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
-                name=f"{state.service_name}-{state.http_route_type.value}", labels=self._labels
+                name=(
+                    f"{http_route_resource_definition.service_name}"
+                    f"-{http_route_resource_definition.http_route_type}"
+                ),
+                labels=self._labels,
             ),
             spec=spec,
         )
@@ -142,3 +211,62 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             name: The name of the secret resource to delete.
         """
         self._client.delete(res=self._http_route_generic_resource_class, name=name)
+
+
+class HTTPRouteRedirectResourceManager(HTTPRouteResourceManager):
+    """HTTP route resource manager that handles rediection."""
+
+    @map_k8s_auth_exception
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> GenericNamespacedResource:
+        """Generate a Gateway resource from a gateway resource definition.
+
+        Args:
+            resource_definition: Part of charm state consisting of 2 components:
+                - HTTPRouteResourceInformation
+                - GatewayResourceDefinition
+
+        Returns:
+            A dictionary representing the gateway custom resource.
+        """
+        http_route_resource_definition = typing.cast(
+            HTTPRouteResourceDefinition, resource_definition
+        )
+
+        listener_id = (
+            f"{http_route_resource_definition.gateway_name}"
+            f"-{http_route_resource_definition.http_route_type}"
+            "-listener"
+        )
+        spec = {
+            "parentRefs": [
+                {
+                    "name": http_route_resource_definition.gateway_name,
+                    "namespace": self._client.namespace,
+                    "sectionName": listener_id,
+                }
+            ],
+            "rules": [
+                {
+                    "filters": [
+                        {
+                            "type": "RequestRedirect",
+                            "requestRedirect": {"scheme": "https", "statusCode": 301},
+                        }
+                    ]
+                }
+            ],
+        }
+        http_route = self._http_route_generic_resource_class(
+            apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
+            kind=HTTP_ROUTE_RESOURCE_NAME,
+            metadata=ObjectMeta(
+                name=(
+                    f"{http_route_resource_definition.service_name}"
+                    f"-{http_route_resource_definition.http_route_type}"
+                ),
+                labels=self._labels,
+            ),
+            spec=spec,
+        )
+
+        return http_route

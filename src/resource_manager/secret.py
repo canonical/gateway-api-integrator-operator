@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 """gateway-api-integrator secret resource manager."""
 
-
+import dataclasses
 import logging
 import typing
 
@@ -13,12 +13,64 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
 
-from state.base import State
+from state.base import ResourceDefinition
+from state.exception import CharmStateValidationBaseError
+from state.tls import TLSInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
 logger = logging.getLogger(__name__)
+
+
+class CertificateDataNotReadyError(CharmStateValidationBaseError):
+    """Exception raised when certificates data is not set on the tls provider."""
+
+
+@dataclasses.dataclass
+class SecretResourceDefinition(ResourceDefinition):
+    """A part of charm state with information required to manage secret resource.
+
+    Attributes:
+        hostname: The configured gateway hostname.
+        secret_resource_name_prefix: Prefix of the secret resource name.
+        certificate: TLS certificate.
+        private_key: Password-ecrypted private key.
+        password: Private key password.
+    """
+
+    hostname: str
+    secret_resource_name_prefix: str
+    certificate: str
+    private_key: str
+    password: str
+
+    @classmethod
+    def from_tls_information(
+        cls, tls_information: TLSInformation, hostname: str
+    ) -> "SecretResourceDefinition":
+        """Get certificate information for a given hostname.
+
+        Args:
+            tls_information: TLSInformation state component.
+            hostname: The requested hostname.
+
+        Raises:
+            CertificateDataNotReadyError: When the certificate data is not ready.
+
+        Returns:
+            SecretResourceDefinition: Information about the certificate.
+        """
+        if hostname not in tls_information.tls_certs:
+            raise CertificateDataNotReadyError("Certificate data missing or incomplete.")
+
+        return SecretResourceDefinition(
+            hostname=hostname,
+            secret_resource_name_prefix=tls_information.secret_resource_name_prefix,
+            certificate=tls_information.tls_certs[hostname],
+            private_key=tls_information.tls_keys[hostname]["key"],
+            password=tls_information.tls_keys[hostname]["password"],
+        )
 
 
 def _get_decrypted_key(private_key: str, password: str) -> str:
@@ -43,11 +95,11 @@ def _get_decrypted_key(private_key: str, password: str) -> str:
     ).decode()
 
 
-class SecretResourceManager(ResourceManager[Secret]):
+class TLSSecretResourceManager(ResourceManager[Secret]):
     """Kubernetes Ingress resource controller."""
 
     def __init__(self, labels: LabelSelector, client: Client) -> None:
-        """Initialize the SecretResourceManager.
+        """Initialize the TLSSecretResourceManager.
 
         Args:
             labels: Label to be added to created resources.
@@ -57,29 +109,28 @@ class SecretResourceManager(ResourceManager[Secret]):
         self._labels = labels
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> Secret:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> Secret:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 3 components:
-                - SecretResourceManager
-                - CharmConfig
-                - TLSInformation
+            resource_definition: Part of charm state.
 
         Returns:
             A Secret resource object.
         """
-        tls_secret_name = f"{state.secret_resource_name_prefix}-{state.external_hostname}"
+        secret_resource_definition = typing.cast(SecretResourceDefinition, resource_definition)
+        prefix = secret_resource_definition.secret_resource_name_prefix
+        tls_secret_name = f"{prefix}-{secret_resource_definition.hostname}"
 
         secret = Secret(
             apiVersion="v1",
             kind="Secret",
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
-                "tls.crt": state.tls_certs[state.external_hostname],
+                "tls.crt": secret_resource_definition.certificate,
                 "tls.key": _get_decrypted_key(
-                    state.tls_keys[state.external_hostname]["key"],
-                    state.tls_keys[state.external_hostname]["password"],
+                    secret_resource_definition.private_key,
+                    secret_resource_definition.password,
                 ),
             },
             type="kubernetes.io/tls",

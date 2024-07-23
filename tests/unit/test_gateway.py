@@ -28,6 +28,17 @@ from .conftest import GATEWAY_CLASS_CONFIG
 logger = logging.getLogger()
 
 
+from unittest.mock import MagicMock, PropertyMock
+
+import ops
+import pytest
+from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
+from ops.model import Secret
+from ops.testing import Harness
+
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+
+
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_create_gateway(
     harness: Harness,

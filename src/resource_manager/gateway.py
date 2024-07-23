@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 """Gateway resource manager."""
 
-
+import dataclasses
 import logging
 import time
 import typing
@@ -13,7 +13,10 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
-from state.base import State
+from state.base import ResourceDefinition
+from state.config import CharmConfig
+from state.gateway import GatewayResourceInformation
+from state.tls import TLSInformation
 
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
@@ -23,6 +26,43 @@ logger = logging.getLogger(__name__)
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
+
+
+@dataclasses.dataclass
+class GatewayResourceDefinition(ResourceDefinition):
+    """A part of charm state with information required to manage gateway resource.
+
+    It consists of 3 components:
+        - GatewayResourceInformation
+        - CharmConfig
+        - TLSInformation
+
+    Attributes:
+        gateway_name: The gateway resource's name
+        external_hostname: The configured gateway hostname.
+        gateway_class_name: The configured gateway class.
+        secret_resource_name_prefix: Prefix of the secret resource name.
+    """
+
+    gateway_name: str
+    external_hostname: str
+    gateway_class_name: str
+    secret_resource_name_prefix: str
+
+    def __init__(
+        self,
+        gateway_resource_information: GatewayResourceInformation,
+        charm_config: CharmConfig,
+        tls_information: TLSInformation,
+    ):
+        """Create the state object with state components.
+
+        Args:
+            gateway_resource_information: GatewayResourceInformation state component.
+            charm_config: CharmConfig state component.
+            tls_information: TLSInformation state component.
+        """
+        super().__init__(gateway_resource_information, charm_config, tls_information)
 
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -51,38 +91,39 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @map_k8s_auth_exception
-    def _gen_resource(self, state: State) -> dict:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> dict:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:
-            state: Part of charm state consisting of 3 components:
-                - GatewayResourceManager
-                - CharmConfig
-                - SecretResourceManager
+            resource_definition: The data necessary to create the gateway resource.
 
         Returns:
             A dictionary representing the gateway custom resource.
         """
-        tls_secret_name = f"{state.secret_resource_name_prefix}-{state.external_hostname}"
+        gateway_resource_definition = typing.cast(GatewayResourceDefinition, resource_definition)
+        prefix = gateway_resource_definition.secret_resource_name_prefix
+        tls_secret_name = f"{prefix}-{gateway_resource_definition.external_hostname}"
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
-            metadata=ObjectMeta(name=state.gateway_name, labels=self._labels),
+            metadata=ObjectMeta(
+                name=gateway_resource_definition.gateway_name, labels=self._labels
+            ),
             spec={
-                "gatewayClassName": state.gateway_class,
+                "gatewayClassName": gateway_resource_definition.gateway_class_name,
                 "listeners": [
                     {
                         "protocol": "HTTP",
                         "port": 80,
-                        "name": f"{state.gateway_name}-http-listener",
-                        "hostname": state.external_hostname,
+                        "name": f"{gateway_resource_definition.gateway_name}-http-listener",
+                        "hostname": gateway_resource_definition.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                     {
                         "protocol": "HTTPS",
                         "port": 443,
-                        "name": f"{state.gateway_name}-https-listener",
-                        "hostname": state.external_hostname,
+                        "name": f"{gateway_resource_definition.gateway_name}-https-listener",
+                        "hostname": gateway_resource_definition.external_hostname,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                         "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
                     },
@@ -140,7 +181,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name=name,
         )
 
-    def gateway_address(self, name: str) -> typing.Optional[str]:  # pragma: no cover
+    def gateway_address(self, name: str) -> typing.Optional[str]:
         """Return the LB address of the gateway resource.
 
         Poll the address for 60 seconds.

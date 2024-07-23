@@ -9,10 +9,10 @@ import ops
 
 
 @dataclasses.dataclass(frozen=True)
-class GatewayResourceDefinition:
+class GatewayResourceInformation:
     """A component of charm state that contains gateway resource definition.
 
-    Attrs:
+    Attributes:
         gateway_name: The gateway resource's name
     """
 
@@ -20,13 +20,13 @@ class GatewayResourceDefinition:
     gateway_name: str
 
     @classmethod
-    def from_charm(cls, charm: ops.CharmBase) -> "GatewayResourceDefinition":
+    def from_charm(cls, charm: ops.CharmBase) -> "GatewayResourceInformation":
         """Create a resource definition from charm instance.
 
         Args:
             charm: The charm instance.
 
         Returns:
-            GatewayResourceDefinition: The gateway resource definition object.
+            GatewayResourceInformation: The gateway resource definition object.
         """
         return cls(gateway_name=charm.app.name)

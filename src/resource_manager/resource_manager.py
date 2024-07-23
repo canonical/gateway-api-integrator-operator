@@ -9,7 +9,7 @@ import typing
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Secret, Service
 
-from state.base import State
+from state.base import ResourceDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +45,11 @@ class ResourceManager(typing.Protocol[AnyResource]):
     """Abstract base class for a generic Kubernetes resource controller."""
 
     @abc.abstractmethod
-    def _gen_resource(self, state: State) -> AnyResource:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> AnyResource:
         """Abstract method to generate a resource from ingress definition.
 
         Args:
-            state: Part of charm state consisting of one or several components.
+            resource_definition: The data necessary to create the k8s resource.
         """
 
     @abc.abstractmethod
@@ -81,7 +81,7 @@ class ResourceManager(typing.Protocol[AnyResource]):
             name: The name of the resource to delete.
         """
 
-    def define_resource(self, state: State) -> AnyResource:
+    def define_resource(self, state: ResourceDefinition) -> AnyResource:
         """Create or update a resource in kubernetes.
 
         Args:
@@ -108,18 +108,16 @@ class ResourceManager(typing.Protocol[AnyResource]):
 
     def cleanup_resources(
         self,
-        exclude: typing.Optional[AnyResource] = None,
+        exclude: list[AnyResource],
     ) -> None:
         """Remove unused resources.
 
         Args:
             exclude: The name of resource to be excluded from the cleanup.
         """
+        excluded_resource_names = [resource_name(resource) for resource in exclude]
         for resource in self._list_resource():
-            excluded_resource_name = resource_name(exclude)
             res_name = resource_name(resource)
-            if not res_name or not excluded_resource_name:
-                continue
-            if res_name == excluded_resource_name:
+            if not res_name or res_name in excluded_resource_names:
                 continue
             self._delete_resource(name=res_name)

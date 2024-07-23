@@ -71,6 +71,25 @@ async def certificate_provider_application_fixture(
     return application
 
 
+@pytest.fixture(scope="module", name="ingress_requirer_application_name")
+def ingress_requirer_application_name_fixture() -> str:
+    """Return the name of the certificate provider application deployed for tests."""
+    return "jenkins-k8s"
+
+
+@pytest_asyncio.fixture(scope="module", name="ingress_requirer_application")
+async def ingress_requirer_application_fixture(
+    ingress_requirer_application_name: str,
+    model: Model,
+) -> Application:
+    """Deploy jenkins-k8s."""
+    application = await model.deploy(
+        ingress_requirer_application_name, channel="latest/edge", constraints="mem=1024M"
+    )
+    await model.wait_for_idle(apps=[ingress_requirer_application_name], status="active")
+    return application
+
+
 @pytest.fixture(scope="module", name="kube_config")
 def kube_config_fixture(request: pytest.FixtureRequest) -> str:
     """The kubernetes config file path."""

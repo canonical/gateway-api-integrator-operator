@@ -24,6 +24,7 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 async def test_deploy(
     application: Application,
     certificate_provider_application: Application,
+    ingress_requirer_application: Application,
     lightkube_client: lightkube.Client,
 ):
     """Deploy the charm together with related charms.
@@ -39,6 +40,16 @@ async def test_deploy(
         idle_period=30,
         status="active",
     )
+
+    await application.model.add_relation(
+        application.name, f"{ingress_requirer_application.name}:ingress"
+    )
+    await application.model.wait_for_idle(
+        apps=[ingress_requirer_application.name],
+        idle_period=30,
+        status="active",
+    )
+
     action = await application.units[0].run_action(
         "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
     )

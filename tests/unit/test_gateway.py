@@ -20,6 +20,8 @@ def test_create_gateway(  # pylint: disable=too-many-arguments
     gateway_class_resource: GenericGlobalResource,
     certificates_relation_data: dict[str, str],
     private_key_and_password: tuple[str, str],
+    gateway_relation_application_data: dict[str, str],
+    gateway_relation_unit_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ):
     """
@@ -36,6 +38,16 @@ def test_create_gateway(  # pylint: disable=too-many-arguments
     juju_secret_mock = MagicMock(spec=Secret)
     juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
+    monkeypatch.setattr(
+        "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",
+        MagicMock(),
+    )
+    harness.add_relation(
+        "gateway",
+        "ingress-requirer",
+        app_data=gateway_relation_application_data,
+        unit_data=gateway_relation_unit_data,
+    )
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.set_leader()

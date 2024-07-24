@@ -7,6 +7,7 @@ import logging
 
 import lightkube
 import pytest
+import requests
 from juju.application import Application
 from lightkube.generic_resource import create_namespaced_resource
 
@@ -49,6 +50,37 @@ async def test_deploy(
         CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
     )
     gateway = lightkube_client.get(gateway_generic_resource_class, name=application.name)
-    assert gateway.status["addresses"], "LB address not assigned to gateway"  # type: ignore
+    gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
+    assert gateway_lb_ip, "LB address not assigned to gateway"
 
-    logger.info("Configured gateway address: %s", gateway.status["addresses"])  # type: ignore
+    ingress_url = (
+        f"http://{gateway_lb_ip}/{application.model.name}-{ingress_requirer_application.name}"
+    )
+    res = requests.get(
+        ingress_url,
+        headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        verify=False,  # nosec - calling charm ingress URL
+        timeout=30,
+    )
+    assert "Authentication required" in str(res.content)
+
+    res = requests.get(
+        f"http://{gateway_lb_ip}/invalid",
+        headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        verify=False,  # nosec - calling charm ingress URL
+        timeout=30,
+    )
+    assert res.status_code == 404
+
+    res = requests.get(
+        ingress_url,
+        headers={"Host": TEST_EXTERNAL_HOSTNAME_CONFIG},
+        verify=False,  # nosec - calling charm ingress URL
+        allow_redirects=False,
+        timeout=30,
+    )
+    assert res.status_code == 301
+    assert res.headers["location"] == (
+        f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}:443"
+        f"/{application.model.name}-{ingress_requirer_application.name}",
+    )

@@ -97,8 +97,8 @@ async def any_charm_ingress_requirer_fixture(model: Model):
     """Deploy any-charm and patch it with ingress lib."""
     any_app_name = "any-ingress"
     ingress_lib_url = (
-        "https://github.com/canonical/nginx-ingress-integrator-operator"
-        "/raw/main/lib/charms/nginx_ingress_integrator/v0/ingress.py"
+        "https://raw.githubusercontent.com/canonical/charm-relation-interfaces"
+        "/main/lib/charms/interfaces/v2/ingress.py"
     )
     ingress_lib = requests.get(ingress_lib_url, timeout=10).text
     any_charm_src_overwrite = {

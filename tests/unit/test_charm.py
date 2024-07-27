@@ -100,6 +100,10 @@ def test_reconcile_api_error_4xx(  # pylint: disable=too-many-arguments
         "lightkube.models.meta_v1.Status.from_dict",
         MagicMock(return_value=Status(code=error_code)),
     )
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.current_gateway_resource",
+        MagicMock(return_value=None),
+    )
     client_with_mock_external.create.side_effect = ApiError(response=MagicMock(spec=Response))
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
@@ -125,6 +129,10 @@ def test_reconcile_api_error_forbidden(
     monkeypatch.setattr(
         "lightkube.models.meta_v1.Status.from_dict",
         MagicMock(return_value=Status(code=403)),
+    )
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.current_gateway_resource",
+        MagicMock(return_value=None),
     )
     client_with_mock_external.create.side_effect = ApiError(response=MagicMock(spec=Response))
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
@@ -156,7 +164,10 @@ def test_create_http_route_insufficient_permission(  # pylint: disable=too-many-
         "resource_manager.http_route.HTTPRouteResourceManager.define_resource",
         MagicMock(side_effect=InsufficientPermissionError),
     )
-
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.current_gateway_resource",
+        MagicMock(return_value=None),
+    )
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.add_relation(

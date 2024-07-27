@@ -132,10 +132,21 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
+    @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        config = CharmConfig.from_charm(self, client)
+
+        if self._certificates_revocation_needed(client, config):
+            self._tls.revoke_all_certificates()
+            self._tls.generate_private_key(config.external_hostname)
+            self._tls.request_certificate(config.external_hostname)
+            return  # _reconcile will be triggered with the next certificates_available event.
+
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _on_start(self, _: typing.Any) -> None:
         """Handle the start event."""
         self._reconcile()
@@ -169,7 +180,7 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-        self._tls.certificate_relation_created(config.external_hostname)
+        self._tls.generate_private_key(config.external_hostname)
 
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
@@ -177,12 +188,14 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-        self._tls.certificate_relation_joined(config.external_hostname)
+        self._tls.request_certificate(config.external_hostname)
 
+    @validate_config_and_integration(defer=False)
     def _on_certificates_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         logger.info("TLS certificate available, creating resources.")
@@ -226,15 +239,16 @@ class GatewayAPICharm(CharmBase):
         except SecretNotFoundError:
             logger.warning("Juju secret for %s already does not exist", hostname)
 
+    @validate_config_and_integration(defer=False)
     def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
         """Handle the data-provided event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
         """Handle the data-removed event."""
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -379,6 +393,31 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
+
+    def _certificates_revocation_needed(self, client: Client, config: CharmConfig) -> bool:
+        """Check if a new certificate is needed.
+
+        Args:
+            client: Lightkube client
+            config: Charm config.
+
+        Returns:
+            True if the current certificate needs to be revoked.
+        """
+        gateway_resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        gateway = gateway_resource_manager.current_gateway_resource()
+        if not gateway:
+            return False
+
+        gateway_listeners = gateway.spec["listeners"]
+        listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
+        if len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]:
+            return False
+
+        return True
 
 
 if __name__ == "__main__":  # pragma: no cover

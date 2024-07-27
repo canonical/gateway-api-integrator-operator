@@ -24,18 +24,23 @@ from .conftest import GATEWAY_CLASS_CONFIG
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
-def test_create_gateway(
+def test_create_gateway(  # pylint: disable=too-many-arguments
     harness: Harness,
     certificates_relation_data: dict[str, str],
     gateway_relation_application_data: dict[str, str],
     gateway_relation_unit_data: dict[str, str],
     config: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """
     arrange: Given a charm with mocked lightkube client, juju secret, relations and gateway ip.
     act: update the charm's config with the correct values.
     assert: the charm goes into active status.
     """
+    monkeypatch.setattr(
+        "resource_manager.gateway.GatewayResourceManager.current_gateway_resource",
+        MagicMock(return_value=None),
+    )
     harness.add_relation(
         "gateway",
         "requirer-charm",

@@ -222,6 +222,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             or None if the resource does not exists or number of gateway resources != 1.
         """
         gateway_resources = self._list_resource()
+        logger.info("%r", gateway_resources)
         if not gateway_resources or len(gateway_resources) != 1:
             return None
         return gateway_resources[0]

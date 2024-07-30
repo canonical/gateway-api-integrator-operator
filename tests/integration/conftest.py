@@ -3,8 +3,10 @@
 
 """General configuration module for integration tests."""
 
+import json
 import logging
 import os.path
+import textwrap
 from typing import AsyncGenerator
 
 import lightkube
@@ -13,6 +15,7 @@ import lightkube.config.kubeconfig
 import lightkube.core
 import pytest
 import pytest_asyncio
+import requests
 from juju.application import Application
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
@@ -86,7 +89,48 @@ async def ingress_requirer_application_fixture(
     application = await model.deploy(
         ingress_requirer_application_name, channel="latest/edge", constraints="mem=1024M"
     )
-    await model.wait_for_idle(apps=[ingress_requirer_application_name], status="active")
+    return application
+
+
+@pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer")
+async def any_charm_ingress_requirer_fixture(model: Model):
+    """Deploy any-charm and patch it with ingress lib."""
+    any_app_name = "any-ingress"
+    ingress_lib_url = (
+        "https://raw.githubusercontent.com/canonical/charm-relation-interfaces"
+        "/main/lib/charms/interfaces/v2/ingress.py"
+    )
+    ingress_lib = requests.get(ingress_lib_url, timeout=10).text
+    any_charm_src_overwrite = {
+        "ingress.py": ingress_lib,
+        "any_charm.py": textwrap.dedent(
+            """\
+        from ingress import IngressRequires
+        from any_charm_base import AnyCharmBase
+        class AnyCharm(AnyCharmBase):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.ingress = IngressRequires(
+                    self,
+                    {
+                        "service-hostname": "any",
+                        "service-name": self.app.name,
+                        "service-port": 80
+                    }
+                )
+            def update_ingress(self, ingress_config):
+                self.ingress.update_config(ingress_config)
+        """
+        ),
+    }
+    application = (
+        await model.deploy(
+            "any-charm",
+            application_name=any_app_name,
+            channel="beta",
+            config={"src-overwrite": json.dumps(any_charm_src_overwrite)},
+        ),
+    )
     return application
 
 
@@ -106,3 +150,26 @@ async def lightkube_client_fixture(kube_config: str, model: Model) -> lightkube.
     config = lightkube.KubeConfig.from_file(kube_config)
     client = lightkube.Client(config, namespace=model.name)
     return client
+
+
+@pytest_asyncio.fixture(scope="module", name="configured_application_with_tls")
+async def configured_application_with_tls_fixture(
+    application: Application,
+    certificate_provider_application: Application,
+):
+    """The gateway-api-integrator charm configured and integrated with tls provider."""
+    await application.set_config(
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+    )
+    await application.model.add_relation(application.name, certificate_provider_application.name)
+    await application.model.wait_for_idle(
+        apps=[certificate_provider_application.name],
+        idle_period=30,
+        status="active",
+    )
+    await application.model.wait_for_idle(
+        apps=[application.name],
+        idle_period=30,
+        status="blocked",
+    )
+    return application

@@ -4,6 +4,7 @@
 # Disable protected access rules due to the need to test charm._labels
 # pylint: disable=protected-access
 """Unit tests for gateway resource."""
+
 from unittest.mock import MagicMock
 
 import ops
@@ -149,7 +150,7 @@ def test_gateway_gen_resource(
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
     assert len(gateway_resource.spec["listeners"])
 
-
+    
 def test_get_current_gateway_no_resource(mock_lightkube_client: MagicMock):
     """
     arrange: Given an GatewayResourceManager with mocked lightkube client

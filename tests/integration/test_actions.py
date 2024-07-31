@@ -10,7 +10,7 @@ from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.abort_on_fail
-async def test_deploy(
+async def test_get_certificate_action(
     configured_application_with_tls: Application,
 ):
     """Deploy the charm with valid config and tls integration.

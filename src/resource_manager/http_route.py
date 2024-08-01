@@ -154,7 +154,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
                 name=(
-                    f"{http_route_resource_definition.service_name}"
+                    f"{http_route_resource_definition.gateway_name}"
                     f"-{http_route_resource_definition.http_route_type}"
                 ),
                 labels=self._labels,
@@ -261,7 +261,7 @@ class HTTPRouteRedirectResourceManager(HTTPRouteResourceManager):
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
                 name=(
-                    f"{http_route_resource_definition.service_name}"
+                    f"{http_route_resource_definition.gateway_name}"
                     f"-{http_route_resource_definition.http_route_type}"
                 ),
                 labels=self._labels,

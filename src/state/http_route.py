@@ -64,7 +64,7 @@ class HTTPRouteResourceInformation:
             integration_data = ingress_provider.get_data(ingress_integration)
             application_name = integration_data.app.name
             requirer_model_name = integration_data.app.model
-            service_name = f"{application_name}-gateway-service"
+            service_name = f"{charm.app.name}-{application_name}-service"
             service_port = integration_data.app.port
             service_port_name = f"tcp-{service_port}"
 

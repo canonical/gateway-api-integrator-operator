@@ -227,7 +227,7 @@ def test_certificate_available(
     )
     reconcile_mock.assert_called_once()
 
-    
+
 @pytest.mark.usefixtures("mock_certificate")
 def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
     """
@@ -251,4 +251,3 @@ def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPat
     tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
     tls.revoke_all_certificates()
     request_certificate_revocation_mock.assert_called_once()
-

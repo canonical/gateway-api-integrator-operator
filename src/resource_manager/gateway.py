@@ -213,3 +213,16 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             logger.info("Gateway address not ready, waiting for %s seconds before retrying", delay)
             time.sleep(delay)
         return gateway_address
+
+    def current_gateway_resource(self) -> typing.Optional[GenericNamespacedResource]:
+        """Return the current gateway resource.
+
+        Returns:
+            typing.Optional[GenericNamespacedResource]: The gateway resource
+            or None if the resource does not exists or number of gateway resources != 1.
+        """
+        gateway_resources = self._list_resource()
+        logger.info("%r", gateway_resources)
+        if not gateway_resources or len(gateway_resources) != 1:
+            return None
+        return gateway_resources[0]

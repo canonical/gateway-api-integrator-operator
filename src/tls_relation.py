@@ -3,6 +3,7 @@
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
 """Gateway API TLS relation business logic."""
+import logging
 import secrets
 import string
 import typing
@@ -20,6 +21,7 @@ from cryptography.x509.oid import NameOID
 from ops.model import Model, Relation, SecretNotFoundError
 
 TLS_CERT = "certificates"
+logger = logging.getLogger()
 
 
 class InvalidCertificateError(Exception):
@@ -85,7 +87,7 @@ class TLSRelationService:
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
 
-    def certificate_relation_joined(self, hostname: str) -> None:
+    def request_certificate(self, hostname: str) -> None:
         """Handle the TLS Certificate joined event.
 
         Args:
@@ -100,7 +102,7 @@ class TLSRelationService:
         )
         self.certificates.request_certificate_creation(certificate_signing_request=csr)
 
-    def certificate_relation_created(self, hostname: str) -> None:
+    def generate_private_key(self, hostname: str) -> None:
         """Handle the TLS Certificate created event.
 
         Args:
@@ -170,6 +172,19 @@ class TLSRelationService:
             secret.remove_all_revisions()
             self.certificates.request_certificate_revocation(
                 certificate_signing_request=invalidated_cert.csr.encode()
+            )
+
+    def revoke_all_certificates(self) -> None:
+        """Revoke all provider certificates and remove all revisions in juju secret."""
+        for certificate in self.certificates.get_provider_certificates():
+            hostname = get_hostname_from_cert(certificate.certificate)
+            try:
+                secret = self.model.get_secret(label=f"private-key-{hostname}")
+                secret.remove_all_revisions()
+            except SecretNotFoundError:
+                logger.warning("Secret not found, skipping.")
+            self.certificates.request_certificate_revocation(
+                certificate_signing_request=certificate.csr.encode()
             )
 
     def _get_private_key(self, hostname: str) -> KeyPair:

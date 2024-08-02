@@ -107,3 +107,17 @@ def test_httproute_gen_resource(
         https_route_resource.spec["parentRefs"][0]["sectionName"]
         == f"{harness.model.app.name}-https-listener"
     )
+
+
+def test_patch_http_route(mock_lightkube_client: MagicMock):
+    """
+    arrange: Given an HTTPRouteResourceManager with mocked lightkube client.
+    act: Call _patch_resource.
+    assert: The mocked client method is called.
+    """
+    http_route_resource_manager = HTTPRouteResourceManager(
+        labels={},
+        client=mock_lightkube_client,
+    )
+    http_route_resource_manager._patch_resource("", None)
+    mock_lightkube_client.patch.assert_called_once()

@@ -226,3 +226,28 @@ def test_certificate_available(
         certificates_relation_data[f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
     )
     reconcile_mock.assert_called_once()
+
+
+@pytest.mark.usefixtures("mock_certificate")
+def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
+    """
+    arrange: Given a TLS relation service with mocked provider certificate.
+    act: .
+    assert: The _reconcile method is called once.
+    """
+    harness.add_relation("certificates", "self-signed-certificates")
+    secret_mock = MagicMock()
+    secret_mock.remove_all_revisions = MagicMock(side_effect=SecretNotFoundError)
+    harness.begin()
+    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=secret_mock))
+    request_certificate_revocation_mock = MagicMock()
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v3.tls_certificates"
+            ".TLSCertificatesRequiresV3.request_certificate_revocation"
+        ),
+        request_certificate_revocation_mock,
+    )
+    tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
+    tls.revoke_all_certificates()
+    request_certificate_revocation_mock.assert_called_once()

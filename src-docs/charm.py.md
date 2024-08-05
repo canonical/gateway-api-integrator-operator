@@ -7,8 +7,9 @@ gateway-api-integrator charm file.
 
 **Global Variables**
 ---------------
-- **TLS_CERT**
 - **CREATED_BY_LABEL**
+- **INGRESS_RELATION**
+- **TLS_CERT_RELATION**
 
 
 ---
@@ -16,7 +17,7 @@ gateway-api-integrator charm file.
 ## <kbd>class</kbd> `GatewayAPICharm`
 The main charm class for the gateway-api-integrator charm. 
 
-<a href="../src/charm.py#L79"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="../src/charm.py#L88"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ### <kbd>function</kbd> `__init__`
 

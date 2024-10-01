@@ -82,14 +82,14 @@ def test_deploy_lightkube_error(
         pytest.param(404, id="not found."),
     ],
 )
-def test_reconcile_api_error_4xx(  # pylint: disable=too-many-arguments
+def test_reconcile_api_error_4xx(
     harness: Harness,
     client_with_mock_external: MagicMock,
     certificates_relation_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     error_code: int,
     config: dict[str, str],
-):
+):  # pylint: disable=too-many-arguments, too-many-positional-arguments
     """
     arrange: Given a charm with valid tls/gateway integration and mocked client returning 4xx.
     act: Update the charm with valid config.
@@ -147,14 +147,14 @@ def test_reconcile_api_error_forbidden(
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
-def test_create_http_route_insufficient_permission(  # pylint: disable=too-many-arguments
+def test_create_http_route_insufficient_permission(
     harness: Harness,
     certificates_relation_data: dict[str, str],
     gateway_relation_application_data: dict[str, str],
     gateway_relation_unit_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
-):
+):  # pylint: disable=too-many-arguments, too-many-positional-arguments
     """
     arrange: Given a charm with valid tls/gateway integration and mocked
     http_route resource manager returning 403 error.

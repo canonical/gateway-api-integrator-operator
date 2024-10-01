@@ -25,7 +25,7 @@ from .conftest import GATEWAY_CLASS_CONFIG
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
-def test_create_gateway(  # pylint: disable=too-many-arguments
+def test_create_gateway(  # pylint: disable=too-many-arguments, too-many-positional-arguments
     harness: Harness,
     certificates_relation_data: dict[str, str],
     gateway_relation_application_data: dict[str, str],

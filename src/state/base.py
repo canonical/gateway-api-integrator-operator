@@ -26,6 +26,6 @@ class ResourceDefinition:  # pylint: disable=too-few-public-methods
         Args:
             components: state components with which the state fragment will be built.
         """
-        for c in components:
-            for field in dataclasses.fields(type(c)):
-                setattr(self, field.name, getattr(c, field.name))
+        for component in components:
+            for field in dataclasses.fields(component):
+                setattr(self, field.name, getattr(component, field.name))

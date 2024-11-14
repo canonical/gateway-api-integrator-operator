@@ -9,7 +9,6 @@ import typing
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
-from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
@@ -185,7 +184,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
     def gateway_address(self, name: str) -> typing.Optional[str]:
         """Return the LB address of the gateway resource.
 
-        Poll the address for 100 seconds.
+        Poll the address for 60 seconds.
 
         Args:
             name: name of the gateway resource.
@@ -207,10 +206,23 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                 ]
                 if gateway_addresses:
                     gateway_address = ",".join(gateway_addresses)
-            except (ApiError, AttributeError, TypeError, KeyError):
-                pass
+            except (AttributeError, TypeError, KeyError):
+                logger.exception("Error retrieving the gateway address.")
             if gateway_address:
                 break
             logger.info("Gateway address not ready, waiting for %s seconds before retrying", delay)
             time.sleep(delay)
         return gateway_address
+
+    def current_gateway_resource(self) -> typing.Optional[GenericNamespacedResource]:
+        """Return the current gateway resource.
+
+        Returns:
+            typing.Optional[GenericNamespacedResource]: The gateway resource
+            or None if the resource does not exists or number of gateway resources != 1.
+        """
+        gateway_resources = self._list_resource()
+        logger.info("%r", gateway_resources)
+        if not gateway_resources or len(gateway_resources) != 1:
+            return None
+        return gateway_resources[0]

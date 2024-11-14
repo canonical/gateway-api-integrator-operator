@@ -14,6 +14,11 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     CertificateInvalidatedEvent,
     TLSCertificatesRequiresV3,
 )
+from charms.traefik_k8s.v2.ingress import (
+    IngressPerAppDataProvidedEvent,
+    IngressPerAppDataRemovedEvent,
+    IngressPerAppProvider,
+)
 from lightkube import Client, KubeConfig
 from lightkube.core.exceptions import ConfigError
 from ops.charm import (
@@ -27,17 +32,25 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
-from resource_manager.resource_manager import InvalidResourceError
+from resource_manager.http_route import (
+    HTTPRouteRedirectResourceManager,
+    HTTPRouteResourceDefinition,
+    HTTPRouteResourceManager,
+    HTTPRouteType,
+)
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
+from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
+from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService, get_hostname_from_cert
 
-TLS_CERT = "certificates"
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
+INGRESS_RELATION = "gateway"
+TLS_CERT_RELATION = "certificates"
 
 
 def _get_client(field_manager: str, namespace: str) -> Client:
@@ -80,7 +93,8 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
-        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT)
+        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
+        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -110,55 +124,29 @@ class GatewayAPICharm(CharmBase):
             self._on_all_certificates_invalidated,
         )
 
+        self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
+        self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
+
     @property
     def _labels(self) -> dict[str, str]:
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
     @validate_config_and_integration(defer=False)
-    def _reconcile(self) -> None:
-        """Reconcile charm status based on configuration and integrations.
-
-        Raises:
-            RuntimeError: when initializing the lightkube client fails,
-            or when creating the gateway resource fails.
-        """
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
-        gateway_resource_information = GatewayResourceInformation.from_charm(self)
-        tls_information = TLSInformation.from_charm(self, self.certificates)
-
-        gateway_resource_manager = GatewayResourceManager(
-            labels=self._labels,
-            client=client,
-        )
-        secret_resource_manager = TLSSecretResourceManager(self._labels, client)
-
-        try:
-            secret = secret_resource_manager.define_resource(
-                SecretResourceDefinition.from_tls_information(
-                    tls_information, config.external_hostname
-                )
-            )
-            gateway = gateway_resource_manager.define_resource(
-                GatewayResourceDefinition(gateway_resource_information, config, tls_information)
-            )
-        except InvalidResourceError as exc:
-            logger.exception("Error creating resource")
-            raise RuntimeError("Error creating resource.") from exc
-
-        self.unit.status = WaitingStatus("Waiting for gateway address")
-        if gateway_address := gateway_resource_manager.gateway_address(gateway.metadata.name):
-            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
-        else:
-            self.unit.status = WaitingStatus("Gateway address unavailable")
-        gateway_resource_manager.cleanup_resources(exclude=gateway)
-        secret_resource_manager.cleanup_resources(exclude=secret)
-
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        config = CharmConfig.from_charm(self, client)
+
+        if self._certificates_revocation_needed(client, config):
+            self._tls.revoke_all_certificates()
+            self._tls.generate_private_key(config.external_hostname)
+            self._tls.request_certificate(config.external_hostname)
+            return  # _reconcile will be triggered with the next certificates_available event.
+
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _on_start(self, _: typing.Any) -> None:
         """Handle the start event."""
         self._reconcile()
@@ -192,7 +180,7 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-        self._tls.certificate_relation_created(config.external_hostname)
+        self._tls.generate_private_key(config.external_hostname)
 
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
@@ -200,12 +188,14 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-        self._tls.certificate_relation_joined(config.external_hostname)
+        self._tls.request_certificate(config.external_hostname)
 
+    @validate_config_and_integration(defer=False)
     def _on_certificates_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
         """Handle the TLS Certificate available event."""
         logger.info("TLS certificate available, creating resources.")
@@ -248,6 +238,186 @@ class GatewayAPICharm(CharmBase):
             secret.remove_all_revisions()
         except SecretNotFoundError:
             logger.warning("Juju secret for %s already does not exist", hostname)
+
+    @validate_config_and_integration(defer=False)
+    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
+        """Handle the data-provided event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+        """Handle the data-removed event."""
+        self._reconcile()
+
+    def _reconcile(self) -> None:
+        """Reconcile charm status based on configuration and integrations.
+
+        Actions performed in this method:
+            1. Initialize charm state components.
+            2. Create the gateway and secret resources.
+            3. Create ingress-related resources:
+                - service
+                - http_route (HTTPS)
+                - http_route (HTTPtoHTTPS redirect)
+            4. Publish the ingress URL to the requirer charm.
+            5. Set the gateway LB address in the charm's status message.
+        """
+        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        config = CharmConfig.from_charm(self, client)
+        gateway_resource_information = GatewayResourceInformation.from_charm(self)
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+
+        self.unit.status = MaintenanceStatus("Creating resources.")
+        self._define_gateway_resource(
+            client, gateway_resource_information, config, tls_information
+        )
+        self._define_secret_resources(client, config, tls_information)
+        self._define_ingress_resources_and_publish_url(
+            client, config, gateway_resource_information
+        )
+        self._set_status_gateway_address(client, gateway_resource_information)
+
+    def _define_gateway_resource(
+        self,
+        client: Client,
+        gateway_resource_information: GatewayResourceInformation,
+        config: CharmConfig,
+        tls_information: TLSInformation,
+    ) -> None:
+        """Define the charm's gateway resource.
+
+        Args:
+            client: Lightkube client.
+            gateway_resource_information: Information needed to create the gateway resource.
+            config: Charm config.
+            tls_information: Information needed to create TLS secret resources.
+        """
+        resource_definition = GatewayResourceDefinition(
+            gateway_resource_information, config, tls_information
+        )
+        resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        gateway = resource_manager.define_resource(resource_definition)
+        resource_manager.cleanup_resources(exclude=[gateway])
+
+    def _define_secret_resources(
+        self,
+        client: Client,
+        config: CharmConfig,
+        tls_information: TLSInformation,
+    ) -> None:
+        """Define TLS secret resources.
+
+        Args:
+            client: Lightkube client.
+            config: Charm config.
+            tls_information: TLS-related information needed to create secret resources.
+        """
+        resource_definition = SecretResourceDefinition.from_tls_information(
+            tls_information, config.external_hostname
+        )
+        resource_manager = TLSSecretResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        secret = resource_manager.define_resource(resource_definition)
+        resource_manager.cleanup_resources(exclude=[secret])
+
+    def _define_ingress_resources_and_publish_url(
+        self,
+        client: Client,
+        config: CharmConfig,
+        gateway_resource_information: GatewayResourceInformation,
+    ) -> None:
+        """Define ingress-relation resources and publish the ingress URL.
+
+        Args:
+            client: Lightkube client.
+            config: Charm config.
+            gateway_resource_information: Information needed to attach http_route resources.
+        """
+        http_route_resource_information = HTTPRouteResourceInformation.from_charm(
+            self, self._ingress_provider
+        )
+        service_resource_manager = ServiceResourceManager(self._labels, client)
+        service = service_resource_manager.define_resource(
+            ServiceResourceDefinition(http_route_resource_information)
+        )
+        http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
+        redirect_resource_manager = HTTPRouteRedirectResourceManager(self._labels, client)
+        redirect_route = redirect_resource_manager.define_resource(
+            HTTPRouteResourceDefinition(
+                http_route_resource_information,
+                gateway_resource_information,
+                HTTPRouteType.HTTP,
+            )
+        )
+        https_route = http_route_resource_manager.define_resource(
+            HTTPRouteResourceDefinition(
+                http_route_resource_information,
+                gateway_resource_information,
+                HTTPRouteType.HTTPS,
+            )
+        )
+        service_resource_manager.cleanup_resources(exclude=[service])
+        http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
+        relation = self.model.get_relation(INGRESS_RELATION)
+        self._ingress_provider.publish_url(
+            relation,
+            (
+                f"https://{config.external_hostname}"
+                f"/{http_route_resource_information.requirer_model_name}"
+                f"-{http_route_resource_information.application_name}"
+            ),
+        )
+
+    def _set_status_gateway_address(
+        self, client: Client, gateway_resource_information: GatewayResourceInformation
+    ) -> None:
+        """Set the gateway address in the charm's status message.
+
+        Args:
+            client: Lightkube client
+            gateway_resource_information: Information about the created gateway resource.
+        """
+        resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        self.unit.status = WaitingStatus("Waiting for gateway address")
+        if gateway_address := resource_manager.gateway_address(
+            gateway_resource_information.gateway_name
+        ):
+            self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
+        else:
+            self.unit.status = WaitingStatus("Gateway address unavailable")
+
+    def _certificates_revocation_needed(self, client: Client, config: CharmConfig) -> bool:
+        """Check if a new certificate is needed.
+
+        Args:
+            client: Lightkube client
+            config: Charm config.
+
+        Returns:
+            True if the current certificate needs to be revoked.
+        """
+        gateway_resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        gateway = gateway_resource_manager.current_gateway_resource()
+        if not gateway:
+            return False
+
+        gateway_listeners = gateway.spec["listeners"]
+        listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
+        if len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]:
+            return False
+
+        return True
 
 
 if __name__ == "__main__":  # pragma: no cover

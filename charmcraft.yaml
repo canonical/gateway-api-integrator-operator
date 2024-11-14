@@ -15,8 +15,11 @@ parts:
       - pkg-config
       - libffi-dev
       - libssl-dev
-      - rustc
-      - cargo
+    build-snaps:
+      - rustup
+    override-build: |
+      rustup default stable
+      craftctl default
 
 name: gateway-api-integrator
 title: Gateway API Integrator
@@ -37,6 +40,10 @@ assumes:
 requires:
   certificates:
     interface: tls-certificates
+    limit: 1
+provides:
+  gateway:
+    interface: ingress
     limit: 1
 
 config:

@@ -9,7 +9,8 @@ import ops
 import pytest
 from httpx import Response
 from lightkube.core.exceptions import ApiError, ConfigError
-from lightkube.models.meta_v1 import Status
+from lightkube.generic_resource import GenericNamespacedResource
+from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
 from charm import LightKubeInitializationError
@@ -184,3 +185,28 @@ def test_create_http_route_insufficient_permission(
     harness.update_config(config)
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
+
+
+def test_certificate_revocation_needed_no_listeners(
+    harness: Harness,
+    mock_lightkube_client,
+):
+    """
+    arrange: Given a charm with mocked lightkube client.
+    act: Calls the _certificates_revocation_needed method with a
+    current gateway resource having no listeners.
+    assert: True is returned.
+    """
+    mock_lightkube_client.list = MagicMock(
+        return_value=[
+            GenericNamespacedResource(metadata=ObjectMeta(name="gateway"), spec={"listeners": []})
+        ]
+    )
+    harness.begin()
+
+    # We disable protected-access check here because we need to test that method
+    # pylint: disable=protected-access
+    certificate_revocation_needed = harness.charm._certificates_revocation_needed(
+        mock_lightkube_client, MagicMock()
+    )
+    assert certificate_revocation_needed is True

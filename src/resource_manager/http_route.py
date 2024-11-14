@@ -15,6 +15,7 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
+from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 
@@ -55,6 +56,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
         http_route_type: Type of the HTTP route, can be http or https.
+        routing_mode: The configured routing mode
+        external_hostname: The configured external-hostname without subdomain prefix.
     """
 
     application_name: str
@@ -63,11 +66,14 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     service_name: str
     service_port: int
     http_route_type: HTTPRouteType
+    routing_mode: str
+    external_hostname: str
 
     def __init__(
         self,
         http_route_resource_information: HTTPRouteResourceInformation,
         gateway_resource_information: GatewayResourceInformation,
+        config: CharmConfig,
         http_route_type: HTTPRouteType,
     ):
         """Create the state object with state components.
@@ -75,9 +81,10 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         Args:
             http_route_resource_information: HTTPRouteResourceInformation state component.
             gateway_resource_information: GatewayResourceInformation state component.
+            config: The charm's' config.
             http_route_type: Type of the HTTP route, can be http or https.
         """
-        super().__init__(http_route_resource_information, gateway_resource_information)
+        super().__init__(http_route_resource_information, gateway_resource_information, config)
         self.http_route_type = http_route_type
 
 

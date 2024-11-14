@@ -42,12 +42,14 @@ class GatewayResourceDefinition(ResourceDefinition):
         external_hostname: The configured gateway hostname.
         gateway_class_name: The configured gateway class.
         secret_resource_name_prefix: Prefix of the secret resource name.
+        routing_mode: The configured routing mode, this affects the gateway listeners.
     """
 
     gateway_name: str
     external_hostname: str
     gateway_class_name: str
     secret_resource_name_prefix: str
+    routing_mode: str
 
     def __init__(
         self,
@@ -103,6 +105,9 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         gateway_resource_definition = typing.cast(GatewayResourceDefinition, resource_definition)
         prefix = gateway_resource_definition.secret_resource_name_prefix
         tls_secret_name = f"{prefix}-{gateway_resource_definition.external_hostname}"
+        hostname_filter = gateway_resource_definition.external_hostname
+        if gateway_resource_definition.routing_mode == "subdomain":
+            hostname_filter = f"*.{gateway_resource_definition.external_hostname}"
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
@@ -116,14 +121,14 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                         "protocol": "HTTP",
                         "port": 80,
                         "name": f"{gateway_resource_definition.gateway_name}-http-listener",
-                        "hostname": gateway_resource_definition.external_hostname,
+                        "hostname": hostname_filter,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                     },
                     {
                         "protocol": "HTTPS",
                         "port": 443,
                         "name": f"{gateway_resource_definition.gateway_name}-https-listener",
-                        "hostname": gateway_resource_definition.external_hostname,
+                        "hostname": hostname_filter,
                         "allowedRoutes": {"namespaces": {"from": "All"}},
                         "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
                     },

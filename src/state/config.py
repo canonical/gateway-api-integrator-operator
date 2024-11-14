@@ -39,12 +39,14 @@ class CharmConfig:
     Attributes:
         gateway_class_name: The configured gateway class.
         external_hostname: The configured gateway hostname.
+        routing_mode: The configured routing mode, must be "path" or "subdomain".
     """
 
     gateway_class_name: str = Field(min_length=1)
     external_hostname: str = Field(
         min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
     )
+    routing_mode: str = Field(pattern=r"^path|subdomain$")
 
     @classmethod
     @map_k8s_auth_exception
@@ -62,7 +64,9 @@ class CharmConfig:
         Returns:
             CharmConfig: Instance of the charm config state component.
         """
+        routing_mode = typing.cast(str, charm.config.get("routing-mode"))
         gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
+
         gateway_class_generic_resource = create_global_resource(
             CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_CLASS_RESOURCE_NAME, GATEWAY_CLASS_PLURAL
         )
@@ -92,6 +96,7 @@ class CharmConfig:
 
         try:
             return cls(
+                routing_mode=routing_mode,
                 gateway_class_name=gateway_class_name,
                 external_hostname=typing.cast(str, charm.config.get("external-hostname")),
             )

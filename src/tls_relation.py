@@ -87,18 +87,21 @@ class TLSRelationService:
         chars = string.ascii_letters + string.digits
         return "".join(secrets.choice(chars) for _ in range(12))
 
-    def request_certificate(self, hostname: str) -> None:
+    def request_certificate(self, hostname: str, wildcard: bool = False) -> None:
         """Handle the TLS Certificate joined event.
 
         Args:
             hostname: Certificate's hostname.
         """
         private_key, password = self._get_private_key(hostname)
+        sans = [hostname]
+        if wildcard:
+            sans.append(f"*.{hostname}")
         csr = generate_csr(
             private_key=private_key.encode(),
             private_key_password=password.encode(),
             subject=hostname,
-            sans_dns=[hostname],
+            sans_dns=sans,
         )
         self.certificates.request_certificate_creation(certificate_signing_request=csr)
 

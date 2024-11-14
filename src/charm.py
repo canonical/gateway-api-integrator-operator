@@ -141,7 +141,7 @@ class GatewayAPICharm(CharmBase):
         if self._certificates_revocation_needed(client, config):
             self._tls.revoke_all_certificates()
             self._tls.generate_private_key(config.external_hostname)
-            self._tls.request_certificate(config.external_hostname)
+            self._tls.request_certificate(config.external_hostname, config == "subdomain")
             return  # _reconcile will be triggered with the next certificates_available event.
 
         self._reconcile()
@@ -188,7 +188,7 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-        self._tls.request_certificate(config.external_hostname)
+        self._tls.request_certificate(config.external_hostname, config == "subdomain")
 
     @validate_config_and_integration(defer=False)
     def _on_certificates_relation_broken(self, _: RelationBrokenEvent) -> None:
@@ -351,6 +351,7 @@ class GatewayAPICharm(CharmBase):
             HTTPRouteResourceDefinition(
                 http_route_resource_information,
                 gateway_resource_information,
+                config,
                 HTTPRouteType.HTTP,
             )
         )
@@ -358,6 +359,7 @@ class GatewayAPICharm(CharmBase):
             HTTPRouteResourceDefinition(
                 http_route_resource_information,
                 gateway_resource_information,
+                config,
                 HTTPRouteType.HTTPS,
             )
         )

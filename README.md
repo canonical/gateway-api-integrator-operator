@@ -17,6 +17,33 @@ For information about how to deploy, integrate, and manage this charm, see the O
 
 To begin, refer to the [Getting Started](https://charmhub.io/gateway-api-integrator/docs/tutorial-getting-started) tutorial for step-by-step instructions.
 
+### Basic operations
+
+#### Configure the gateway class
+
+The configuration `gateway-class` sets gateway controller for the Kubernetes resource.
+
+On [canonical-k8s](https://snapcraft.io/install/k8s/ubuntu), for example, to set it to `cilium`, run the following
+command:
+
+```
+juju config gateway-api-integrator gateway-class=cilium
+```
+
+#### Relate to a certificate provider charm
+
+The `certificates` relation provides the gateway-api-integrator charm with TLS termination.
+
+1. Deploy a TLS provider charm
+```
+juju deploy self-signed-certificates
+```
+
+2. Integrate the gateway-api-integrator charm with the TLS provider charm
+```
+juju integrate gateway-api-integrator self-signed-certificates
+```
+
 ## Learn more
 
 - [Read more](https://charmhub.io/gateway-api-integrator/docs)
@@ -31,3 +58,4 @@ suggestions, fixes and constructive feedback.
 - [Code of conduct](https://ubuntu.com/community/code-of-conduct)
 - [Get support](https://discourse.charmhub.io/)
 - [Contribute](https://charmhub.io/gateway-api-integrator#contributing-to-this-documentation)
+- [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

@@ -40,12 +40,12 @@ from resource_manager.http_route import (
 )
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
-from state.config import CharmConfig
+from state.config import CharmConfig, SUBDOMAIN_ROUTING_MODE
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import TLSRelationService, get_hostname_from_cert
+from tls_relation import TLSRelationService, get_hostname_from_cert, get_all_hostnames_from_cert
 
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
@@ -366,14 +366,16 @@ class GatewayAPICharm(CharmBase):
         service_resource_manager.cleanup_resources(exclude=[service])
         http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
         relation = self.model.get_relation(INGRESS_RELATION)
-        self._ingress_provider.publish_url(
-            relation,
-            (
-                f"https://{config.external_hostname}"
-                f"/{http_route_resource_information.requirer_model_name}"
-                f"-{http_route_resource_information.application_name}"
-            ),
+        backend_prefix =  (
+            f"{http_route_resource_information.requirer_model_name}"
+            f"-{http_route_resource_information.application_name}"
         )
+
+        ingress_url = f"https://{config.external_hostname}/{backend_prefix}"
+        if config.routing_mode == SUBDOMAIN_ROUTING_MODE:
+            ingress_url = f"https://{backend_prefix}.{config.external_hostname}"
+
+        self._ingress_provider.publish_url(relation, ingress_url)
 
     def _set_status_gateway_address(
         self, client: Client, gateway_resource_information: GatewayResourceInformation
@@ -395,6 +397,25 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
+
+    def _reconcile_certificates(self) -> None:
+        """Request new certificates if needed to match the configured hostname."""
+        tls_information = TLSInformation.from_charm(self, self.certificates)
+        current_certificate = None
+        for certificate in self.certificates.get_provider_certificates():
+            if (
+                get_all_hostnames_from_cert(certificate.certificate)
+                != tls_information.external_hostname
+            ):
+                self.certificates.request_certificate_revocation(
+                    certificate_signing_request=certificate.csr.encode()
+                )
+            else:
+                current_certificate = certificate
+        if not current_certificate:
+            logger.info("Certificate not in provider's relation data, creating csr.")
+            self._tls.generate_private_key(tls_information.external_hostname)
+            self._tls.request_certificate(tls_information.external_hostname)
 
     def _certificates_revocation_needed(self, client: Client, config: CharmConfig) -> bool:
         """Check if a new certificate is needed.

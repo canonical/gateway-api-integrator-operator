@@ -8,6 +8,8 @@ from unittest.mock import MagicMock
 
 import pytest
 from lightkube.core.client import Client
+from lightkube.generic_resource import GenericGlobalResource
+from lightkube.models.meta_v1 import ObjectMeta
 from ops.testing import Harness
 
 from resource_manager.http_route import (
@@ -16,12 +18,15 @@ from resource_manager.http_route import (
     HTTPRouteResourceManager,
     HTTPRouteType,
 )
+from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
     HTTPRouteResourceInformation,
     IngressIntegrationDataValidationError,
     IngressIntegrationMissingError,
 )
+
+from .conftest import GATEWAY_CLASS_CONFIG
 
 
 def test_http_route_resource_information_integration_missing(harness: Harness):
@@ -63,6 +68,9 @@ def test_httproute_gen_resource(
     assert: The k8s resource is correctly generated.
     """
     client_mock = MagicMock(spec=Client)
+    client_mock.list = MagicMock(
+        return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
+    )
     harness.update_config(config)
     harness.add_relation(
         "gateway",
@@ -70,9 +78,11 @@ def test_httproute_gen_resource(
         app_data=gateway_relation_application_data,
         unit_data=gateway_relation_unit_data,
     )
-
     harness.begin()
+
     charm = harness.charm
+    charm_config = CharmConfig.from_charm(charm, client_mock)
+
     http_route_resource_information = HTTPRouteResourceInformation.from_charm(
         charm, charm._ingress_provider
     )
@@ -89,6 +99,7 @@ def test_httproute_gen_resource(
         HTTPRouteResourceDefinition(
             http_route_resource_information,
             gateway_resource_information,
+            charm_config,
             HTTPRouteType.HTTP,
         )
     )
@@ -96,6 +107,7 @@ def test_httproute_gen_resource(
         HTTPRouteResourceDefinition(
             http_route_resource_information,
             gateway_resource_information,
+            charm_config,
             HTTPRouteType.HTTPS,
         )
     )

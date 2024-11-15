@@ -14,7 +14,7 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
-from state.config import CharmConfig
+from state.config import SUBDOMAIN_ROUTING_MODE, CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
@@ -106,7 +106,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         prefix = gateway_resource_definition.secret_resource_name_prefix
         tls_secret_name = f"{prefix}-{gateway_resource_definition.external_hostname}"
         hostname_filter = gateway_resource_definition.external_hostname
-        if gateway_resource_definition.routing_mode == "subdomain":
+        if gateway_resource_definition.routing_mode == SUBDOMAIN_ROUTING_MODE:
             hostname_filter = f"*.{gateway_resource_definition.external_hostname}"
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",

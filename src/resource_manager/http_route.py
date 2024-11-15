@@ -15,7 +15,7 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
-from state.config import CharmConfig
+from state.config import PATH_ROUTING_MODE, CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 
@@ -41,6 +41,7 @@ class HTTPRouteType(StrEnum):
     HTTPS = "https"
 
 
+# pylint: disable=too-many-instance-attributes
 @dataclasses.dataclass
 class HTTPRouteResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage gateway resource.
@@ -120,11 +121,34 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             HTTPRouteResourceDefinition, resource_definition
         )
 
-        listener_id = (
-            f"{http_route_resource_definition.gateway_name}"
-            f"-{http_route_resource_definition.http_route_type}"
-            "-listener"
+        backend_prefix = (
+            f"{http_route_resource_definition.requirer_model_name}"
+            f"-{http_route_resource_definition.application_name}"
         )
+        listener_id = f"{backend_prefix}-listener"
+        hostnames = [f"{backend_prefix}.{http_route_resource_definition.external_hostname}"]
+        rules = [
+            {
+                "backendRefs": [
+                    {
+                        "name": http_route_resource_definition.service_name,
+                        "port": http_route_resource_definition.service_port,
+                    }
+                ],
+            }
+        ]
+
+        if http_route_resource_definition.routing_mode == PATH_ROUTING_MODE:
+            rules[0]["matches"] = [
+                {
+                    "path": {
+                        "type": "PathPrefix",
+                        "value": f"/{backend_prefix}",
+                    }
+                }
+            ]
+            hostnames = [http_route_resource_definition.external_hostname]
+
         spec = {
             "parentRefs": [
                 {
@@ -133,27 +157,8 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                     "sectionName": listener_id,
                 }
             ],
-            "rules": [
-                {
-                    "matches": [
-                        {
-                            "path": {
-                                "type": "PathPrefix",
-                                "value": (
-                                    f"/{http_route_resource_definition.requirer_model_name}"
-                                    f"-{http_route_resource_definition.application_name}"
-                                ),
-                            }
-                        }
-                    ],
-                    "backendRefs": [
-                        {
-                            "name": http_route_resource_definition.service_name,
-                            "port": http_route_resource_definition.service_port,
-                        }
-                    ],
-                }
-            ],
+            "hostnames": hostnames,
+            "rules": rules,
         }
 
         http_route = self._http_route_generic_resource_class(

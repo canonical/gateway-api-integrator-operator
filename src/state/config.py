@@ -20,7 +20,8 @@ from .exception import CharmStateValidationBaseError
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
-
+PATH_ROUTING_MODE = "path"
+SUBDOMAIN_ROUTING_MODE = "subdomain"
 logger = logging.getLogger()
 
 

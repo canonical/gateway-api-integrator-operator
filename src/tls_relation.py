@@ -17,7 +17,7 @@ from charms.tls_certificates_interface.v3.tls_certificates import (
     generate_private_key,
 )
 from cryptography import x509
-from cryptography.x509.oid import NameOID
+from cryptography.x509.oid import NameOID, ExtensionOID
 from ops.model import Model, Relation, SecretNotFoundError
 
 TLS_CERT = "certificates"
@@ -63,6 +63,34 @@ def get_hostname_from_cert(certificate: str) -> str:
     return str(common_name_attribute[0].value)
 
 
+def get_all_hostnames_from_cert(certificate: str) -> set[str]:
+    """Get all hostnames from a certificate subject name
+    from the common_name and sans attributes.
+
+    Args:
+        certificate: The certificate in PEM format.
+
+    Returns:
+        A set of all hostnames.
+
+    Raises:
+        InvalidCertificateError: When hostname cannot be parsed from the given certificate.
+    """
+    decoded_cert = x509.load_pem_x509_certificate(certificate.encode())
+
+    common_name_attribute = decoded_cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
+    subject_alternative_name = decoded_cert.subject.get_attributes_for_oid(
+        ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+    )
+    hostnames = common_name_attribute + subject_alternative_name
+
+    if not hostnames:
+        raise InvalidCertificateError(
+            f"Cannot parse hostname from x509 certificate: {certificate}"
+        )
+
+    return set(map(lambda attribute: attribute[0].value, hostnames))
+
 class TLSRelationService:
     """TLS Relation service class."""
 
@@ -92,11 +120,12 @@ class TLSRelationService:
 
         Args:
             hostname: Certificate's hostname.
+            wildcard: Whether to request a wildcard certificate.
         """
         private_key, password = self._get_private_key(hostname)
         sans = [hostname]
         if wildcard:
-            sans.append(f"*.{hostname}")
+            sans = [f"*.{hostname}"]
         csr = generate_csr(
             private_key=private_key.encode(),
             private_key_password=password.encode(),

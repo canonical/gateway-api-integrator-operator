@@ -5,7 +5,7 @@ on:
 
 jobs:
   integration-tests:
-    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@add_support_for_canonical_k8s_w_workaround
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@add_support_for_canonical_k8s
     secrets: inherit
     with:
       provider: k8s

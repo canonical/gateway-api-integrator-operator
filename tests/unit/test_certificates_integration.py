@@ -251,3 +251,24 @@ def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPat
     tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
     tls.revoke_all_certificates()
     request_certificate_revocation_mock.assert_called_once()
+
+
+@pytest.mark.usefixtures("juju_secret_mock")
+def test_request_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
+    """
+    arrange: Given a char with mocked juju secret.
+    act: Call request certificate.
+    assert: The library method is correctly called.
+    """
+    request_certificate_creation_mock = MagicMock()
+    monkeypatch.setattr(
+        (
+            "charms.tls_certificates_interface.v3.tls_certificates"
+            ".TLSCertificatesRequiresV3.request_certificate_creation"
+        ),
+        request_certificate_creation_mock,
+    )
+    harness.begin()
+    tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
+    tls.request_certificate(TEST_EXTERNAL_HOSTNAME_CONFIG)
+    request_certificate_creation_mock.assert_called_once()

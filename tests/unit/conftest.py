@@ -88,6 +88,19 @@ def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
     return (password.decode(), private_key.decode())
 
 
+@pytest.fixture(scope="function", name="juju_secret_mock")
+def juju_secret_mock_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+    private_key_and_password: tuple[str, str],
+) -> tuple[str, str]:
+    """Mock certificates integration."""
+    password, private_key = private_key_and_password
+    juju_secret_mock = MagicMock(spec=Secret)
+    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
+    return juju_secret_mock
+
+
 @pytest.fixture(scope="function", name="mock_certificate")
 def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     """Mock tls certificate from a tls provider charm."""

@@ -3,10 +3,8 @@
 
 """General configuration module for integration tests."""
 
-import json
 import logging
 import os.path
-import textwrap
 from typing import AsyncGenerator
 
 import lightkube
@@ -15,7 +13,6 @@ import lightkube.config.kubeconfig
 import lightkube.core
 import pytest
 import pytest_asyncio
-import requests
 from juju.application import Application
 from juju.model import Model
 from pytest_operator.plugin import OpsTest

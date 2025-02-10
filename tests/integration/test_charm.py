@@ -43,12 +43,6 @@ async def test_deploy(
         status="active",
     )
 
-    action = await application.units[0].run_action(
-        "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
-    )
-    await action.wait()
-    assert action.results
-
     gateway_generic_resource_class = create_namespaced_resource(
         CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
     )

@@ -1,6 +1,6 @@
 # Charm architecture
 
-The `gateway-api-integrator` is very similar to the [`gateway-api-integrator`](https://charmhub.io/gateway-api-integrator)
+The `gateway-api-integrator` is very similar to the [`nginx-ingress-integrator`](https://charmhub.io/nginx-ingress-integrator)
 charm in that it provides Kubernetes ingress to charms that require it. However,
 instead of interacting with the Kubernetes cluster using the Ingress API, it 
 uses the newer [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/)
@@ -30,14 +30,17 @@ something like the following:
 ```
 NAME                             READY   STATUS    RESTARTS   AGE
 gateway-api-integrator-0       1/1     Running   0          3h47m
-
 ```
+
+This shows there is only one container for the charm code.
 
 ## OCI images
 
 Gateway Ingress Integrator charm doesn't use any OCI image resources.
 
 ## Juju events
+
+For this charm, the following Juju events are observed:
 
 1. [`config-changed`](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/hook/#config-changed)
 2. [`start`](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/hook/#start)

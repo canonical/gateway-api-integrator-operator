@@ -11,8 +11,8 @@ The Gateway API integrator receives ingress requests using the [`ingress` relati
 It relies on the `tls-certificates` relation to gather TLS certificates for 
 the gateway's TLS configuration. Information about the backend application is 
 collected from the `ingress` relation and combined with the TLS certificates 
-from the `tls-certificates` relation. As a result, Kubernetes [`Service` resources](https://kubernetes.io/docs/concepts/services-networking/service/),  
-[`Gateway` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway),  
+from the `tls-certificates` relation. As a result, Kubernetes [`Service` resources](https://kubernetes.io/docs/concepts/services-networking/service/),
+[`Gateway` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway),
 [`HTTPRoute` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute),
 and [`Secret` resources](https://kubernetes.io/docs/concepts/configuration/secret/)  
 will be created to facilitate ingress as expected by the ingress requirer.
@@ -20,10 +20,10 @@ will be created to facilitate ingress as expected by the ingress requirer.
 In designing this charm, we've leveraged the [sidecar](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns/#example-1-sidecar-containers) pattern for Kubernetes 
 charms, but somewhat unusually we're not actually deploying a workload container
 alongside our charm code. Instead, the charm code talks directly to the 
-Kubernetes API to provision the appropriate gateway API resource to enable 
+Kubernetes API to provision the appropriate Gateway API resource to enable 
 traffic to reach the service in question. 
 
-As a result, if you run a `kubectl get pods` on a namespace named for the Juju 
+As a result, if you run `kubectl get pods` on a namespace named for the Juju 
 model you’ve deployed the gateway-api-integrator charm into, you’ll see 
 something like the following:
 
@@ -59,7 +59,7 @@ The `src/charm.py` is the default entry point for a charm and has the
 base class from which all Charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops)
 (Python framework for developing charms).
 
-> See more in the Juju docs: [Charm](https://juju.is/docs/sdk/constructs#heading--charm)
+> See more in the Juju docs: [Charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/)
 
 Take, for example, when a configuration is changed by using the CLI.
 
@@ -77,7 +77,7 @@ self.framework.observe(self.on.config_changed, self._on_config_changed)
 ## Charm architecture diagram
 
 The Gateway API Integrator charm uses the `ingress` and `tls_certificates` charm
-libraries to handle charm integrations. It also uses the `lightkube` Python 
+libraries to handle charm relations. It also uses the `lightkube` Python 
 Kubernetes client, which is wrapped in custom modules to reconcile the 
 Kubernetes resources necessary for ingress.
 
@@ -110,7 +110,7 @@ C4Context
         UpdateLayoutConfig($c4ShapeInRow="1", $c4BoundaryInRow="4")
         
         UpdateRelStyle(tls-certificates-lib, gateway-api-integrator-charm, $offsetY="10", $offsetX="-40")
-        UpdateRelStyle(ingress-lib, gateway-api-integrator-charm, $offsetY="0", $offsetX="-40")
+        UpdateRelStyle(ingress-lib, gateway-api-integrator-charm, $offsetY="20", $offsetX="-80")
         UpdateRelStyle(gateway-api-integrator-charm, gateway, $offsetY="10", $offsetX="-10")
         UpdateRelStyle(gateway-api-integrator-charm, http-route, $offsetY="20", $offsetX="-10")
         UpdateRelStyle(gateway-api-integrator-charm, secret, $offsetY="30", $offsetX="-10")

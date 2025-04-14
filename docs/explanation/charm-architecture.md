@@ -1,6 +1,6 @@
 # Charm architecture
 
-The `gateway-api-integrator` is very similar to the [`nginx-ingress-integrator`](https://charmhub.io/nginx-ingress-integrator)
+The `gateway-api-integrator` charm is very similar to the [`nginx-ingress-integrator`](https://charmhub.io/nginx-ingress-integrator)
 charm in that it provides Kubernetes ingress to charms that require it. However,
 instead of interacting with the Kubernetes cluster using the Ingress API, it 
 uses the newer [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/)
@@ -14,7 +14,7 @@ collected from the `ingress` relation and combined with the TLS certificates
 from the `tls-certificates` relation. As a result, Kubernetes [`Service` resources](https://kubernetes.io/docs/concepts/services-networking/service/),
 [`Gateway` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway),
 [`HTTPRoute` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute),
-and [`Secret` resources](https://kubernetes.io/docs/concepts/configuration/secret/)  
+and [`Secret` resources](https://kubernetes.io/docs/concepts/configuration/secret/)
 will be created to facilitate ingress as expected by the ingress requirer.
 
 In designing this charm, we've leveraged the [sidecar](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns/#example-1-sidecar-containers) pattern for Kubernetes 

@@ -69,9 +69,7 @@ async def certificate_provider_application_fixture(
     model: Model,
 ) -> Application:
     """Deploy self-signed-certificates."""
-    application = await model.deploy(
-        certificate_provider_application_name, channel="edge", base="ubuntu@22.04"
-    )
+    application = await model.deploy(certificate_provider_application_name, channel="1/edge")
     await model.wait_for_idle(apps=[certificate_provider_application_name], status="active")
     return application
 

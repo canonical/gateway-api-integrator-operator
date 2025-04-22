@@ -14,7 +14,7 @@ jobs:
       use-canonical-k8s: true
       self-hosted-runner: true
       self-hosted-runner-label: "large"
-      juju-channel: 3.3/stable
+      juju-channel: 3.5/stable
       channel: edge
       charmcraft-channel: latest/edge
       modules: '["test_actions.py", "test_charm.py"]'

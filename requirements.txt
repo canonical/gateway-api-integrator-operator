@@ -1,4 +1,4 @@
-cryptography==44.0.1
+cryptography==45.0.2
 jsonschema==4.23.0
 lightkube==0.17.0
 ops==2.18.0

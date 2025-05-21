@@ -1,21 +1,15 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """General configuration module for integration tests."""
 
-import json
 import logging
 import os.path
-import textwrap
 from typing import AsyncGenerator
 
 import lightkube
-import lightkube.config
-import lightkube.config.kubeconfig
-import lightkube.core
 import pytest
 import pytest_asyncio
-import requests
 from juju.application import Application
 from juju.model import Model
 from pytest_operator.plugin import OpsTest
@@ -69,7 +63,9 @@ async def certificate_provider_application_fixture(
     model: Model,
 ) -> Application:
     """Deploy self-signed-certificates."""
-    application = await model.deploy(certificate_provider_application_name, channel="edge")
+    application = await model.deploy(
+        certificate_provider_application_name, channel="latest/edge", series="jammy"
+    )
     await model.wait_for_idle(apps=[certificate_provider_application_name], status="active")
     return application
 
@@ -77,7 +73,7 @@ async def certificate_provider_application_fixture(
 @pytest.fixture(scope="module", name="ingress_requirer_application_name")
 def ingress_requirer_application_name_fixture() -> str:
     """Return the name of the certificate provider application deployed for tests."""
-    return "jenkins-k8s"
+    return "flask-k8s"
 
 
 @pytest_asyncio.fixture(scope="module", name="ingress_requirer_application")
@@ -85,52 +81,8 @@ async def ingress_requirer_application_fixture(
     ingress_requirer_application_name: str,
     model: Model,
 ) -> Application:
-    """Deploy jenkins-k8s."""
-    application = await model.deploy(
-        ingress_requirer_application_name, channel="latest/edge", constraints="mem=1024M"
-    )
-    return application
-
-
-@pytest_asyncio.fixture(scope="module", name="any_charm_ingress_requirer")
-async def any_charm_ingress_requirer_fixture(model: Model):
-    """Deploy any-charm and patch it with ingress lib."""
-    any_app_name = "any-ingress"
-    ingress_lib_url = (
-        "https://raw.githubusercontent.com/canonical/charm-relation-interfaces"
-        "/main/lib/charms/interfaces/v2/ingress.py"
-    )
-    ingress_lib = requests.get(ingress_lib_url, timeout=10).text
-    any_charm_src_overwrite = {
-        "ingress.py": ingress_lib,
-        "any_charm.py": textwrap.dedent(
-            """\
-        from ingress import IngressRequires
-        from any_charm_base import AnyCharmBase
-        class AnyCharm(AnyCharmBase):
-            def __init__(self, *args, **kwargs):
-                super().__init__(*args, **kwargs)
-                self.ingress = IngressRequires(
-                    self,
-                    {
-                        "service-hostname": "any",
-                        "service-name": self.app.name,
-                        "service-port": 80
-                    }
-                )
-            def update_ingress(self, ingress_config):
-                self.ingress.update_config(ingress_config)
-        """
-        ),
-    }
-    application = (
-        await model.deploy(
-            "any-charm",
-            application_name=any_app_name,
-            channel="beta",
-            config={"src-overwrite": json.dumps(any_charm_src_overwrite)},
-        ),
-    )
+    """Deploy flask-k8s."""
+    application = await model.deploy(ingress_requirer_application_name, channel="latest/edge")
     return application
 
 

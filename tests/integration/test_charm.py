@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Integration test for charm deploy."""
@@ -87,4 +87,4 @@ async def test_deploy(
         verify=False,  # nosec - calling charm ingress URL
         timeout=30,
     )
-    assert "Authentication required" in str(res.content)
+    assert "Welcome to flask-k8s Charm" in str(res.content)

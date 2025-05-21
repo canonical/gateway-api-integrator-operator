@@ -1,4 +1,4 @@
-# Copyright 2024 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """Module for functions containing charm utilities."""
@@ -34,7 +34,7 @@ def validate_config_and_integration(
     """
 
     def decorator(
-        method: typing.Callable[[C, typing.Any], None]
+        method: typing.Callable[[C, typing.Any], None],
     ) -> typing.Callable[[C, typing.Any], None]:
         """Create a decorator that puts the charm in blocked state if the config is wrong.
 

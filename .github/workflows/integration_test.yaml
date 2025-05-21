@@ -18,4 +18,4 @@ jobs:
       channel: edge
       charmcraft-channel: latest/edge
       modules: '["test_actions.py", "test_charm.py"]'
-      tmate-debug: true
+      tmate-debug: false

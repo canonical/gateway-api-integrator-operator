@@ -56,6 +56,10 @@ config:
       default: ""
       description: The gateway class.
       type: string
+    routing-mode:
+      default: "path"
+      description: The ingress routing mode, must be 'path' or 'subdomain'. Defaults to 'path'.
+      type: string
 
 
 actions:

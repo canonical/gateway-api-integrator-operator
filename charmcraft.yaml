@@ -42,7 +42,7 @@ requires:
     interface: tls-certificates
     limit: 1
   dns-record:
-    interface: dns-record
+    interface: dns_record
 provides:
   gateway:
     interface: ingress

@@ -7,6 +7,7 @@
 import logging
 import typing
 import uuid
+from typing import Tuple
 
 from charms.bind.v0.dns_record import (
     DNSRecordRequirerData,
@@ -287,46 +288,14 @@ class GatewayAPICharm(CharmBase):
                 - http_route (HTTPS)
                 - http_route (HTTPtoHTTPS redirect)
             4. Publish the ingress URL to the requirer charm.
-            5. Set the gateway LB address in the charm's status message.
+            5. Update the DNS record relation with the DNS record data
+            6. Set the gateway LB address in the charm's status message.
         """
 
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
-        logger.info(config)
-        logger.info(self.config)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
-
-        # ToDo: If relation is established AND external_hostname is configured AND ip address in gateway => request for record
-        resource_manager = GatewayResourceManager(
-            labels=self._labels,
-            client=client,
-        )
-        self.unit.status = WaitingStatus("Waiting for gateway address")
-        gateway_address = resource_manager.gateway_address(
-            gateway_resource_information.gateway_name
-        )
-        relation = self.model.get_relation(self.dns_record_requirer.relation_name)
-        if (
-            relation
-            and config.external_hostname
-            and gateway_address  # ToDo: Check if ip address in gateway
-        ):
-            host_label, domain = config.external_hostname.split(".", 1)  # www.example.com
-            entry = RequirerEntry(
-                domain=domain,
-                host_label=host_label,
-                ttl=600,
-                record_class=RecordClass.IN,
-                record_type=RecordType.A,
-                record_data=gateway_address,
-                uuid=uuid.uuid5(
-                    UUID_NAMESPACE, str(config.external_hostname) + str(gateway_address)
-                ),
-            )
-            dns_record_requirer_data = DNSRecordRequirerData(dns_entries=[entry])
-            self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
-
         self.unit.status = MaintenanceStatus("Creating resources.")
         self._define_gateway_resource(
             client, gateway_resource_information, config, tls_information
@@ -335,16 +304,86 @@ class GatewayAPICharm(CharmBase):
         self._define_ingress_resources_and_publish_url(
             client, config, gateway_resource_information
         )
+        self._update_dns_record_relation(
+            config.external_hostname, client, gateway_resource_information
+        )
         self._set_status_gateway_address(client, gateway_resource_information)
 
-    def _get_dns_record_requirer_data(self) -> DNSRecordRequirerData:
-        """Get the DNS record requirer data.
+    def _update_dns_record_relation(
+        self,
+        external_hostname: str,
+        client: Client,
+        gateway_resource_information: GatewayResourceInformation,
+    ) -> None:
+        """
+        Update the DNS record relation with the external hostname and gateway address.
+        Args:
+            external_hostname: The external hostname to be used in the DNS record.
+            client: Lightkube client.
+            gateway_resource_information: Information needed to create the gateway resource.
 
-        Returns:
-            DNSRecordRequirerData: The DNS record requirer data.
+        """
+        relation = self.model.get_relation(self.dns_record_requirer.relation_name)
+        if not relation or not external_hostname:
+            return
+        resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        if not resource_manager.current_gateway_resource():
+            logger.warning(
+                "No gateway resource found, cannot update DNS record for %s",
+                external_hostname,
+            )
+            return
+        gateway_address = resource_manager.gateway_address(
+            gateway_resource_information.gateway_name
+        )
+        if not gateway_address:
+            logger.warning(
+                "No gateway address found for %s, cannot update DNS record",
+                external_hostname,
+            )
+            return
+        host_label, domain = self._split_hostname(external_hostname)
+        entry = RequirerEntry(
+            domain=domain,
+            host_label=host_label,
+            ttl=600,
+            record_class=RecordClass.IN,
+            record_type=RecordType.A,
+            record_data=gateway_address,
+            uuid=uuid.uuid5(UUID_NAMESPACE, str(external_hostname) + str(gateway_address)),
+        )
+        dns_record_requirer_data = DNSRecordRequirerData(dns_entries=[entry])
+        self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
+
+    def _split_hostname(self, hostname: str) -> Tuple[str, str]:
+        """
+        Splits external_hostname into host_label and domain.
+
+        - host_label: the subdomain or specific host (e.g. 'www')
+        - domain: the root domain (e.g. 'example.com')
+
+        If the hostname is a root domain (like 'example.com'), the host_label is '@'.
+
+        Raises:
+            ValueError if the hostname is invalid.
         """
 
-        return DNSRecordRequirerData(dns_entries=[])  # ToDo: Fill here
+        labels = hostname.split(".")
+
+        if len(labels) < 2:
+            raise ValueError(f"Hostname must contain at least one dot: {hostname}")
+
+        if len(labels) == 2:
+            # Apex/root domain (e.g., 'example.com')
+            return "@", hostname
+
+        # More than 2 labels: e.g., 'www.example.com' → ('www', 'example.com')
+        host_label = labels[0]
+        domain = ".".join(labels[1:])
+        return host_label, domain
 
     def _define_gateway_resource(
         self,

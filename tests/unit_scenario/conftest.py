@@ -29,20 +29,9 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     )
     monkeypatch.setattr("charm.GatewayAPICharm._set_status_gateway_address", MagicMock())
     monkeypatch.setattr("charm.GatewayResourceManager.current_gateway_resource", MagicMock())
-
-    def mock_gateway_address(self, gateway_name):  # pylint: disable=unused-argument
-        # Disabling the unused-argument because the method signature is required by the mock.
-        """Mock the gateway address to return a fixed IP.
-
-        Args:
-            gateway_name: The name of the gateway resource.
-
-        Returns:
-            A fixed IP address as a string.
-        """
-        return "1.2.3.4"
-
-    monkeypatch.setattr("charm.GatewayResourceManager.gateway_address", mock_gateway_address)
+    monkeypatch.setattr(
+        "charm.GatewayResourceManager.gateway_address", lambda self, name: "1.2.3.4"
+    )
 
     dns_relation = testing.Relation(
         endpoint="dns-record",

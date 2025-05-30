@@ -3,30 +3,31 @@
 
 """General configuration module for Jubilant integration tests."""
 
+import logging
 import pathlib
 
 import jubilant
 import pytest
 
+logger = logging.getLogger(__name__)
 
-@pytest.fixture(scope="module")
-def juju(request: pytest.FixtureRequest):
+
+@pytest.fixture(scope="module", name="juju")
+def juju_model_fixture(request: pytest.FixtureRequest):
     """Create a temporary Juju model for testing."""
     keep_models = bool(request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:  # pylint: disable=redefined-outer-name
-        # Disabling pylint warning as this naming is what is suggested.
-        juju.wait_timeout = 10 * 60
+    with jubilant.temp_model(keep=keep_models) as juju_model:
+        juju_model.wait_timeout = 10 * 60
 
-        yield juju  # run the test
+        yield juju_model  # run the test
 
         if request.session.testsfailed:
-            log = juju.debug_log(limit=1000)
-            print(log, end="")
+            log = juju_model.debug_log(limit=1000)
+            logger.debug(log)
 
 
 @pytest.fixture(scope="module")
-def app(juju: jubilant.Juju):  # pylint: disable=redefined-outer-name
-    # Disabling pylint warning as this naming is what is suggested.
+def app(juju: jubilant.Juju):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     juju.deploy(
         charm_path("gateway-api-integrator"),

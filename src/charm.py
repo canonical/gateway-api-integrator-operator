@@ -60,6 +60,7 @@ logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 INGRESS_RELATION = "gateway"
 TLS_CERT_RELATION = "certificates"
+# Randomly selected UUID namespace for generating UUID for DNS records.
 UUID_NAMESPACE = uuid.UUID("f8f206da-a7f8-4206-b044-30be3724a09d")
 
 

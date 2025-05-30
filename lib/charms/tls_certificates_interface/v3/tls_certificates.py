@@ -287,9 +287,10 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Literal, Optional, Union
 
 from cryptography import x509
-from cryptography.hazmat._oid import ExtensionOID
+from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from cryptography.x509.oid import ExtensionOID
 from jsonschema import exceptions, validate
 from ops.charm import (
     CharmBase,
@@ -305,6 +306,7 @@ from ops.model import (
     ModelError,
     Relation,
     RelationDataContent,
+    Secret,
     SecretNotFoundError,
     Unit,
 )
@@ -317,7 +319,7 @@ LIBAPI = 3
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 17
+LIBPATCH = 26
 
 PYDEPS = ["cryptography", "jsonschema"]
 
@@ -457,9 +459,21 @@ class ProviderCertificate:
     expiry_time: datetime
     expiry_notification_time: Optional[datetime] = None
 
-    def chain_as_pem(self) -> str:
+    def chain_as_pem(self, reverse: bool = True) -> str:
+        """Return full certificate chain as a PEM string.
+
+        The function is deprecated, please use chain_as_pem_string instead.
+
+        Args:
+            reverse (bool): By default this function will reverse the order of the chain from relation data.
+                To disable that, set reverse to False.
+        """
+        logger.warning("This function is deprecated, please use chain_as_pem_string instead")
+        return "\n\n".join(reversed(self.chain)) if reverse else "\n\n".join(self.chain)
+
+    def chain_as_pem_string(self) -> str:
         """Return full certificate chain as a PEM string."""
-        return "\n\n".join(reversed(self.chain))
+        return "\n\n".join(self.chain)
 
     def to_json(self) -> str:
         """Return the object as a JSON string.
@@ -517,15 +531,27 @@ class CertificateAvailableEvent(EventBase):
         self.ca = snapshot["ca"]
         self.chain = snapshot["chain"]
 
-    def chain_as_pem(self) -> str:
+    def chain_as_pem(self, reverse: bool = True) -> str:
+        """Return full certificate chain as a PEM string.
+
+        The function is deprecated, please use chain_as_pem_string instead.
+
+        Args:
+            reverse (bool): By default this function will reverse the order of the chain from relation data.
+                To disable that, set reverse to False.
+        """
+        logger.warning("This function is deprecated, please use chain_as_pem_string instead")
+        return "\n\n".join(reversed(self.chain)) if reverse else "\n\n".join(self.chain)
+
+    def chain_as_pem_string(self) -> str:
         """Return full certificate chain as a PEM string."""
-        return "\n\n".join(reversed(self.chain))
+        return "\n\n".join(self.chain)
 
 
 class CertificateExpiringEvent(EventBase):
     """Charm Event triggered when a TLS certificate is almost expired."""
 
-    def __init__(self, handle, certificate: str, expiry: str):
+    def __init__(self, handle: Handle, certificate: str, expiry: str):
         """CertificateExpiringEvent.
 
         Args:
@@ -665,6 +691,32 @@ class CertificateRevocationRequestEvent(EventBase):
         self.chain = snapshot["chain"]
 
 
+def chain_has_valid_order(chain: List[str]) -> bool:
+    """Check if the chain has a valid order.
+
+    Validates that each certificate in the chain is properly signed by the next certificate.
+    The chain should be ordered from leaf to root, where each certificate is signed by
+    the next one in the chain.
+
+    Args:
+        chain (List[str]): List of certificates in PEM format, ordered from leaf to root
+
+    Returns:
+        bool: True if the chain has a valid order, False otherwise.
+    """
+    if len(chain) < 2:
+        return True
+
+    try:
+        for i in range(len(chain) - 1):
+            cert = x509.load_pem_x509_certificate(chain[i].encode())
+            issuer = x509.load_pem_x509_certificate(chain[i + 1].encode())
+            cert.verify_directly_issued_by(issuer)
+        return True
+    except (ValueError, TypeError, InvalidSignature):
+        return False
+
+
 def _load_relation_data(relation_data_content: RelationDataContent) -> dict:
     """Load relation data from the relation data bag.
 
@@ -735,16 +787,16 @@ def calculate_expiry_notification_time(
     """
     if provider_recommended_notification_time is not None:
         provider_recommended_notification_time = abs(provider_recommended_notification_time)
-        provider_recommendation_time_delta = (
-            expiry_time - timedelta(hours=provider_recommended_notification_time)
+        provider_recommendation_time_delta = expiry_time - timedelta(
+            hours=provider_recommended_notification_time
         )
         if validity_start_time < provider_recommendation_time_delta:
             return provider_recommendation_time_delta
 
     if requirer_recommended_notification_time is not None:
         requirer_recommended_notification_time = abs(requirer_recommended_notification_time)
-        requirer_recommendation_time_delta = (
-            expiry_time - timedelta(hours=requirer_recommended_notification_time)
+        requirer_recommendation_time_delta = expiry_time - timedelta(
+            hours=requirer_recommended_notification_time
         )
         if validity_start_time < requirer_recommendation_time_delta:
             return requirer_recommendation_time_delta
@@ -1233,6 +1285,15 @@ class TLSCertificatesProvidesV3(Object):
         if new_certificate in certificates:
             logger.info("Certificate already in relation data - Doing nothing")
             return
+        if not chain[0] != certificate:
+            logger.warning(
+                "The order of the chain from the TLS Certificates Provider is incorrect. "
+                "The leaf certificate should be the first element of the chain."
+            )
+        elif not chain_has_valid_order(chain):
+            logger.warning(
+                "The order of the chain from the TLS Certificates Provider is partially incorrect."
+            )
         certificates.append(new_certificate)
         relation.data[self.model.app]["certificates"] = json.dumps(certificates)
 
@@ -1448,18 +1509,31 @@ class TLSCertificatesProvidesV3(Object):
         Returns:
             None
         """
-        provider_certificates = self.get_provider_certificates(relation_id)
-        requirer_csrs = self.get_requirer_csrs(relation_id)
+        provider_certificates = self.get_unsolicited_certificates(relation_id=relation_id)
+        for provider_certificate in provider_certificates:
+            self.on.certificate_revocation_request.emit(
+                certificate=provider_certificate.certificate,
+                certificate_signing_request=provider_certificate.csr,
+                ca=provider_certificate.ca,
+                chain=provider_certificate.chain,
+            )
+            self.remove_certificate(certificate=provider_certificate.certificate)
+
+    def get_unsolicited_certificates(
+        self, relation_id: Optional[int] = None
+    ) -> List[ProviderCertificate]:
+        """Return provider certificates for which no certificate requests exists.
+
+        Those certificates should be revoked.
+        """
+        unsolicited_certificates: List[ProviderCertificate] = []
+        provider_certificates = self.get_provider_certificates(relation_id=relation_id)
+        requirer_csrs = self.get_requirer_csrs(relation_id=relation_id)
         list_of_csrs = [csr.csr for csr in requirer_csrs]
         for certificate in provider_certificates:
             if certificate.csr not in list_of_csrs:
-                self.on.certificate_revocation_request.emit(
-                    certificate=certificate.certificate,
-                    certificate_signing_request=certificate.csr,
-                    ca=certificate.ca,
-                    chain=certificate.chain,
-                )
-                self.remove_certificate(certificate=certificate.certificate)
+                unsolicited_certificates.append(certificate)
+        return unsolicited_certificates
 
     def get_outstanding_certificate_requests(
         self, relation_id: Optional[int] = None
@@ -1877,8 +1951,7 @@ class TLSCertificatesRequiresV3(Object):
                             "Removing secret with label %s",
                             f"{LIBID}-{csr_in_sha256_hex}",
                         )
-                        secret = self.model.get_secret(
-                            label=f"{LIBID}-{csr_in_sha256_hex}")
+                        secret = self.model.get_secret(label=f"{LIBID}-{csr_in_sha256_hex}")
                         secret.remove_all_revisions()
                     self.on.certificate_invalidated.emit(
                         reason="revoked",
@@ -1889,10 +1962,20 @@ class TLSCertificatesRequiresV3(Object):
                     )
                 else:
                     try:
+                        secret = self.model.get_secret(label=f"{LIBID}-{csr_in_sha256_hex}")
                         logger.debug(
                             "Setting secret with label %s", f"{LIBID}-{csr_in_sha256_hex}"
                         )
-                        secret = self.model.get_secret(label=f"{LIBID}-{csr_in_sha256_hex}")
+                        # Juju < 3.6 will create a new revision even if the content is the same
+                        if (
+                            secret.get_content(refresh=True).get("certificate", "")
+                            == certificate.certificate
+                        ):
+                            logger.debug(
+                                "Secret %s with correct certificate already exists",
+                                f"{LIBID}-{csr_in_sha256_hex}",
+                            )
+                            continue
                         secret.set_content(
                             {"certificate": certificate.certificate, "csr": certificate.csr}
                         )
@@ -1966,17 +2049,26 @@ class TLSCertificatesRequiresV3(Object):
         Args:
             event (SecretExpiredEvent): Juju event
         """
-        if not event.secret.label or not event.secret.label.startswith(f"{LIBID}-"):
+        csr = self._get_csr_from_secret(event.secret)
+        if not csr:
+            logger.error("Failed to get CSR from secret %s", event.secret.label)
             return
-        csr = event.secret.get_content()["csr"]
         provider_certificate = self._find_certificate_in_relation_data(csr)
         if not provider_certificate:
             # A secret expired but we did not find matching certificate. Cleaning up
+            logger.warning(
+                "Failed to find matching certificate for csr, cleaning up secret %s",
+                event.secret.label,
+            )
             event.secret.remove_all_revisions()
             return
 
         if not provider_certificate.expiry_time:
             # A secret expired but matching certificate is invalid. Cleaning up
+            logger.warning(
+                "Certificate matching csr is invalid, cleaning up secret %s",
+                event.secret.label,
+            )
             event.secret.remove_all_revisions()
             return
 
@@ -2008,3 +2100,22 @@ class TLSCertificatesRequiresV3(Object):
                 continue
             return provider_certificate
         return None
+
+    def _get_csr_from_secret(self, secret: Secret) -> Union[str, None]:
+        """Extract the CSR from the secret label or content.
+
+        This function is a workaround to maintain backwards compatibility
+        and fix the issue reported in
+        https://github.com/canonical/tls-certificates-interface/issues/228
+        """
+        try:
+            content = secret.get_content(refresh=True)
+        except SecretNotFoundError:
+            return None
+        if not (csr := content.get("csr", None)):
+            # In versions <14 of the Lib we were storing the CSR in the label of the secret
+            # The CSR now is stored int the content of the secret, which was a breaking change
+            # Here we get the CSR if the secret was created by an app using libpatch 14 or lower
+            if secret.label and secret.label.startswith(f"{LIBID}-"):
+                csr = secret.label[len(f"{LIBID}-") :]
+        return csr

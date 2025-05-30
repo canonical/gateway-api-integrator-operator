@@ -60,9 +60,5 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     )
     yield {
         "leader": True,
-        # config={
-        #     "gateway-class": GATEWAY_CLASS_CONFIG,
-        #     "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
-        # },
         "relations": [dns_relation, certificates_relation, ingress_relation],
     }

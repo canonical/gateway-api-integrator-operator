@@ -1,6 +1,3 @@
-# Copyright 2025 Canonical Ltd.
-# See LICENSE file for licensing details.
-
 # Copyright 2024 Canonical Ltd.
 # Licensed under the Apache2.0. See LICENSE file in charm source for details.
 

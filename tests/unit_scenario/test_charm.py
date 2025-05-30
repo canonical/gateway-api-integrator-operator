@@ -15,7 +15,7 @@ def test_dns_record(base_state: dict) -> None:
     """
     ctx = testing.Context(GatewayAPICharm)
     state = testing.State(**base_state)
-    ctx.run(ctx.on.start(), state)
+    state = ctx.run(ctx.on.start(), state)
     mock_dns_entry_str = (
         '[{"domain": "gateway.internal", '
         '"host_label": "www", '

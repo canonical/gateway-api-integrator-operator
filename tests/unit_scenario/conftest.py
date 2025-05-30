@@ -14,21 +14,11 @@ TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
 
 
-@pytest.fixture(scope="function", name="patch_lightkube_client")
-def patch_lightkube_client_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """Patch lightkube cluster initialization."""
+@pytest.fixture(scope="function", name="base_state")
+def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock the base state for the charm."""
     monkeypatch.setattr("charm.KubeConfig", MagicMock())
     monkeypatch.setattr("charm.Client", MagicMock())
-
-
-@pytest.fixture(scope="function", name="base_state")
-def base_state_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-    patch_lightkube_client: None,
-):
-    """Mock the base state for the charm."""
     monkeypatch.setattr(
         "charm.CharmConfig.from_charm",
         MagicMock(return_value=CharmConfig(GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG)),
@@ -40,22 +30,31 @@ def base_state_fixture(
     monkeypatch.setattr("charm.GatewayAPICharm._set_status_gateway_address", MagicMock())
     monkeypatch.setattr("charm.GatewayResourceManager.current_gateway_resource", MagicMock())
 
-    def mock_gateway_address(self, gateway_name):
+    def mock_gateway_address(self, gateway_name):  # pylint: disable=unused-argument
+        # Disabling the unused-argument because the method signature is required by the mock.
+        """Mock the gateway address to return a fixed IP.
+
+        Args:
+            gateway_name: The name of the gateway resource.
+
+        Returns:
+            A fixed IP address as a string.
+        """
         return "1.2.3.4"
 
     monkeypatch.setattr("charm.GatewayResourceManager.gateway_address", mock_gateway_address)
 
-    dnsRelation = testing.Relation(
+    dns_relation = testing.Relation(
         endpoint="dns-record",
         interface="dns-record",
     )
 
-    certificatesRelation = testing.Relation(
+    certificates_relation = testing.Relation(
         endpoint="certificates",
         interface="certificates",
     )
 
-    ingressRelation = testing.Relation(
+    ingress_relation = testing.Relation(
         endpoint="gateway",
         interface="ingress",
     )
@@ -65,5 +64,5 @@ def base_state_fixture(
         #     "gateway-class": GATEWAY_CLASS_CONFIG,
         #     "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
         # },
-        "relations": [dnsRelation, certificatesRelation, ingressRelation],
+        "relations": [dns_relation, certificates_relation, ingress_relation],
     }

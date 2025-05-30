@@ -1,26 +1,20 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+"""General configuration module for Jubilant integration tests."""
+
 import pathlib
 
 import jubilant
 import pytest
 
 
-def pytest_addoption(parser: pytest.OptionGroup):
-    parser.addoption(
-        "--keep-models",
-        action="store_true",
-        default=False,
-        help="keep temporarily-created models",
-    )
-
-
 @pytest.fixture(scope="module")
 def juju(request: pytest.FixtureRequest):
     """Create a temporary Juju model for testing."""
     keep_models = bool(request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju:
+    with jubilant.temp_model(keep=keep_models) as juju:  # pylint: disable=redefined-outer-name
+        # Disabling pylint warning as this naming is what is suggested.
         juju.wait_timeout = 10 * 60
 
         yield juju  # run the test
@@ -31,7 +25,8 @@ def juju(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="module")
-def app(juju: jubilant.Juju):
+def app(juju: jubilant.Juju):  # pylint: disable=redefined-outer-name
+    # Disabling pylint warning as this naming is what is suggested.
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     juju.deploy(
         charm_path("gateway-api-integrator"),
@@ -57,7 +52,14 @@ def app(juju: jubilant.Juju):
 
 
 def charm_path(name: str) -> pathlib.Path:
-    """Return full absolute path to given test charm."""
+    """Return full absolute path to given test charm.
+
+    Args:
+        name: The name of the charm, e.g. "gateway-api-integrator".
+
+    Returns:
+        The absolute path to the charm file.
+    """
     # We're in tests/integration/conftest.py, so parent*3 is repo top level.
     charm_dir = pathlib.Path(__file__).parent.parent.parent
     charms = [p.absolute() for p in charm_dir.glob(f"{name}_*.charm")]

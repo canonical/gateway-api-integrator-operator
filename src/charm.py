@@ -291,7 +291,6 @@ class GatewayAPICharm(CharmBase):
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
         """
-
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
@@ -315,13 +314,12 @@ class GatewayAPICharm(CharmBase):
         client: Client,
         gateway_resource_information: GatewayResourceInformation,
     ) -> None:
-        """
-        Update the DNS record relation with the external hostname and gateway address.
+        """Update the DNS record relation with the external hostname and gateway address.
+
         Args:
             external_hostname: The external hostname to be used in the DNS record.
             client: Lightkube client.
             gateway_resource_information: Information needed to create the gateway resource.
-
         """
         relation = self.model.get_relation(self.dns_record_requirer.relation_name)
         if not relation or not external_hostname:
@@ -359,8 +357,7 @@ class GatewayAPICharm(CharmBase):
         self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
 
     def _split_hostname(self, hostname: str) -> Tuple[str, str]:
-        """
-        Splits external_hostname into host_label and domain.
+        """Split external_hostname into host_label and domain.
 
         - host_label: the subdomain or specific host (e.g. 'www')
         - domain: the root domain (e.g. 'example.com')
@@ -368,9 +365,8 @@ class GatewayAPICharm(CharmBase):
         If the hostname is a root domain (like 'example.com'), the host_label is '@'.
 
         Raises:
-            ValueError if the hostname is invalid.
+            ValueError: if the hostname is invalid.
         """
-
         labels = hostname.split(".")
 
         if len(labels) < 2:

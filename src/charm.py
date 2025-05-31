@@ -6,7 +6,16 @@
 
 import logging
 import typing
+import uuid
+from typing import Tuple
 
+from charms.bind.v0.dns_record import (
+    DNSRecordRequirerData,
+    DNSRecordRequires,
+    RecordClass,
+    RecordType,
+    RequirerEntry,
+)
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
     CertificateAvailableEvent,
@@ -51,6 +60,8 @@ logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 INGRESS_RELATION = "gateway"
 TLS_CERT_RELATION = "certificates"
+# Randomly selected UUID namespace for generating UUID for DNS records.
+UUID_NAMESPACE = uuid.UUID("f8f206da-a7f8-4206-b044-30be3724a09d")
 
 
 def _get_client(field_manager: str, namespace: str) -> Client:
@@ -96,6 +107,7 @@ class GatewayAPICharm(CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
+        self.dns_record_requirer = DNSRecordRequires(self)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -126,6 +138,13 @@ class GatewayAPICharm(CharmBase):
 
         self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
+
+        self.framework.observe(
+            self.on.dns_record_relation_created, self._on_dns_record_relation_created
+        )
+        self.framework.observe(
+            self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
+        )
 
     @property
     def _labels(self) -> dict[str, str]:
@@ -249,6 +268,16 @@ class GatewayAPICharm(CharmBase):
         """Handle the data-removed event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
+    def _on_dns_record_relation_created(self, _: RelationCreatedEvent) -> None:
+        """Handle the DNS record relation created event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_dns_record_relation_joined(self, _: RelationJoinedEvent) -> None:
+        """Handle the DNS record relation joined event."""
+        self._reconcile()
+
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -260,13 +289,13 @@ class GatewayAPICharm(CharmBase):
                 - http_route (HTTPS)
                 - http_route (HTTPtoHTTPS redirect)
             4. Publish the ingress URL to the requirer charm.
-            5. Set the gateway LB address in the charm's status message.
+            5. Update the DNS record relation with the DNS record data
+            6. Set the gateway LB address in the charm's status message.
         """
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
-
         self.unit.status = MaintenanceStatus("Creating resources.")
         self._define_gateway_resource(
             client, gateway_resource_information, config, tls_information
@@ -275,7 +304,83 @@ class GatewayAPICharm(CharmBase):
         self._define_ingress_resources_and_publish_url(
             client, config, gateway_resource_information
         )
+        self._update_dns_record_relation(
+            config.external_hostname, client, gateway_resource_information
+        )
         self._set_status_gateway_address(client, gateway_resource_information)
+
+    def _update_dns_record_relation(
+        self,
+        external_hostname: str,
+        client: Client,
+        gateway_resource_information: GatewayResourceInformation,
+    ) -> None:
+        """Update the DNS record relation with the external hostname and gateway address.
+
+        Args:
+            external_hostname: The external hostname to be used in the DNS record.
+            client: Lightkube client.
+            gateway_resource_information: Information needed to create the gateway resource.
+        """
+        relation = self.model.get_relation(self.dns_record_requirer.relation_name)
+        if not relation or not external_hostname:
+            return
+        resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
+        if not resource_manager.current_gateway_resource():
+            logger.warning(
+                "No gateway resource found, cannot update DNS record for %s",
+                external_hostname,
+            )
+            return
+        gateway_address = resource_manager.gateway_address(
+            gateway_resource_information.gateway_name
+        )
+        if not gateway_address:
+            logger.warning(
+                "No gateway address found for %s, cannot update DNS record",
+                external_hostname,
+            )
+            return
+        host_label, domain = self._split_hostname(external_hostname)
+        entry = RequirerEntry(
+            domain=domain,
+            host_label=host_label,
+            ttl=600,
+            record_class=RecordClass.IN,
+            record_type=RecordType.A,
+            record_data=gateway_address,
+            uuid=uuid.uuid5(UUID_NAMESPACE, str(external_hostname) + str(gateway_address)),
+        )
+        dns_record_requirer_data = DNSRecordRequirerData(dns_entries=[entry])
+        self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
+
+    def _split_hostname(self, hostname: str) -> Tuple[str, str]:
+        """Split external_hostname into host_label and domain.
+
+        - host_label: the subdomain or specific host (e.g. 'www')
+        - domain: the root domain (e.g. 'example.com')
+
+        If the hostname is a root domain (like 'example.com'), the host_label is '@'.
+
+        Raises:
+            ValueError: if the hostname is invalid.
+        """
+        labels = hostname.split(".")
+
+        if len(labels) < 2:
+            raise ValueError(f"Hostname must contain at least one dot: {hostname}")
+
+        if len(labels) == 2:
+            # Apex/root domain (e.g., 'example.com')
+            return "@", hostname
+
+        # More than 2 labels: e.g., 'www.example.com' → ('www', 'example.com')
+        host_label = labels[0]
+        domain = ".".join(labels[1:])
+        return host_label, domain
 
     def _define_gateway_resource(
         self,

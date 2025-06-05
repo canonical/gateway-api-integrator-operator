@@ -28,8 +28,8 @@ def test_dns_record_relation(juju: jubilant.Juju, app: str):
     for relation in unit_info_dict["relation-info"]:
         if relation["endpoint"] == "provide-dns-record":
             dns_record = json.loads(relation["application-data"]["dns_entries"])[0]
-            assert dns_record["domain"] == "gateway.internal"
-            assert dns_record["host_label"] == "www"
+            assert dns_record["domain"] == "www.gateway.internal"
+            assert dns_record["host_label"] == "@"
             assert "record_data" in dns_record
             assert "uuid" in dns_record
             break

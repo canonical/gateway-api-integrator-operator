@@ -7,7 +7,6 @@
 import logging
 import typing
 import uuid
-from typing import Tuple
 
 from charms.bind.v0.dns_record import (
     DNSRecordRequirerData,

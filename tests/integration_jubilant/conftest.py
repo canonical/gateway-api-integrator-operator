@@ -12,6 +12,18 @@ import pytest
 logger = logging.getLogger(__name__)
 
 
+@pytest.fixture(scope="module", name="gateway_class")
+def gateway_class_fixture():
+    """Fixture to provide the gateway class for the charm."""
+    yield "cilium"
+
+
+@pytest.fixture(scope="module", name="external_hostname")
+def external_hostname_fixture():
+    """Fixture to provide the external hostname for the charm."""
+    yield "www.gateway.internal"
+
+
 @pytest.fixture(scope="module", name="juju")
 def juju_model_fixture(request: pytest.FixtureRequest):
     """Create a temporary Juju model for testing."""
@@ -27,7 +39,7 @@ def juju_model_fixture(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="module")
-def app(juju: jubilant.Juju):
+def app(juju: jubilant.Juju, gateway_class: str, external_hostname: str):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     juju.deploy(
         charm_path("gateway-api-integrator"),
@@ -35,8 +47,8 @@ def app(juju: jubilant.Juju):
         base="ubuntu@24.04",
         trust=True,
         config={
-            "gateway-class": "cilium",
-            "external-hostname": "www.gateway.internal",
+            "gateway-class": gateway_class,
+            "external-hostname": external_hostname,
         },
     )
     juju.deploy("self-signed-certificates")

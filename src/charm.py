@@ -343,6 +343,8 @@ class GatewayAPICharm(CharmBase):
                 external_hostname,
             )
             return
+        # External hostname as a zone for now to get a simple solution for the DNS record.
+        # In the future, we might want to support multiple zones.
         entry = RequirerEntry(
             domain=external_hostname,
             host_label="@",

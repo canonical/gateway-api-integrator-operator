@@ -35,7 +35,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
 
     dns_relation = testing.Relation(
         endpoint="dns-record",
-        interface="dns-record",
+        interface="dns_record",
     )
 
     certificates_relation = testing.Relation(

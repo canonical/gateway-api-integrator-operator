@@ -18,13 +18,13 @@ def test_dns_record(base_state: dict) -> None:
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
     mock_dns_entry_str = (
-        '[{"domain": "gateway.internal", '
-        '"host_label": "www", '
+        '[{"domain": "www.gateway.internal", '
+        '"host_label": "@", '
         '"ttl": 600, '
         '"record_class": "IN", '
         '"record_type": "A", '
         '"record_data": "1.2.3.4", '
-        '"uuid": "3ffc8151-8357-5348-9c57-0a585800a032"}]'
+        '"uuid": "5e7b1cba-450c-5238-b811-4ace6d6fdbbf"}]'
     )
     assert list(state.relations)[0].local_app_data["dns_entries"] == mock_dns_entry_str
 

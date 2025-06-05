@@ -50,4 +50,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     yield {
         "leader": True,
         "relations": [dns_relation, certificates_relation, ingress_relation],
+        "model": testing.Model(
+            name="testmodel",
+        ),
     }

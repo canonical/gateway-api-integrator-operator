@@ -6,7 +6,15 @@
 
 import logging
 import typing
+import uuid
 
+from charms.bind.v0.dns_record import (
+    DNSRecordRequirerData,
+    DNSRecordRequires,
+    RecordClass,
+    RecordType,
+    RequirerEntry,
+)
 from charms.tls_certificates_interface.v3.tls_certificates import (
     AllCertificatesInvalidatedEvent,
     CertificateAvailableEvent,
@@ -51,6 +59,8 @@ logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 INGRESS_RELATION = "gateway"
 TLS_CERT_RELATION = "certificates"
+# Randomly selected UUID namespace for generating UUID for DNS records.
+UUID_NAMESPACE = uuid.UUID("f8f206da-a7f8-4206-b044-30be3724a09d")
 
 
 def _get_client(field_manager: str, namespace: str) -> Client:
@@ -96,6 +106,7 @@ class GatewayAPICharm(CharmBase):
         self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
+        self.dns_record_requirer = DNSRecordRequires(self)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -126,6 +137,13 @@ class GatewayAPICharm(CharmBase):
 
         self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
+
+        self.framework.observe(
+            self.on.dns_record_relation_created, self._on_dns_record_relation_created
+        )
+        self.framework.observe(
+            self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
+        )
 
     @property
     def _labels(self) -> dict[str, str]:
@@ -249,6 +267,16 @@ class GatewayAPICharm(CharmBase):
         """Handle the data-removed event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
+    def _on_dns_record_relation_created(self, _: RelationCreatedEvent) -> None:
+        """Handle the DNS record relation created event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_dns_record_relation_joined(self, _: RelationJoinedEvent) -> None:
+        """Handle the DNS record relation joined event."""
+        self._reconcile()
+
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -260,26 +288,78 @@ class GatewayAPICharm(CharmBase):
                 - http_route (HTTPS)
                 - http_route (HTTPtoHTTPS redirect)
             4. Publish the ingress URL to the requirer charm.
-            5. Set the gateway LB address in the charm's status message.
+            5. Update the DNS record relation with the DNS record data
+            6. Set the gateway LB address in the charm's status message.
         """
         client = _get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
-
         self.unit.status = MaintenanceStatus("Creating resources.")
+        resource_manager = GatewayResourceManager(
+            labels=self._labels,
+            client=client,
+        )
         self._define_gateway_resource(
-            client, gateway_resource_information, config, tls_information
+            resource_manager, gateway_resource_information, config, tls_information
         )
         self._define_secret_resources(client, config, tls_information)
         self._define_ingress_resources_and_publish_url(
             client, config, gateway_resource_information
         )
-        self._set_status_gateway_address(client, gateway_resource_information)
+        self._update_dns_record_relation(
+            resource_manager, config.external_hostname, gateway_resource_information
+        )
+        self._set_status_gateway_address(resource_manager, gateway_resource_information)
+
+    def _update_dns_record_relation(
+        self,
+        resource_manager: GatewayResourceManager,
+        external_hostname: str,
+        gateway_resource_information: GatewayResourceInformation,
+    ) -> None:
+        """Update the DNS record relation with the external hostname and gateway address.
+
+        Args:
+            resource_manager: The Gateway resource manager to get the gateway address.
+            external_hostname: The external hostname to be used in the DNS record.
+            gateway_resource_information: Information needed to create the gateway resource.
+        """
+        relation = self.model.get_relation(self.dns_record_requirer.relation_name)
+        if not relation or not external_hostname:
+            return
+        if not resource_manager.current_gateway_resource():
+            logger.warning(
+                "No gateway resource found, cannot update DNS record for %s",
+                external_hostname,
+            )
+            return
+        gateway_address = resource_manager.gateway_address(
+            gateway_resource_information.gateway_name
+        )
+        if not gateway_address:
+            logger.warning(
+                "No gateway address found for %s, cannot update DNS record",
+                external_hostname,
+            )
+            return
+        # External hostname as a zone for now to get a simple solution for the DNS record.
+        # In the future, we might want to support multiple zones.
+        entry = RequirerEntry(
+            domain=external_hostname,
+            host_label="@",
+            ttl=600,
+            record_class=RecordClass.IN,
+            record_type=RecordType.A,
+            record_data=gateway_address,
+            uuid=uuid.uuid5(UUID_NAMESPACE, str(external_hostname) + " " + str(gateway_address)),
+        )
+        dns_record_requirer_data = DNSRecordRequirerData(dns_entries=[entry])
+        self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
 
     def _define_gateway_resource(
         self,
-        client: Client,
+        resource_manager: GatewayResourceManager,
         gateway_resource_information: GatewayResourceInformation,
         config: CharmConfig,
         tls_information: TLSInformation,
@@ -287,17 +367,13 @@ class GatewayAPICharm(CharmBase):
         """Define the charm's gateway resource.
 
         Args:
-            client: Lightkube client.
+            resource_manager: The Gateway resource manager to define the gateway resource.
             gateway_resource_information: Information needed to create the gateway resource.
             config: Charm config.
             tls_information: Information needed to create TLS secret resources.
         """
         resource_definition = GatewayResourceDefinition(
             gateway_resource_information, config, tls_information
-        )
-        resource_manager = GatewayResourceManager(
-            labels=self._labels,
-            client=client,
         )
         gateway = resource_manager.define_resource(resource_definition)
         resource_manager.cleanup_resources(exclude=[gateway])
@@ -374,18 +450,16 @@ class GatewayAPICharm(CharmBase):
         )
 
     def _set_status_gateway_address(
-        self, client: Client, gateway_resource_information: GatewayResourceInformation
+        self,
+        resource_manager: GatewayResourceManager,
+        gateway_resource_information: GatewayResourceInformation,
     ) -> None:
         """Set the gateway address in the charm's status message.
 
         Args:
-            client: Lightkube client
+            resource_manager: The Gateway resource manager to get the gateway address.
             gateway_resource_information: Information about the created gateway resource.
         """
-        resource_manager = GatewayResourceManager(
-            labels=self._labels,
-            client=client,
-        )
         self.unit.status = WaitingStatus("Waiting for gateway address")
         if gateway_address := resource_manager.gateway_address(
             gateway_resource_information.gateway_name

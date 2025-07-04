@@ -428,6 +428,7 @@ class GatewayAPICharm(CharmBase):
                 http_route_resource_information,
                 gateway_resource_information,
                 HTTPRouteType.HTTP,
+                http_route_resource_information.strip_prefix,
             )
         )
         https_route = http_route_resource_manager.define_resource(

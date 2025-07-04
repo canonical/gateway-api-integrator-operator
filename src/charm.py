@@ -435,6 +435,7 @@ class GatewayAPICharm(CharmBase):
                 http_route_resource_information,
                 gateway_resource_information,
                 HTTPRouteType.HTTPS,
+                http_route_resource_information.strip_prefix,
             )
         )
         service_resource_manager.cleanup_resources(exclude=[service])

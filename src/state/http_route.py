@@ -31,6 +31,7 @@ class HTTPRouteResourceInformation:
         service_name: The name of the service we're creating.
         service_port: The port of the service.
         service_port_name: The port name of the service.
+        strip_prefix: Whether to strip the generated prefix.
     """
 
     application_name: str
@@ -38,6 +39,7 @@ class HTTPRouteResourceInformation:
     service_name: str
     service_port: int
     service_port_name: str
+    strip_prefix: bool
 
     @classmethod
     def from_charm(
@@ -67,6 +69,7 @@ class HTTPRouteResourceInformation:
             service_name = f"{charm.app.name}-{application_name}-service"
             service_port = integration_data.app.port
             service_port_name = f"tcp-{service_port}"
+            strip_prefix = integration_data.app.strip_prefix
 
             return cls(
                 application_name=application_name,
@@ -74,6 +77,7 @@ class HTTPRouteResourceInformation:
                 service_name=service_name,
                 service_port=service_port,
                 service_port_name=service_port_name,
+                strip_prefix=strip_prefix,
             )
         except DataValidationError as exc:
             raise IngressIntegrationDataValidationError(

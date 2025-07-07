@@ -12,8 +12,8 @@ from ops.model import SecretNotFoundError
 
 from resource_manager.resource_manager import InvalidResourceError
 from state.exception import CharmStateValidationBaseError
-from tls_relation import InvalidCertificateError
 from state.http_route import IngressIntegrationMissingError
+from tls_relation import InvalidCertificateError
 
 logger = logging.getLogger(__name__)
 

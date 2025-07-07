@@ -85,18 +85,24 @@ def test_httproute_gen_resource(
         labels=harness.charm._labels,
         client=client_mock,
     )
-    redirect_route_resource = redirect_route_resource_manager._gen_resource(
-        HTTPRouteResourceDefinition(
-            http_route_resource_information,
-            gateway_resource_information,
-            HTTPRouteType.HTTP,
+    redirect_route_resource = (
+        redirect_route_resource_manager._gen_resource(  # pylint: disable=duplicate-code
+            HTTPRouteResourceDefinition(
+                http_route_resource_information,
+                gateway_resource_information,
+                HTTPRouteType.HTTP,
+                http_route_resource_information.strip_prefix,
+            )
         )
     )
-    https_route_resource = http_route_resource_manager._gen_resource(
-        HTTPRouteResourceDefinition(
-            http_route_resource_information,
-            gateway_resource_information,
-            HTTPRouteType.HTTPS,
+    https_route_resource = (
+        http_route_resource_manager._gen_resource(  # pylint: disable=duplicate-code
+            HTTPRouteResourceDefinition(
+                http_route_resource_information,
+                gateway_resource_information,
+                HTTPRouteType.HTTPS,
+                http_route_resource_information.strip_prefix,
+            )
         )
     )
     assert (

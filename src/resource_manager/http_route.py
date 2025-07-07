@@ -144,17 +144,21 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                             }
                         }
                     ],
-                    "filters": [] if not http_route_resource_definition.strip_prefix else [
-                        {
-                            "type": "URLRewrite",
-                            "urlRewrite": {
-                                "path": {
-                                    "type": "ReplacePrefixMatch",
-                                    "replacePrefixMatch": "/"
-                                }
+                    "filters": (
+                        []
+                        if not http_route_resource_definition.strip_prefix
+                        else [
+                            {
+                                "type": "URLRewrite",
+                                "urlRewrite": {
+                                    "path": {
+                                        "type": "ReplacePrefixMatch",
+                                        "replacePrefixMatch": "/",
+                                    }
+                                },
                             }
-                        }
-                    ],
+                        ]
+                    ),
                     "backendRefs": [
                         {
                             "name": http_route_resource_definition.service_name,

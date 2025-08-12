@@ -1,4 +1,6 @@
-# Tutorial: Deploy the Gateway API integrator charm
+<!-- vale Canonical.007-Headings-sentence-case = NO -->
+# Deploy the Gateway API integrator charm
+<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 ## What you'll do
 This tutorial will walk you through deploying the gateway-api-integrator charm; you will:
@@ -6,8 +8,8 @@ This tutorial will walk you through deploying the gateway-api-integrator charm; 
 2. Establish an integration with a TLS provider charm
 
 ## Prerequisites
-* A kubernetes cluster with a gateway controller installed.
-* A host machine with juju version 3.3 or above.
+* A Kubernetes cluster with a gateway controller installed.
+* A host machine with Juju version 3.3 or above.
 
 ## Deploy and configure the gateway-api-integrator charm
 1. Deploy and configure the charm

@@ -3,8 +3,6 @@
 
 2. Once TLS is configure a minimal gateway object containing a http and a https listener is created. The charm will remain in a block state until integration with an ingress requirer charm is established.
 
-![create_gateway_resource](../reference/create_gateway_resource.png)
-
 3. When integration with an ingress requirer has been established, a service, an endpoint slice and an HTTPRoute object is created.
 
 4. The ingress requirer is then notified on the available ingress endpoint.

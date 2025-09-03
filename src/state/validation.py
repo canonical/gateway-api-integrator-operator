@@ -10,6 +10,7 @@ import typing
 import ops
 from ops.model import SecretNotFoundError
 
+import client
 from resource_manager.resource_manager import InvalidResourceError
 from state.exception import CharmStateValidationBaseError
 from state.http_route import IngressIntegrationMissingError
@@ -71,6 +72,12 @@ def validate_config_and_integration(
                     event.defer()
                 logger.exception("Error setting up charm state component: %s", str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
+                client.cleanup_all_resources(
+                    client.get_client(
+                        field_manager=instance.app.name, namespace=instance.model.name
+                    ),
+                    client.application_label_selector(instance.app.name),
+                )
                 return None
             except InvalidResourceError:
                 logger.exception("Error creating kubernetes resource")

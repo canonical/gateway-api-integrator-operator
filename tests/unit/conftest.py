@@ -69,7 +69,7 @@ def patch_lightkube_client_fixture(
 def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
     """Mock lightkube client."""
     lightkube_client_mock = MagicMock(spec=Client)
-    monkeypatch.setattr("charm._get_client", MagicMock(return_value=lightkube_client_mock))
+    monkeypatch.setattr("charm.get_client", MagicMock(return_value=lightkube_client_mock))
     return lightkube_client_mock
 
 

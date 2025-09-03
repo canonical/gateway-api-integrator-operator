@@ -13,7 +13,7 @@ from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
-from charm import LightKubeInitializationError
+from client import LightKubeInitializationError
 from resource_manager.permission import InsufficientPermissionError
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG

@@ -61,8 +61,8 @@ def patch_lightkube_client_fixture(
     monkeypatch: pytest.MonkeyPatch,
 ):
     """Patch lightkube cluster initialization."""
-    monkeypatch.setattr("charm.KubeConfig", MagicMock())
-    monkeypatch.setattr("charm.Client", MagicMock())
+    monkeypatch.setattr("client.KubeConfig", MagicMock())
+    monkeypatch.setattr("client.Client", MagicMock())
 
 
 @pytest.fixture(scope="function", name="mock_lightkube_client")

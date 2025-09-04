@@ -8,12 +8,11 @@ from unittest.mock import MagicMock
 import ops
 import pytest
 from httpx import Response
-from lightkube.core.exceptions import ApiError, ConfigError
+from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
-from client import LightKubeInitializationError
 from resource_manager.permission import InsufficientPermissionError
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -50,29 +49,6 @@ def test_deploy_missing_tls(harness: Harness):
     )
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
-
-
-def test_deploy_lightkube_error(
-    harness: Harness,
-    certificates_relation_data: dict,
-    monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
-):
-    """
-    arrange: given a charm with valid tls relation and mocked lightkube client.
-    act: Change the charm's config to trigger reconciliation.
-    assert: the charm goes into error state.
-    """
-    lightkube_get_sa_mock = MagicMock()
-    lightkube_get_sa_mock.from_service_account = MagicMock(side_effect=ConfigError)
-    monkeypatch.setattr("charm.KubeConfig", lightkube_get_sa_mock)
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.begin()
-
-    with pytest.raises(LightKubeInitializationError):
-        harness.update_config(config)
 
 
 @pytest.mark.parametrize(

@@ -14,6 +14,8 @@ from lightkube.core.exceptions import ConfigError
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from lightkube.resources.core_v1 import Service
 
+from resource_manager.permission import map_k8s_auth_exception
+
 logger = logging.getLogger(__name__)
 
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
@@ -70,6 +72,7 @@ def application_label_selector(name: str) -> LabelSelector:
     return cast(LabelSelector, {CREATED_BY_LABEL: name})
 
 
+@map_k8s_auth_exception
 def cleanup_all_resources(client: Client, labels: LabelSelector) -> None:
     """_summary_.
 

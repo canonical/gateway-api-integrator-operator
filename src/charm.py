@@ -27,8 +27,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from lightkube import Client, KubeConfig
-from lightkube.core.exceptions import ConfigError
+from lightkube import Client
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -39,6 +38,7 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
 
+from client import get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteRedirectResourceManager,
@@ -61,35 +61,6 @@ INGRESS_RELATION = "gateway"
 TLS_CERT_RELATION = "certificates"
 # Randomly selected UUID namespace for generating UUID for DNS records.
 UUID_NAMESPACE = uuid.UUID("f8f206da-a7f8-4206-b044-30be3724a09d")
-
-
-def _get_client(field_manager: str, namespace: str) -> Client:
-    """Initialize the lightkube client with the correct namespace and field_manager.
-
-    Args:
-        field_manager: field manager for server side apply when patching resources.
-        namespace: The k8s namespace in which resources are managed.
-
-    Raises:
-        LightKubeInitializationError: When initialization of the lightkube client fails
-
-    Returns:
-        Client: The initialized lightkube client
-    """
-    try:
-        # Set field_manager for server-side apply when patching resources
-        # Keep this consistent across client initializations
-        kubeconfig = KubeConfig.from_service_account()
-        client = Client(config=kubeconfig, field_manager=field_manager, namespace=namespace)
-    except ConfigError as exc:
-        logger.exception("Error initializing the lightkube client.")
-        raise LightKubeInitializationError("Error initializing the lightkube client.") from exc
-
-    return client
-
-
-class LightKubeInitializationError(Exception):
-    """Exception raised when initialization of the lightkube client failed."""
 
 
 class GatewayAPICharm(CharmBase):
@@ -153,7 +124,7 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
 
         if self._certificates_revocation_needed(client, config):
@@ -196,7 +167,7 @@ class GatewayAPICharm(CharmBase):
     def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event."""
         TLSInformation.validate(self)
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         self._tls.generate_private_key(config.external_hostname)
 
@@ -204,7 +175,7 @@ class GatewayAPICharm(CharmBase):
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
         TLSInformation.validate(self)
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         self._tls.request_certificate(config.external_hostname)
 
@@ -247,7 +218,7 @@ class GatewayAPICharm(CharmBase):
     def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
         TLSInformation.validate(self)
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         hostname = config.external_hostname
 
@@ -291,7 +262,7 @@ class GatewayAPICharm(CharmBase):
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
         """
-        client = _get_client(field_manager=self.app.name, namespace=self.model.name)
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)

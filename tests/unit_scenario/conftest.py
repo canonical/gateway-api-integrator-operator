@@ -17,8 +17,8 @@ GATEWAY_CLASS_CONFIG = "cilium"
 @pytest.fixture(scope="function", name="base_state")
 def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     """Mock the base state for the charm."""
-    monkeypatch.setattr("charm.KubeConfig", MagicMock())
-    monkeypatch.setattr("charm.Client", MagicMock())
+    monkeypatch.setattr("client.KubeConfig", MagicMock())
+    monkeypatch.setattr("client.Client", MagicMock())
     monkeypatch.setattr(
         "charm.CharmConfig.from_charm",
         MagicMock(return_value=CharmConfig(GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG)),

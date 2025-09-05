@@ -80,7 +80,7 @@ def test_gateway_resource_definition_insufficient_permission(
         side_effect=ApiError(response=MagicMock(spec=Response))
     )
     monkeypatch.setattr(
-        "charm._get_client",
+        "charm.get_client",
         lightkube_client_mock,
     )
     harness.begin()
@@ -111,7 +111,7 @@ def test_gateway_resource_definition_api_error_4xx(
         side_effect=ApiError(response=MagicMock(spec=Response))
     )
     monkeypatch.setattr(
-        "charm._get_client",
+        "charm.get_client",
         lightkube_client_mock,
     )
     harness.begin()

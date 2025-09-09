@@ -4,6 +4,7 @@
 """Integration tests using Jubilant the charm."""
 
 import json
+import subprocess  # nosec
 
 import jubilant
 
@@ -33,3 +34,12 @@ def test_dns_record_relation(juju: jubilant.Juju, app: str, external_hostname: s
             assert "record_data" in dns_record
             assert "uuid" in dns_record
             break
+
+    juju.remove_relation(app, "flask-k8s")
+    juju.wait(lambda status: jubilant.all_blocked(status, app))
+    cmd = (
+        "kubectl -n gateway get all,httproute,service "
+        f"--selector gateway-api-integrator.charm.juju.is/managed-by={app} | wc -l"
+    )
+    output = subprocess.check_output(["/bin/bash", "-c", cmd], stderr=subprocess.STDOUT)
+    assert "No resources found" in str(output)

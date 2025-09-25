@@ -10,6 +10,7 @@ import typing
 import ops
 from ops.model import SecretNotFoundError
 
+import client
 from resource_manager.resource_manager import InvalidResourceError
 from state.exception import CharmStateValidationBaseError
 from state.http_route import IngressIntegrationMissingError
@@ -71,6 +72,7 @@ def validate_config_and_integration(
                     event.defer()
                 logger.exception("Error setting up charm state component: %s", str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
+                _clean_up_resources_in_blocked_state(instance)
                 return None
             except InvalidResourceError:
                 logger.exception("Error creating kubernetes resource")
@@ -82,3 +84,26 @@ def validate_config_and_integration(
         return wrapper
 
     return decorator
+
+
+# We broadly catch all of the exceptions here because we don't want to raise another exception
+# during exception handling. This method is private by design to prevent it from being used
+# elsewhere.
+# pylint: disable=broad-exception-caught
+def _clean_up_resources_in_blocked_state(instance: ops.CharmBase) -> None:
+    """Clean up all managed resources in the k8s namespace.
+
+    This method should only be called in the exception handling code of the
+    `validate_config_and_integration` decorator. We assume that at this point every resources
+    except for the `gateway` and `secret` resources are no longer needed.
+
+    Args:
+        instance: The charm instance.
+    """
+    try:
+        client.cleanup_all_resources(
+            client.get_client(field_manager=instance.app.name, namespace=instance.model.name),
+            client.application_label_selector(instance.app.name),
+        )
+    except Exception:
+        logger.exception("Error raised during cleanup while handling another error, skipping.")

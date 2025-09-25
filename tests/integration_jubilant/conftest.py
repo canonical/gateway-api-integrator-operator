@@ -39,10 +39,17 @@ def juju_model_fixture(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="module")
-def app(juju: jubilant.Juju, gateway_class: str, external_hostname: str):
+def app(
+    juju: jubilant.Juju, gateway_class: str, external_hostname: str, pytestconfig: pytest.Config
+):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
+    configured_charm_path = pytestconfig.getoption("--charm-file")
     juju.deploy(
-        charm_path("gateway-api-integrator"),
+        (
+            str(configured_charm_path)
+            if configured_charm_path
+            else charm_path("gateway-api-integrator")
+        ),
         "gateway-api-integrator",
         base="ubuntu@24.04",
         trust=True,

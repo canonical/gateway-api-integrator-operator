@@ -34,3 +34,5 @@ If there’s a particular area of documentation that you’d like to see that’
   1. [Actions](reference/actions.md)
 1. [Tutorial](tutorial)
   1. [Tutorial: Deploy the Gateway API integrator charm](tutorial/getting-started.md)
+1. [How-to](how-to)
+  1. [Upgrade](how-to/upgrade.md)

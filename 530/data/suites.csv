@@ -1,0 +1,14 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"
+    Test that the charm correctly sets up the DNS record relation.
+    Deploy any-charm and integrate it on dns-record relation.
+    Assert that the relation data contains the expected DNS entries.
+    ","36004","test_deploy_charm","tests.integration_jubilant","2025-10-21","passed","2025-10-21","","test_charm","",""
+"Deploy the charm together with related charms.
+
+    Assert on the unit status before any relations/configurations take place.
+    ","53097","test_deploy","tests.integration","2025-10-21","passed","2025-10-21","","test_charm","",""
+"Deploy the charm with valid config and tls integration.
+
+    Assert on valid output of get-certificate.
+    ","1024","test_get_certificate_action","tests.integration","2025-10-21","passed","2025-10-21","","test_actions","",""

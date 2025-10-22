@@ -54,7 +54,7 @@ class TLSInformation:
 
         for cert in certificates.get_provider_certificates():
             hostname = get_hostname_from_cert(cert.certificate)
-            tls_certs[hostname] = cert.certificate
+            tls_certs[hostname] = cert.chain_as_pem_string()
             secret = charm.model.get_secret(label=f"private-key-{hostname}")
             tls_keys[hostname] = {
                 "key": secret.get_content()["key"],

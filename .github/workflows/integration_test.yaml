@@ -20,3 +20,8 @@ jobs:
       charmcraft-channel: latest/edge
       modules: '["test_actions.py", "test_charm.py"]'
       tmate-debug: false
+  allure-report:
+    if: always() && !cancelled()
+    needs:
+      - integration-tests
+    uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main

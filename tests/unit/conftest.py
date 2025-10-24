@@ -129,6 +129,7 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     )
     provider_cert_mock = MagicMock()
     provider_cert_mock.certificate = cert
+    provider_cert_mock.chain_as_pem_string = MagicMock(return_value=cert)
     monkeypatch.setattr(
         (
             "charms.tls_certificates_interface.v3.tls_certificates"

@@ -34,7 +34,7 @@ def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
         f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
         f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}": mock_certificate,
         f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
-        f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
+        f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}": mock_certificate,
     }
 
 
@@ -129,6 +129,8 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     )
     provider_cert_mock = MagicMock()
     provider_cert_mock.certificate = cert
+    provider_cert_mock.chain = [cert]
+    provider_cert_mock.chain_as_pem_string = MagicMock(return_value=cert)
     monkeypatch.setattr(
         (
             "charms.tls_certificates_interface.v3.tls_certificates"

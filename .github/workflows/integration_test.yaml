@@ -18,7 +18,7 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-label: large
       self-hosted-runner-image: noble
-      juju-channel: 3.5/stable
+      juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
       modules: '["test_actions.py", "test_charm.py"]'

@@ -2,10 +2,13 @@ name: Integration tests
 
 on:
   pull_request:
+  schedule:
+  - cron: "0 15 * * SAT"
 
 jobs:
   integration-tests:
-    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    uses: 
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       provider: k8s
@@ -15,13 +18,13 @@ jobs:
       self-hosted-runner: true
       self-hosted-runner-label: large
       self-hosted-runner-image: noble
-      juju-channel: 3.5/stable
+      juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
       modules: '["test_actions.py", "test_charm.py"]'
       tmate-debug: false
   allure-report:
-    if: always() && !cancelled()
+    if: ${{ !cancelled() && github.event_name == 'schedule' }}
     needs:
-      - integration-tests
+    - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main

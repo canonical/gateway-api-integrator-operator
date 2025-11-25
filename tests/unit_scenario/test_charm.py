@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Unit tests for the charm."""
+
 import pytest
 from ops import testing
 

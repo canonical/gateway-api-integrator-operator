@@ -9,18 +9,10 @@ platforms:
 
 parts:
   charm:
-    build-packages:
-      - build-essential
-      - python3-dev
-      - pkg-config
-      - libffi-dev
-      - libssl-dev
+    source: .
+    plugin: uv
     build-snaps:
-      - rustup
-    override-build: |
-      rustup default stable
-      craftctl default
-
+    - astral-uv
 name: gateway-api-integrator
 title: Gateway API Integrator
 description: |

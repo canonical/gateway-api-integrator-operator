@@ -7,8 +7,7 @@ on:
 
 jobs:
   integration-tests:
-    uses: 
-      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
       provider: k8s
@@ -23,6 +22,7 @@ jobs:
       charmcraft-channel: latest/edge
       modules: '["test_actions.py", "test_charm.py"]'
       tmate-debug: false
+      with-uv: true
   allure-report:
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     needs:

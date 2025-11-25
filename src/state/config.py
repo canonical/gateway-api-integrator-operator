@@ -79,10 +79,7 @@ class CharmConfig:
         if gateway_class_name not in gateway_class_names:
             available_gateway_classes = ",".join(gateway_class_names)
             logger.error(
-                (
-                    "Configured gateway class %s not present on the cluster."
-                    "Available ones are: %r"
-                ),
+                ("Configured gateway class %s not present on the cluster.Available ones are: %r"),
                 gateway_class_name,
                 available_gateway_classes,
             )

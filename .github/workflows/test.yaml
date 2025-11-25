@@ -12,3 +12,4 @@ jobs:
       self-hosted-runner-image: "noble"
       charmcraft-channel: latest/edge
       vale-style-check: false
+      with-uv: true

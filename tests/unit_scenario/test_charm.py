@@ -27,7 +27,7 @@ def test_dns_record(base_state: dict) -> None:
         '"record_data": "1.2.3.4", '
         '"uuid": "5e7b1cba-450c-5238-b811-4ace6d6fdbbf"}]'
     )
-    assert list(state.relations)[0].local_app_data["dns_entries"] == mock_dns_entry_str
+    assert next(iter(state.relations)).local_app_data["dns_entries"] == mock_dns_entry_str
 
 
 def test_dns_record_no_gateway_resource(base_state: dict, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -43,7 +43,7 @@ def test_dns_record_no_gateway_resource(base_state: dict, monkeypatch: pytest.Mo
     ctx = testing.Context(GatewayAPICharm)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
-    assert "dns_entries" not in list(state.relations)[0].local_app_data
+    assert "dns_entries" not in next(iter(state.relations)).local_app_data
 
 
 def test_dns_record_no_gateway_address(base_state: dict, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -56,4 +56,4 @@ def test_dns_record_no_gateway_address(base_state: dict, monkeypatch: pytest.Mon
     ctx = testing.Context(GatewayAPICharm)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
-    assert "dns_entries" not in list(state.relations)[0].local_app_data
+    assert "dns_entries" not in next(iter(state.relations)).local_app_data

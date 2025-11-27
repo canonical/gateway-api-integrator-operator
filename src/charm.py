@@ -461,10 +461,9 @@ class GatewayAPICharm(CharmBase):
 
         gateway_listeners = gateway.spec["listeners"]
         listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
-        if len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]:
-            return False
-
-        return True
+        return not (
+            len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

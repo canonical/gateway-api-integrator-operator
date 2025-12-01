@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 """gateway-api-integrator http_route resource manager."""
 
-
 import dataclasses
 import logging
 import typing

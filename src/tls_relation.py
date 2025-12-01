@@ -3,6 +3,7 @@
 # Since the relations invoked in the methods are taken from the charm,
 # mypy guesses the relations might be None about all of them.
 """Gateway API TLS relation business logic."""
+
 import logging
 import secrets
 import string

@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """gateway-api-integrator charm state constructor."""
+
 import dataclasses
 import typing
 

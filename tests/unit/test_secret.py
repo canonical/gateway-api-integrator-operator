@@ -11,24 +11,10 @@ from ops.testing import Harness
 from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,
-    _get_decrypted_key,
 )
 from state.tls import TLSInformation
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-
-
-def test_secret_get_decrypted_key(harness: Harness, private_key: str):
-    """
-    arrange: given a GatewayApiIntegrator charm.
-    act: generate a private key and decrypt it.
-    assert: the decrypt operation pass without any error.
-    """
-    harness.begin()
-
-    decrypted_key = _get_decrypted_key(private_key)
-
-    assert decrypted_key
 
 
 def test_secret_gen_resource(

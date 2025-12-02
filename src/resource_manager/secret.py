@@ -6,13 +6,13 @@ import dataclasses
 import logging
 import typing
 
-from cryptography.hazmat.primitives import serialization
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
 
+from lib.charms.tls_certificates_interface.v4.tls_certificates import PrivateKey
 from state.base import ResourceDefinition
 from state.exception import CharmStateValidationBaseError
 from state.tls import TLSInformation
@@ -73,24 +73,6 @@ class SecretResourceDefinition(ResourceDefinition):
         )
 
 
-def _get_decrypted_key(private_key: str) -> str:
-    """Decrypted the provided private key using the provided password.
-
-    Args:
-        private_key: The encrypted private key.
-        password: The password to decrypt the private key.
-
-    Returns:
-        The decrypted private key.
-    """
-    # There are multiple representation PKCS8 is the default supported by nginx controller
-    return PrivateKey.from_string(private_key).private_bytes(
-        encoding=serialization.Encoding.PEM,
-        format=serialization.PrivateFormat.PKCS8,
-        encryption_algorithm=serialization.NoEncryption(),
-    ).decode()
-
-
 class TLSSecretResourceManager(ResourceManager[Secret]):
     """Kubernetes Ingress resource controller."""
 
@@ -124,9 +106,7 @@ class TLSSecretResourceManager(ResourceManager[Secret]):
             metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
             stringData={
                 "tls.crt": secret_resource_definition.certificate,
-                "tls.key": _get_decrypted_key(
-                    secret_resource_definition.private_key
-                ),
+                "tls.key": str(PrivateKey.from_string(secret_resource_definition.private_key)),
             },
             type="kubernetes.io/tls",
         )

@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 import pytest
 from ops.testing import Harness
 
-import tls_relation
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -81,17 +80,13 @@ def test_certificate_available(
     harness.set_leader()
     harness.begin()
 
-    # In v4, the event signature is different
-    # Generate a proper CSR for testing
     from charms.tls_certificates_interface.v4.tls_certificates import (
-        PrivateKey,
         CertificateRequestAttributes,
+        PrivateKey,
     )
 
     private_key = PrivateKey.generate()
-    cert_attrs = CertificateRequestAttributes(
-        sans_dns=[TEST_EXTERNAL_HOSTNAME_CONFIG]
-    )
+    cert_attrs = CertificateRequestAttributes(sans_dns=[TEST_EXTERNAL_HOSTNAME_CONFIG])
     csr = cert_attrs.generate_csr(private_key)
 
     cert_key = f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
@@ -127,6 +122,4 @@ def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPat
         ),
         regenerate_private_key_mock,
     )
-    tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
-    tls.revoke_all_certificates()
     regenerate_private_key_mock.assert_called_once()

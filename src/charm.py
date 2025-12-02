@@ -26,7 +26,6 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from lib.charms.tls_certificates_interface.v4.tls_certificates import Certificate
 from lightkube import Client
 from ops.charm import (
     ActionEvent,
@@ -39,6 +38,7 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 from client import get_client
+from lib.charms.tls_certificates_interface.v4.tls_certificates import Certificate
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteRedirectResourceManager,
@@ -53,7 +53,6 @@ from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import TLSRelationService
 
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
@@ -84,7 +83,6 @@ class GatewayAPICharm(CharmBase):
             mode=Mode.APP,
         )
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self._tls = TLSRelationService(self.model, self.certificates)
         self.dns_record_requirer = DNSRecordRequires(self)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -144,6 +142,7 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm(self, client)
 
         if self._certificates_revocation_needed(client, config):
+            self.certificates.regenerate_private_key()
             self._tls.revoke_all_certificates()
             # In v4, certificate requests are managed by updating the
             # certificate_requests attribute. The library will automatically

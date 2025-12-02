@@ -24,7 +24,7 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
     """
     arrange: given a stock gateway-api-integrator charm.
     act: Add a relation to tls provider while config is invalid.
-    assert: the charm is in maintenance state (v4 auto-generates keys).
+    assert: the charm stays in blocked state.
     """
     harness.begin()
 
@@ -32,9 +32,7 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
         "certificates", "self-signed-certificates", app_data=certificates_relation_data
     )
 
-    # In v4, the library auto-generates private keys, so the charm progresses
-    # to maintenance state instead of being blocked
-    assert harness.charm.unit.status.name == ops.MaintenanceStatus.name
+    assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
 
 @pytest.mark.usefixtures("patch_lightkube_client")

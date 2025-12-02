@@ -7,7 +7,6 @@ import dataclasses
 
 import ops
 from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
-from lib.charms.tls_certificates_interface.v4.tls_certificates import Certificate
 
 from .exception import CharmStateValidationBaseError
 
@@ -51,18 +50,15 @@ class TLSInformation:
         tls_keys = {}
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 
-        for cert in certificates.get_provider_certificates():
-            certificate = Certificate.from_string(cert)
+        for certificate in certificates.get_provider_certificates():
             hostname = certificate.common_name
-            chain = [str(c) for c in certificate.chain]
-            if chain[0] != str(cert.certificate):
+            chain = [c.raw for c in certificate.chain]
+            if chain[0] != certificate.raw:
                 chain.reverse()
             tls_certs[hostname] = "\n\n".join(chain)
-            # In v4, private keys are managed by the library
-            # We can get the private key from the library
             if certificates.private_key:
                 tls_keys[hostname] = {
-                    "key": str(certificates.private_key),
+                    "key": certificates.private_key.raw,
                     "password": "",  # v4 doesn't use password for private keys
                 }
 

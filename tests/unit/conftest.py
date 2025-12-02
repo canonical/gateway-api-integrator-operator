@@ -14,7 +14,6 @@ from ops.model import Secret
 from ops.testing import Harness
 
 from charm import GatewayAPICharm
-from tls_relation import TLSRelationService
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"

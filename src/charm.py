@@ -143,10 +143,6 @@ class GatewayAPICharm(CharmBase):
 
         if self._certificates_revocation_needed(client, config):
             self.certificates.regenerate_private_key()
-            self._tls.revoke_all_certificates()
-            # In v4, certificate requests are managed by updating the
-            # certificate_requests attribute. The library will automatically
-            # request new certificates.
             return  # _reconcile will be triggered with certificate_available
 
         self._reconcile()

@@ -6,7 +6,7 @@
 import dataclasses
 
 import ops
-from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
+from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 
 from tls_relation import get_hostname_from_cert
 
@@ -35,7 +35,7 @@ class TLSInformation:
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV3
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
     ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
@@ -53,16 +53,18 @@ class TLSInformation:
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         for cert in certificates.get_provider_certificates():
-            hostname = get_hostname_from_cert(cert.certificate)
-            chain = cert.chain
-            if chain[0] != cert.certificate:
+            hostname = get_hostname_from_cert(str(cert.certificate))
+            chain = [str(c) for c in cert.chain]
+            if chain[0] != str(cert.certificate):
                 chain.reverse()
             tls_certs[hostname] = "\n\n".join(chain)
-            secret = charm.model.get_secret(label=f"private-key-{hostname}")
-            tls_keys[hostname] = {
-                "key": secret.get_content()["key"],
-                "password": secret.get_content()["password"],
-            }
+            # In v4, private keys are managed by the library
+            # We can get the private key from the library
+            if certificates.private_key:
+                tls_keys[hostname] = {
+                    "key": str(certificates.private_key),
+                    "password": "",  # v4 doesn't use password for private keys
+                }
 
         return cls(
             secret_resource_name_prefix=secret_resource_name_prefix,

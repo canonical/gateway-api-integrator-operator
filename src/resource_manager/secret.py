@@ -83,8 +83,10 @@ def _get_decrypted_key(private_key: str, password: str) -> str:
     Returns:
         The decrypted private key.
     """
+    # V4 library generates unencrypted keys (empty password)
+    password_bytes = password.encode() if password else None
     decrypted_key = serialization.load_pem_private_key(
-        private_key.encode(), password=password.encode()
+        private_key.encode(), password=password_bytes
     )
 
     # There are multiple representation PKCS8 is the default supported by nginx controller

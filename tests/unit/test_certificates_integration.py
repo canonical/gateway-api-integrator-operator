@@ -5,15 +5,14 @@
 
 from unittest.mock import MagicMock
 
-import ops
 import pytest
-from ops.model import Secret, SecretNotFoundError
+from ops.model import SecretNotFoundError
 from ops.testing import Harness
 
 import tls_relation
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.usefixtures("patch_lightkube_client")
@@ -41,21 +40,21 @@ def test_cert_relation_secret_not_found_error(
 ):
     """
     arrange: Given a charm with mocked tls module methods and valid config.
-    act: when relation with a TLS provider is established.
-    assert: the charm correctly generates a password and a CSR.
+    act: when relation with a TLS provider is established and secret is missing.
+    assert: v4 library handles missing secret gracefully by auto-generating keys.
     """
-    monkeypatch.setattr(
-        "ops.model.Model.get_secret",
-        MagicMock(side_effect=SecretNotFoundError),
-    )
+    # V4 library auto-generates private keys when secret is not found
+    # So we don't expect SecretNotFoundError anymore
     harness.set_leader()
     harness.update_config(config)
     harness.begin()
 
-    with pytest.raises(SecretNotFoundError):
-        harness.add_relation(
-            "certificates", "self-signed-certificates", app_data=certificates_relation_data
-        )
+    # Should not raise an exception - v4 handles this gracefully
+    harness.add_relation(
+        "certificates", "self-signed-certificates", app_data=certificates_relation_data
+    )
+    # Verify the relation was added successfully
+    assert harness.charm.certificates.private_key is not None
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
@@ -70,134 +69,13 @@ def test_tls_information_integration_missing(harness: Harness):
         TLSInformation.from_charm(harness.charm, harness.charm.certificates)
 
 
-@pytest.mark.usefixtures("client_with_mock_external")
-def test_cert_relation_certificate_expiring(
-    harness: Harness, certificates_relation_data: dict[str, str], monkeypatch: pytest.MonkeyPatch
-):
-    """
-    arrange: Given a charm with valid certificates integration data.
-    act: Fire certificate_expiring event.
-    assert: request_certificate_renewal lib method is called once.
-    """
-    request_certificate_renewal_mock = MagicMock()
-    monkeypatch.setattr(
-        (
-            "charms.tls_certificates_interface.v3.tls_certificates"
-            ".TLSCertificatesRequiresV3.request_certificate_renewal"
-        ),
-        request_certificate_renewal_mock,
-    )
-    harness.set_leader()
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
-    relation_id = harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.update_relation_data(
-        relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
-    )
-    harness.begin()
-
-    harness.charm.certificates.on.certificate_expiring.emit(
-        certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"], "now"
-    )
-
-    request_certificate_renewal_mock.assert_called_once()
+# Certificate expiring is handled automatically by v4 library
 
 
-@pytest.mark.usefixtures("client_with_mock_external")
-@pytest.mark.parametrize(
-    "reason",
-    [
-        pytest.param("expired", id="expired."),
-        pytest.param("revoked", id="revoked."),
-    ],
-)
-def test_cert_relation_certificate_invalidated(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    reason: str,
-):
-    """
-    arrange: Given a charm with valid certificates integration data.
-    act: Fire certificate_invalidated event.
-    assert: The charm is in Maintenance status to wait for new cert.
-    """
-    harness.set_leader()
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
-    relation_id = harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.update_relation_data(
-        relation_id, harness.model.app.name, {f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "csr"}
-    )
-
-    harness.begin()
-    harness.charm.certificates.on.certificate_invalidated.emit(
-        reason,
-        certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-        "csr",
-        certificates_relation_data[f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-        certificates_relation_data[f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-    )
-
-    assert harness.charm.unit.status.name == ops.MaintenanceStatus.name
+# Certificate invalidation is handled automatically by v4 library
 
 
-@pytest.mark.usefixtures("client_with_mock_external")
-def test_cert_relation_all_certificates_invalidated(
-    harness: Harness,
-    monkeypatch: pytest.MonkeyPatch,
-    certificates_relation_data: dict[str, str],
-    config: dict[str, str],
-):
-    """
-    arrange: Given a charm with valid certificates integration data.
-    act: Fire all_certificates_invalidated event.
-    assert: The remove_all_revisions method is called once.
-    """
-    juju_secret_mock = MagicMock(spec=Secret)
-    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
-    harness.update_config(config)
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.begin()
-
-    harness.charm.certificates.on.all_certificates_invalidated.emit()
-
-    juju_secret_mock.remove_all_revisions.assert_called_once()
-
-
-@pytest.mark.usefixtures("client_with_mock_external")
-def test_cert_relation_all_certificates_invalidated_secret_not_found(
-    harness: Harness,
-    monkeypatch: pytest.MonkeyPatch,
-    certificates_relation_data: dict[str, str],
-    config: dict[str, str],
-):
-    """
-    arrange: Given a charm with valid certificates integration data and no juju.
-    act: Fire all_certificates_invalidated event.
-    assert: The remove_all_revisions method is not called.
-    """
-    juju_secret_mock = MagicMock(spec=Secret)
-    monkeypatch.setattr(
-        "ops.model.Model.get_secret",
-        MagicMock(return_value=juju_secret_mock, side_effect=SecretNotFoundError),
-    )
-    harness.update_config(config)
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    harness.begin()
-
-    harness.charm.certificates.on.all_certificates_invalidated.emit()
-
-    juju_secret_mock.remove_all_revisions.assert_not_called()
+# All certificates invalidation is handled automatically by v4 library
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
@@ -211,6 +89,8 @@ def test_certificate_available(
     act: Fire certificate_available event.
     assert: The _reconcile method is called once.
     """
+    from charms.tls_certificates_interface.v4.tls_certificates import Certificate
+
     reconcile_mock = MagicMock()
     monkeypatch.setattr("charm.GatewayAPICharm._reconcile", reconcile_mock)
 
@@ -219,11 +99,31 @@ def test_certificate_available(
     harness.set_leader()
     harness.begin()
 
+    # In v4, the event signature is different
+    # Generate a proper CSR for testing
+    from charms.tls_certificates_interface.v4.tls_certificates import (
+        PrivateKey,
+        CertificateRequestAttributes,
+    )
+
+    private_key = PrivateKey.generate()
+    cert_attrs = CertificateRequestAttributes(
+        sans_dns=[TEST_EXTERNAL_HOSTNAME_CONFIG]
+    )
+    csr = cert_attrs.generate_csr(private_key)
+
+    cert_key = f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
+    ca_key = f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
+    chain_key = f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
+    cert = Certificate.from_string(certificates_relation_data[cert_key])
+    ca = Certificate.from_string(certificates_relation_data[ca_key])
+    chain = [Certificate.from_string(certificates_relation_data[chain_key])]
+
     harness.charm.certificates.on.certificate_available.emit(
-        certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-        "csr",
-        certificates_relation_data[f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-        certificates_relation_data[f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
+        certificate=cert,
+        certificate_signing_request=csr,
+        ca=ca,
+        chain=chain,
     )
     reconcile_mock.assert_called_once()
 
@@ -232,43 +132,33 @@ def test_certificate_available(
 def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
     """
     arrange: Given a TLS relation service with mocked provider certificate.
-    act: .
-    assert: The _reconcile method is called once.
+    act: Call revoke_all_certificates.
+    assert: The regenerate_private_key method is called once.
     """
     harness.add_relation("certificates", "self-signed-certificates")
-    secret_mock = MagicMock()
-    secret_mock.remove_all_revisions = MagicMock(side_effect=SecretNotFoundError)
     harness.begin()
-    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=secret_mock))
-    request_certificate_revocation_mock = MagicMock()
+    regenerate_private_key_mock = MagicMock()
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v3.tls_certificates"
-            ".TLSCertificatesRequiresV3.request_certificate_revocation"
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.regenerate_private_key"
         ),
-        request_certificate_revocation_mock,
+        regenerate_private_key_mock,
     )
     tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
     tls.revoke_all_certificates()
-    request_certificate_revocation_mock.assert_called_once()
+    regenerate_private_key_mock.assert_called_once()
 
 
 @pytest.mark.usefixtures("juju_secret_mock")
 def test_request_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
     """
-    arrange: Given a char with mocked juju secret.
+    arrange: Given a charm with mocked juju secret.
     act: Call request certificate.
-    assert: The library method is correctly called.
+    assert: In v4, this is a no-op as certificates are requested automatically.
     """
-    request_certificate_creation_mock = MagicMock()
-    monkeypatch.setattr(
-        (
-            "charms.tls_certificates_interface.v3.tls_certificates"
-            ".TLSCertificatesRequiresV3.request_certificate_creation"
-        ),
-        request_certificate_creation_mock,
-    )
     harness.begin()
     tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
+    # In v4, request_certificate is a no-op
     tls.request_certificate(TEST_EXTERNAL_HOSTNAME_CONFIG)
-    request_certificate_creation_mock.assert_called_once()
+    # No assertion needed as it's a no-op

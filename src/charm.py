@@ -15,12 +15,11 @@ from charms.bind.v0.dns_record import (
     RecordType,
     RequirerEntry,
 )
-from charms.tls_certificates_interface.v3.tls_certificates import (
-    AllCertificatesInvalidatedEvent,
+from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
-    CertificateExpiringEvent,
-    CertificateInvalidatedEvent,
-    TLSCertificatesRequiresV3,
+    CertificateRequestAttributes,
+    Mode,
+    TLSCertificatesRequiresV4,
 )
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataProvidedEvent,
@@ -36,7 +35,7 @@ from ops.charm import (
     RelationJoinedEvent,
 )
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
+from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 from client import get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
@@ -74,7 +73,15 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
-        self.certificates = TLSCertificatesRequiresV3(self, TLS_CERT_RELATION)
+        # Get certificate requests based on config
+        certificate_requests = self._get_certificate_requests()
+
+        self.certificates = TLSCertificatesRequiresV4(
+            self,
+            TLS_CERT_RELATION,
+            certificate_requests=certificate_requests,
+            mode=Mode.APP,
+        )
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
         self.dns_record_requirer = DNSRecordRequires(self)
@@ -94,17 +101,7 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
         )
-        self.framework.observe(
-            self.certificates.on.certificate_expiring, self._on_certificate_expiring
-        )
-        self.framework.observe(
-            self.certificates.on.certificate_invalidated, self._on_certificate_invalidated
-        )
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
-        self.framework.observe(
-            self.certificates.on.all_certificates_invalidated,
-            self._on_all_certificates_invalidated,
-        )
 
         self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
@@ -115,6 +112,24 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(
             self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
         )
+
+    def _get_certificate_requests(self) -> list[CertificateRequestAttributes]:
+        """Get certificate requests based on charm configuration.
+
+        Returns:
+            List of certificate request attributes.
+        """
+        hostname = self.config.get("external-hostname", "")
+        if not hostname:
+            return []
+
+        # Create certificate request without common_name, only with sans_dns
+        # This satisfies the requirement to not provide common_name
+        return [
+            CertificateRequestAttributes(
+                sans_dns=[hostname],
+            )
+        ]
 
     @property
     def _labels(self) -> dict[str, str]:
@@ -129,9 +144,10 @@ class GatewayAPICharm(CharmBase):
 
         if self._certificates_revocation_needed(client, config):
             self._tls.revoke_all_certificates()
-            self._tls.generate_private_key(config.external_hostname)
-            self._tls.request_certificate(config.external_hostname)
-            return  # _reconcile will be triggered with the next certificates_available event.
+            # In v4, certificate requests are managed by updating the
+            # certificate_requests attribute. The library will automatically
+            # request new certificates.
+            return  # _reconcile will be triggered with certificate_available
 
         self._reconcile()
 
@@ -151,12 +167,12 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
 
         for cert in self.certificates.get_provider_certificates():
-            if get_hostname_from_cert(cert.certificate) == hostname:
+            if get_hostname_from_cert(str(cert.certificate)) == hostname:
                 event.set_results(
                     {
-                        "certificate": cert.certificate,
-                        "ca": cert.ca,
-                        "chain": cert.chain_as_pem(),
+                        "certificate": str(cert.certificate),
+                        "ca": str(cert.ca),
+                        "chain": "\n\n".join([str(c) for c in cert.chain]),
                     }
                 )
                 return
@@ -167,17 +183,13 @@ class GatewayAPICharm(CharmBase):
     def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
         """Handle the TLS Certificate relation created event."""
         TLSInformation.validate(self)
-        client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
-        self._tls.generate_private_key(config.external_hostname)
+        # In v4, certificates are automatically requested when the relation is established
 
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
         TLSInformation.validate(self)
-        client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
-        self._tls.request_certificate(config.external_hostname)
+        # In v4, certificates are automatically requested when the relation is joined
 
     @validate_config_and_integration(defer=False)
     def _on_certificates_relation_broken(self, _: RelationBrokenEvent) -> None:
@@ -189,44 +201,6 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate available event."""
         logger.info("TLS certificate available, creating resources.")
         self._reconcile()
-
-    @validate_config_and_integration(defer=True)
-    def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
-        """Handle the TLS Certificate expiring event.
-
-        Args:
-            event: The event that fires this method.
-        """
-        TLSInformation.validate(self)
-        self._tls.certificate_expiring(event)
-
-    @validate_config_and_integration(defer=True)
-    def _on_certificate_invalidated(self, event: CertificateInvalidatedEvent) -> None:
-        """Handle the TLS Certificate invalidation event.
-
-        Args:
-            event: The event that fires this method.
-        """
-        TLSInformation.validate(self)
-        if event.reason == "revoked":
-            self._tls.certificate_invalidated(event)
-        if event.reason == "expired":
-            self._tls.certificate_expiring(event)
-        self.unit.status = MaintenanceStatus("Waiting for new certificate")
-
-    @validate_config_and_integration(defer=True)
-    def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
-        """Handle the TLS Certificate relation broken event."""
-        TLSInformation.validate(self)
-        client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
-        hostname = config.external_hostname
-
-        try:
-            secret = self.model.get_secret(label=f"private-key-{hostname}")
-            secret.remove_all_revisions()
-        except SecretNotFoundError:
-            logger.warning("Juju secret for %s already does not exist", hostname)
 
     @validate_config_and_integration(defer=False)
     def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:

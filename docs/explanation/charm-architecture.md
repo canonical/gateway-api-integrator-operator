@@ -88,7 +88,7 @@ Kubernetes resources necessary for ingress.
 C4Context
     System_Boundary(gateway-api-integrator, "Gateway API Integrator") {
         Container_Boundary(charm-lib, "Charm Libraries") {
-            Component(tls-certificates-lib, "tls_certificates_interface.v3.tls_certificates")
+            Component(tls-certificates-lib, "tls_certificates_interface.v4.tls_certificates")
             Component(ingress-lib, "traefik_k8s.v2.ingress")
         }
         

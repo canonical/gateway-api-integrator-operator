@@ -8,17 +8,13 @@ import secrets
 import string
 import typing
 
-from charms.tls_certificates_interface.v3.tls_certificates import (
-    CertificateExpiringEvent,
-    CertificateInvalidatedEvent,
+from charms.tls_certificates_interface.v4.tls_certificates import (
     ProviderCertificate,
-    TLSCertificatesRequiresV3,
-    generate_csr,
-    generate_private_key,
+    TLSCertificatesRequiresV4,
 )
 from cryptography import x509
 from cryptography.x509.oid import NameOID
-from ops.model import Model, Relation, SecretNotFoundError
+from ops.model import Model
 
 TLS_CERT = "certificates"
 logger = logging.getLogger()
@@ -66,7 +62,7 @@ def get_hostname_from_cert(certificate: str) -> str:
 class TLSRelationService:
     """TLS Relation service class."""
 
-    def __init__(self, model: Model, certificates: TLSCertificatesRequiresV3) -> None:
+    def __init__(self, model: Model, certificates: TLSCertificatesRequiresV4) -> None:
         """Init method for the class.
 
         Args:
@@ -93,99 +89,48 @@ class TLSRelationService:
         Args:
             hostname: Certificate's hostname.
         """
-        private_key, password = self._get_private_key(hostname)
-        csr = generate_csr(
-            private_key=private_key.encode(),
-            private_key_password=password.encode(),
-            subject=hostname,
-            sans_dns=[hostname],
-        )
-        self.certificates.request_certificate_creation(certificate_signing_request=csr)
+        # In v4, certificates are requested through certificate_requests in the constructor
+        # This method is now a no-op as the library handles certificate requests automatically
+        pass
 
     def generate_private_key(self, hostname: str) -> None:
         """Handle the TLS Certificate created event.
 
         Args:
             hostname: Certificate's hostname.
-
-        Raises:
-            AssertionError: If this method is called before the certificates integration is ready.
         """
-        # At this point, TLSInformation state component should already be initialized
-        tls_integration = self.model.get_relation(self.integration_name)
-        if not tls_integration:
-            raise AssertionError
-
-        tls_integration = typing.cast(Relation, tls_integration)
-
-        private_key_password = self.generate_password().encode()
-        private_key = generate_private_key(password=private_key_password)
-        private_key_dict = {
-            "password": private_key_password.decode(),
-            "key": private_key.decode(),
-        }
-        try:
-            secret = self.model.get_secret(label=f"private-key-{hostname}")
-            secret.set_content(private_key_dict)
-        except SecretNotFoundError:
-            secret = self.application.add_secret(
-                content=private_key_dict, label=f"private-key-{hostname}"
-            )
-            secret.grant(tls_integration)
+        # In v4, private keys are managed internally by the library
+        # This method is now a no-op as the library handles private key generation
+        pass
 
     def certificate_expiring(
         self,
-        event: CertificateExpiringEvent,
+        certificate: str,
     ) -> None:
         """Handle the TLS Certificate expiring event.
 
         Args:
-            event: The event that fires this method.
+            certificate: The certificate that is expiring.
         """
-        if expiring_cert := self._get_cert(event.certificate):
-            hostname = get_hostname_from_cert(expiring_cert.certificate)
-            old_csr = expiring_cert.csr
-            private_key, password = self._get_private_key(hostname)
-            new_csr = generate_csr(
-                private_key=private_key.encode(),
-                private_key_password=password.encode(),
-                subject=hostname,
-                sans_dns=[hostname],
-            )
-            self.certificates.request_certificate_renewal(
-                old_certificate_signing_request=old_csr.encode(),
-                new_certificate_signing_request=new_csr,
-            )
+        if expiring_cert := self._get_cert(certificate):
+            # In v4, certificate renewal is handled automatically by the library
+            # when the certificate's expiry secret expires
+            self.certificates.renew_certificate(expiring_cert)
 
-    def certificate_invalidated(
-        self,
-        event: CertificateInvalidatedEvent,
-    ) -> None:
-        """Handle TLS Certificate revocation.
-
-        Args:
-            event: The event that fires this method.
-        """
-        if invalidated_cert := self._get_cert(event.certificate):
-            hostname = get_hostname_from_cert(invalidated_cert.certificate)
-            secret = self.model.get_secret(label=f"private-key-{hostname}")
-            secret.remove_all_revisions()
-            self.certificates.request_certificate_revocation(
-                certificate_signing_request=invalidated_cert.csr.encode()
-            )
+    def certificate_invalidated(self) -> None:
+        """Handle TLS Certificate revocation."""
+        # In v4, certificate invalidation and revocation is handled by the library
+        # Certificates are automatically removed when invalidated
+        pass
 
     def revoke_all_certificates(self) -> None:
         """Revoke all provider certificates and remove all revisions in juju secret."""
-        for certificate in self.certificates.get_provider_certificates():
-            hostname = get_hostname_from_cert(certificate.certificate)
-            try:
-                secret = self.model.get_secret(label=f"private-key-{hostname}")
-                secret.remove_all_revisions()
-            except SecretNotFoundError:
-                logger.warning("Secret not found, skipping.")
-            self.certificates.request_certificate_revocation(
-                certificate_signing_request=certificate.csr.encode()
-            )
+        # In v4, we need to regenerate the private key which will trigger new certificate requests
+        # The library manages certificate lifecycle internally
+        try:
+            self.certificates.regenerate_private_key()
+        except Exception as e:
+            logger.warning("Failed to regenerate private key: %s", e)
 
     def _get_private_key(self, hostname: str) -> KeyPair:
         """Return the private key and its password from either juju secrets or the relation data.
@@ -212,6 +157,6 @@ class TLSRelationService:
         """
         provider_certificates = self.certificates.get_provider_certificates()
         matching_certs = [
-            cert for cert in provider_certificates if cert.certificate == certificate
+            cert for cert in provider_certificates if str(cert.certificate) == certificate
         ]
         return matching_certs[0] if matching_certs else None

@@ -13,7 +13,7 @@ from ops.model import Secret
 from ops.testing import Harness
 
 from charm import GatewayAPICharm
-from tls_relation import TLSRelationService, generate_private_key
+from tls_relation import TLSRelationService
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -82,10 +82,11 @@ def gateway_class_resource_fixture():
 @pytest.fixture(scope="function", name="private_key_and_password")
 def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
     """Mock private key juju secret."""
-    tls = TLSRelationService(harness.model, MagicMock())
-    password = tls.generate_password().encode()
-    private_key = generate_private_key(password=password)
-    return (password.decode(), private_key.decode())
+    from charms.tls_certificates_interface.v4.tls_certificates import PrivateKey
+
+    # V4 generates unencrypted private keys, so password is empty
+    private_key = PrivateKey.generate()
+    return ("", str(private_key))
 
 
 @pytest.fixture(scope="function", name="juju_secret_mock")
@@ -96,7 +97,8 @@ def juju_secret_mock_fixture(
     """Mock certificates integration."""
     password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    # V4 library uses "private-key" in secrets
+    juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     return juju_secret_mock
 
@@ -105,36 +107,37 @@ def juju_secret_mock_fixture(
 def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     """Mock tls certificate from a tls provider charm."""
     cert = (
-        "-----BEGIN CERTIFICATE-----"
-        "MIIDgDCCAmigAwIBAgIUa32Vp4pS2WjrTNG7SZJ66SdMs2YwDQYJKoZIhvcNAQEL"
-        "BQAwOTELMAkGA1UEBhMCVVMxKjAoBgNVBAMMIXNlbGYtc2lnbmVkLWNlcnRpZmlj"
-        "YXRlcy1vcGVyYXRvcjAeFw0yNDA3MDMxODE0MjBaFw0yNTA3MDMxODE0MjBaMEox"
-        "GTAXBgNVBAMMEGdhdGV3YXkuaW50ZXJuYWwxLTArBgNVBC0MJDRmZmM4YjZlLTA0"
-        "MGUtNDIxZC1hOGJhLTNhOTAzMzQxYjg1MzCCASIwDQYJKoZIhvcNAQEBBQADggEP"
-        "ADCCAQoCggEBAJVOj9tOjA6zidDoSpqR4ObnTIouqdbXoibFB8/QlE7KiLkvUe4z"
-        "F53ATHMeXOvJ7/q8sAyyOsHIjmPOf7TSh2lrrZCiwmsy5ma8oNQewps+VJR3tLgb"
-        "OEh2ygpTaEPEK1Xz7zwwRU8EJrRuSo4L37iJJTcu2nubLWvBnzqWE1bYBbV8msH/"
-        "xP88kojbDuufND6ad1qZf1YPmxzbXTlWtYrlGXrvRWf5fP2AWZYwOX4e8m32Xa/m"
-        "z+1vb0xm2YrLqmjC+un0es+XaXSYyh1ZS5t42QW6J5nRwq0z4KOaRjOb9dq+T4nL"
-        "ZdkPn61cRNyY7E+xZ+TqMXGtlNXzTkXcJ3ECAwEAAaNvMG0wIQYDVR0jBBowGIAW"
-        "BBQ8ihb2ukCPiqijvCUaZ6HjYE9slDAdBgNVHQ4EFgQUwQYmWRBZk02AYVbx49QW"
-        "kiVuu2owDAYDVR0TAQH/BAIwADAbBgNVHREEFDASghBnYXRld2F5LmludGVybmFs"
-        "MA0GCSqGSIb3DQEBCwUAA4IBAQADD9FU7rU9ZMqzAAnQ+POpOau9l25/27Itx64W"
-        "BHsIDx29yUCJTKBeV1yU8jlEp6r3H6ntQJO2jke3qQzDPF7eWOyCFhohMRHT9M6N"
-        "r9xzrAaqd2OdQ8xlYqvXJ8JXmUfWE5jstUHK10KBsXjBZdfOTLGhg3kHw72cg/MJ"
-        "bB0JcLv2Lf/sFgU68bEWampwgjlAuybGKSTh+tiJXm2G14eCnI5xEMwezJQS+J+7"
-        "YXZZ153/uJZ5N8hIo9ld0LcYX5l7YrM1GH8CQ5GXN9kTgmRrpuSp/bZKd7GFmRq1"
-        "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
-        "-----END CERTIFICATE-----"
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIDgDCCAmigAwIBAgIUa32Vp4pS2WjrTNG7SZJ66SdMs2YwDQYJKoZIhvcNAQEL\n"
+        "BQAwOTELMAkGA1UEBhMCVVMxKjAoBgNVBAMMIXNlbGYtc2lnbmVkLWNlcnRpZmlj\n"
+        "YXRlcy1vcGVyYXRvcjAeFw0yNDA3MDMxODE0MjBaFw0yNTA3MDMxODE0MjBaMEox\n"
+        "GTAXBgNVBAMMEGdhdGV3YXkuaW50ZXJuYWwxLTArBgNVBC0MJDRmZmM4YjZlLTA0\n"
+        "MGUtNDIxZC1hOGJhLTNhOTAzMzQxYjg1MzCCASIwDQYJKoZIhvcNAQEBBQADggEP\n"
+        "ADCCAQoCggEBAJVOj9tOjA6zidDoSpqR4ObnTIouqdbXoibFB8/QlE7KiLkvUe4z\n"
+        "F53ATHMeXOvJ7/q8sAyyOsHIjmPOf7TSh2lrrZCiwmsy5ma8oNQewps+VJR3tLgb\n"
+        "OEh2ygpTaEPEK1Xz7zwwRU8EJrRuSo4L37iJJTcu2nubLWvBnzqWE1bYBbV8msH/\n"
+        "xP88kojbDuufND6ad1qZf1YPmxzbXTlWtYrlGXrvRWf5fP2AWZYwOX4e8m32Xa/m\n"
+        "z+1vb0xm2YrLqmjC+un0es+XaXSYyh1ZS5t42QW6J5nRwq0z4KOaRjOb9dq+T4nL\n"
+        "ZdkPn61cRNyY7E+xZ+TqMXGtlNXzTkXcJ3ECAwEAAaNvMG0wIQYDVR0jBBowGIAW\n"
+        "BBQ8ihb2ukCPiqijvCUaZ6HjYE9slDAdBgNVHQ4EFgQUwQYmWRBZk02AYVbx49QW\n"
+        "kiVuu2owDAYDVR0TAQH/BAIwADAbBgNVHREEFDASghBnYXRld2F5LmludGVybmFs\n"
+        "MA0GCSqGSIb3DQEBCwUAA4IBAQADD9FU7rU9ZMqzAAnQ+POpOau9l25/27Itx64W\n"
+        "BHsIDx29yUCJTKBeV1yU8jlEp6r3H6ntQJO2jke3qQzDPF7eWOyCFhohMRHT9M6N\n"
+        "r9xzrAaqd2OdQ8xlYqvXJ8JXmUfWE5jstUHK10KBsXjBZdfOTLGhg3kHw72cg/MJ\n"
+        "bB0JcLv2Lf/sFgU68bEWampwgjlAuybGKSTh+tiJXm2G14eCnI5xEMwezJQS+J+7\n"
+        "YXZZ153/uJZ5N8hIo9ld0LcYX5l7YrM1GH8CQ5GXN9kTgmRrpuSp/bZKd7GFmRq1\n"
+        "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW\n"
+        "-----END CERTIFICATE-----\n"
     )
+    from charms.tls_certificates_interface.v4.tls_certificates import Certificate
+
     provider_cert_mock = MagicMock()
-    provider_cert_mock.certificate = cert
-    provider_cert_mock.chain = [cert]
-    provider_cert_mock.chain_as_pem_string = MagicMock(return_value=cert)
+    provider_cert_mock.certificate = Certificate.from_string(cert)
+    provider_cert_mock.chain = [Certificate.from_string(cert)]
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v3.tls_certificates"
-            ".TLSCertificatesRequiresV3.get_provider_certificates"
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.get_provider_certificates"
         ),
         MagicMock(return_value=[provider_cert_mock]),
     )
@@ -165,7 +168,8 @@ def client_with_mock_external_fixture(
     monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
     password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    # V4 library uses "private-key" in secrets
+    juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     monkeypatch.setattr(
         "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",

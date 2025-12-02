@@ -6,7 +6,6 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ops.model import SecretNotFoundError
 from ops.testing import Harness
 
 import tls_relation
@@ -15,27 +14,10 @@ from state.tls import TLSInformation, TlsIntegrationMissingError
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
-def test_generate_password(harness: Harness):
-    """
-    arrange: Given a gateway api integrator charm.
-    act: run generate password.
-    assert: the password generated has the correct format.
-    """
-    harness.begin()
-
-    tls_rel = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
-
-    password = tls_rel.generate_password()
-    assert isinstance(password, str)
-    assert len(password) == 12
-
-
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_cert_relation_secret_not_found_error(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):
     """
@@ -148,17 +130,3 @@ def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPat
     tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
     tls.revoke_all_certificates()
     regenerate_private_key_mock.assert_called_once()
-
-
-@pytest.mark.usefixtures("juju_secret_mock")
-def test_request_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
-    """
-    arrange: Given a charm with mocked juju secret.
-    act: Call request certificate.
-    assert: In v4, this is a no-op as certificates are requested automatically.
-    """
-    harness.begin()
-    tls = tls_relation.TLSRelationService(harness.model, harness.charm.certificates)
-    # In v4, request_certificate is a no-op
-    tls.request_certificate(TEST_EXTERNAL_HOSTNAME_CONFIG)
-    # No assertion needed as it's a no-op

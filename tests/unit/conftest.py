@@ -6,6 +6,7 @@
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
+from charms.tls_certificates_interface.v4.tls_certificates import Certificate, PrivateKey
 from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta
@@ -79,25 +80,19 @@ def gateway_class_resource_fixture():
     return GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))
 
 
-@pytest.fixture(scope="function", name="private_key_and_password")
-def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
+@pytest.fixture(scope="function", name="private_key")
+def private_key_fixture() -> str:
     """Mock private key juju secret."""
-    from charms.tls_certificates_interface.v4.tls_certificates import PrivateKey
-
-    # V4 generates unencrypted private keys, so password is empty
-    private_key = PrivateKey.generate()
-    return ("", str(private_key))
+    return PrivateKey.generate()
 
 
 @pytest.fixture(scope="function", name="juju_secret_mock")
 def juju_secret_mock_fixture(
     monkeypatch: pytest.MonkeyPatch,
-    private_key_and_password: tuple[str, str],
+    private_key: str,
 ) -> tuple[str, str]:
     """Mock certificates integration."""
-    password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    # V4 library uses "private-key" in secrets
     juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     return juju_secret_mock
@@ -129,7 +124,6 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW\n"
         "-----END CERTIFICATE-----\n"
     )
-    from charms.tls_certificates_interface.v4.tls_certificates import Certificate
 
     provider_cert_mock = MagicMock()
     provider_cert_mock.certificate = Certificate.from_string(cert)
@@ -157,7 +151,7 @@ def config_fixture() -> dict[str, str]:
 def client_with_mock_external_fixture(
     mock_lightkube_client: MagicMock,
     gateway_class_resource: GenericGlobalResource,
-    private_key_and_password: tuple[str, str],
+    private_key: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> MagicMock:
     """Mock necessary external methods for the charm to work properly with harness."""
@@ -166,9 +160,7 @@ def client_with_mock_external_fixture(
         return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),
     )
     monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
-    password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    # V4 library uses "private-key" in secrets
     juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     monkeypatch.setattr(

@@ -7,8 +7,7 @@ import dataclasses
 
 import ops
 from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
-
-from tls_relation import get_hostname_from_cert
+from lib.charms.tls_certificates_interface.v4.tls_certificates import Certificate
 
 from .exception import CharmStateValidationBaseError
 
@@ -53,8 +52,9 @@ class TLSInformation:
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         for cert in certificates.get_provider_certificates():
-            hostname = get_hostname_from_cert(str(cert.certificate))
-            chain = [str(c) for c in cert.chain]
+            certificate = Certificate.from_string(cert)
+            hostname = certificate.common_name
+            chain = [str(c) for c in certificate.chain]
             if chain[0] != str(cert.certificate):
                 chain.reverse()
             tls_certs[hostname] = "\n\n".join(chain)

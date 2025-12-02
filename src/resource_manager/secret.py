@@ -73,7 +73,7 @@ class SecretResourceDefinition(ResourceDefinition):
         )
 
 
-def _get_decrypted_key(private_key: str, password: str) -> str:
+def _get_decrypted_key(private_key: str) -> str:
     """Decrypted the provided private key using the provided password.
 
     Args:
@@ -83,14 +83,8 @@ def _get_decrypted_key(private_key: str, password: str) -> str:
     Returns:
         The decrypted private key.
     """
-    # V4 library generates unencrypted keys (empty password)
-    password_bytes = password.encode() if password else None
-    decrypted_key = serialization.load_pem_private_key(
-        private_key.encode(), password=password_bytes
-    )
-
     # There are multiple representation PKCS8 is the default supported by nginx controller
-    return decrypted_key.private_bytes(
+    return PrivateKey.from_string(private_key).private_bytes(
         encoding=serialization.Encoding.PEM,
         format=serialization.PrivateFormat.PKCS8,
         encryption_algorithm=serialization.NoEncryption(),
@@ -131,8 +125,7 @@ class TLSSecretResourceManager(ResourceManager[Secret]):
             stringData={
                 "tls.crt": secret_resource_definition.certificate,
                 "tls.key": _get_decrypted_key(
-                    secret_resource_definition.private_key,
-                    secret_resource_definition.password,
+                    secret_resource_definition.private_key
                 ),
             },
             type="kubernetes.io/tls",

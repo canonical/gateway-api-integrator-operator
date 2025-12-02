@@ -26,6 +26,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
+from lib.charms.tls_certificates_interface.v4.tls_certificates import Certificate
 from lightkube import Client
 from ops.charm import (
     ActionEvent,
@@ -52,7 +53,7 @@ from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
-from tls_relation import TLSRelationService, get_hostname_from_cert
+from tls_relation import TLSRelationService
 
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
@@ -167,7 +168,7 @@ class GatewayAPICharm(CharmBase):
         TLSInformation.validate(self)
 
         for cert in self.certificates.get_provider_certificates():
-            if get_hostname_from_cert(str(cert.certificate)) == hostname:
+            if Certificate.from_string(cert).common_name == hostname:
                 event.set_results(
                     {
                         "certificate": str(cert.certificate),

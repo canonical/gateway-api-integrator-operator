@@ -51,7 +51,9 @@ def gateway_api_integrator(
     juju: jubilant.Juju, gateway_class: str, external_hostname: str, pytestconfig: pytest.Config
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
-    configured_charm_path = pytestconfig.getoption("--gateway-api-integrator-charm-file")
+    configured_charm_path = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-api-integrator" in f), None
+    )
     juju.deploy(
         (
             str(configured_charm_path)
@@ -90,7 +92,9 @@ def gateway_route_configurator(
     juju: jubilant.Juju, external_hostname: str, pytestconfig: pytest.Config
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
-    configured_charm_path = pytestconfig.getoption("--gateway-route-configurator-charm-file")
+    configured_charm_path = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-route-configurator" in f), None
+    )
     juju.deploy(
         (
             str(configured_charm_path)

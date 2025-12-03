@@ -30,9 +30,20 @@ async def model_fixture(ops_test: OpsTest) -> Model:
 @pytest_asyncio.fixture(scope="module", name="charm")
 async def charm_fixture(pytestconfig: pytest.Config) -> str:
     """Get value from parameter charm-file."""
+    charm_files = pytestconfig.getoption("--charm-file")
+    if charm_files is None:
+        charm_files = []
+    
     charm = next(
-        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-api-integrator" in f), None
+        (f for f in charm_files if "gateway-api-integrator" in f), None
     )
+    
+    # If we couldn't find a charm with the full path, look for one with just the name pattern
+    if charm is None:
+        charm = next(
+            (f for f in charm_files if "gateway-api-integrator" in f), None
+        )
+    
     assert charm, "--charm-file must be set"
     if not os.path.exists(charm):
         logger.info("Using parent directory for charm file")
@@ -44,7 +55,7 @@ async def charm_fixture(pytestconfig: pytest.Config) -> str:
 async def application_fixture(charm: str, model: Model) -> AsyncGenerator[Application, None]:
     """Deploy the charm."""
     # Deploy the charm and wait for active/idle status
-    application = await model.deploy(f"./{charm}", trust=True)
+    application = await model.deploy(charm, trust=True)
     await model.wait_for_idle(
         apps=[application.name],
         status="blocked",

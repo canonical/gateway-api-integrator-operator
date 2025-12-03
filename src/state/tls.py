@@ -57,11 +57,11 @@ class TLSInformation:
             if chain[0] != certificate.raw:
                 chain.reverse()
             tls_certs[hostname] = "\n\n".join(chain)
-            if certificates.private_key:
-                tls_keys[hostname] = {
-                    "key": certificates.private_key.raw,
-                    "password": "",  # v4 doesn't use password for private keys
-                }
+            secret = charm.model.get_secret(label=f"private-key-{hostname}")
+            tls_keys[hostname] = {
+                "key": secret.get_content()["key"],
+                "password": secret.get_content()["password"],
+            }
 
         return cls(
             secret_resource_name_prefix=secret_resource_name_prefix,

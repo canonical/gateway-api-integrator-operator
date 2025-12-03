@@ -27,7 +27,6 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 from client import get_client
-from lib.charms.tls_certificates_interface.v4.tls_certificates import Certificate
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteRedirectResourceManager,
@@ -141,9 +140,9 @@ class GatewayAPICharm(CharmBase):
             if certificate.common_name == hostname:
                 event.set_results(
                     {
-                        "certificate": str(certificate),
-                        "ca": str(provider_certificate.ca),
-                        "chain": "\n\n".join([str(c) for c in provider_certificate.chain]),
+                        "certificate": certificate.raw,
+                        "ca": provider_certificate.ca.raw,
+                        "chain": "\n\n".join([c.raw for c in provider_certificate.chain]),
                     }
                 )
                 return

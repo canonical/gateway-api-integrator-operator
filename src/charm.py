@@ -80,6 +80,7 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
 
+        self.framework.observe(self.on.certificates_relation_joined, self._reconcile)
         self.framework.observe(self.on.certificates_relation_broken, self._reconcile)
         self.framework.observe(self.certificates.on.certificate_available, self._reconcile)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
@@ -87,7 +88,6 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self._ingress_provider.on.data_provided, self._reconcile)
         self.framework.observe(self._ingress_provider.on.data_removed, self._reconcile)
 
-        self.framework.observe(self.on.dns_record_relation_created, self._reconcile)
         self.framework.observe(self.on.dns_record_relation_joined, self._reconcile)
 
     @property

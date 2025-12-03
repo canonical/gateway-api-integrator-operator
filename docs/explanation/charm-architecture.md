@@ -47,13 +47,9 @@ For this charm, the following Juju events are observed:
 3. [`data-provided` from `ingress` charm library](https://charmhub.io/traefik-k8s/libraries/ingress)
 4. [`data-removed` from `ingress` charm library](https://charmhub.io/traefik-k8s/libraries/ingress)
 5. [`certificate-available` from `tls_certificates` charm library](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates)
-6. [`certificate-expiring` from `tls_certificates` charm library](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates)
-7. [`certificate-invalidated` from `tls_certificates` charm library](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates)
-8. [`all-certificates-invalidated` from `tls_certificates` charm library](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates)
-9. [`get-certificate-action`](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/hook/#action-action)
-10. [`certificates-relation-created`](https://documentation.ubuntu.com/juju/latest/reference/hook/index.html#endpoint-relation-created)
-11. [`certificates-relation-joined`](https://documentation.ubuntu.com/juju/latest/reference/hook/index.html#endpoint-relation-joined)
-12. [`certificates-relation-broken`](https://documentation.ubuntu.com/juju/latest/reference/hook/index.html#endpoint-relation-broken)
+6. [`get-certificate-action`](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/hook/#action-action)
+7. [`certificates-relation-joined`](https://documentation.ubuntu.com/juju/latest/reference/hook/index.html#endpoint-relation-joined)
+8. [`certificates-relation-broken`](https://documentation.ubuntu.com/juju/latest/reference/hook/index.html#endpoint-relation-broken)
 
 ## Charm code overview
 

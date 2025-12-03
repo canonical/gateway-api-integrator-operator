@@ -30,7 +30,9 @@ async def model_fixture(ops_test: OpsTest) -> Model:
 @pytest_asyncio.fixture(scope="module", name="charm")
 async def charm_fixture(pytestconfig: pytest.Config) -> str:
     """Get value from parameter charm-file."""
-    charm = pytestconfig.getoption("--charm-file")
+    charm = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-api-integrator" in f), None
+    )
     assert charm, "--charm-file must be set"
     if not os.path.exists(charm):
         logger.info("Using parent directory for charm file")

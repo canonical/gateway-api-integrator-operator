@@ -13,3 +13,4 @@ jobs:
     with:
       channel: latest/edge
       charmcraft-channel: latest/edge
+      working-directory: ./gateway-api-integrator

@@ -61,8 +61,13 @@ class GatewayAPICharm(CharmBase):
         """
         super().__init__(*args)
 
-        # Get certificate requests based on config
-        certificate_requests = self._get_certificate_requests()
+        self.client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        self.state = CharmConfig.from_charm(self, self.client)
+        certificate_requests = [
+            CertificateRequestAttributes(
+                sans_dns=[self.state.external_hostname],
+            )
+        ]
         self.certificates = TLSCertificatesRequiresV4(
             self,
             TLS_CERT_RELATION,
@@ -85,24 +90,6 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self.on.dns_record_relation_created, self._reconcile)
         self.framework.observe(self.on.dns_record_relation_joined, self._reconcile)
 
-    def _get_certificate_requests(self) -> list[CertificateRequestAttributes]:
-        """Get certificate requests based on charm configuration.
-
-        Returns:
-            List of certificate request attributes.
-        """
-        hostname = self.config.get("external-hostname", "")
-        if not hostname:
-            return []
-
-        # Create certificate request without common_name, only with sans_dns
-        # This satisfies the requirement to not provide common_name
-        return [
-            CertificateRequestAttributes(
-                sans_dns=[hostname],
-            )
-        ]
-
     @property
     def _labels(self) -> dict[str, str]:
         """Get labels assigned to resources created by this app."""
@@ -111,10 +98,8 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration()
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
-        client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
-
-        if self._certificates_revocation_needed(client, config):
+        
+        if self._certificates_revocation_needed(self.client, self.state):
             self.certificates.regenerate_private_key()
             return  # _reconcile will be triggered with certificate_available
 
@@ -164,24 +149,22 @@ class GatewayAPICharm(CharmBase):
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
         """
-        client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
         self.unit.status = MaintenanceStatus("Creating resources.")
         resource_manager = GatewayResourceManager(
             labels=self._labels,
-            client=client,
+            client=self.client,
         )
         self._define_gateway_resource(
-            resource_manager, gateway_resource_information, config, tls_information
+            resource_manager, gateway_resource_information, self.state, tls_information
         )
-        self._define_secret_resources(client, config, tls_information)
+        self._define_secret_resources(self.client, self.state, tls_information)
         self._define_ingress_resources_and_publish_url(
-            client, config, gateway_resource_information
+            self.client, self.state, gateway_resource_information
         )
         self._update_dns_record_relation(
-            resource_manager, config.external_hostname, gateway_resource_information
+            resource_manager, self.state.external_hostname, gateway_resource_information
         )
         self._set_status_gateway_address(resource_manager, gateway_resource_information)
 

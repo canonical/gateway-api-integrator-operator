@@ -47,6 +47,8 @@ provides:
   gateway:
     interface: ingress
     limit: 1
+  gateway-route:
+    interface: gateway-route
 
 config:
   options:

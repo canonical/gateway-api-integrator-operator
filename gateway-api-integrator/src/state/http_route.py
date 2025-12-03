@@ -6,11 +6,13 @@
 import dataclasses
 
 import ops
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 from .exception import CharmStateValidationBaseError
 
 INGRESS_RELATION = "gateway"
+GATEWAY_ROUTE_RELATION = "gateway-route"
 
 
 class IngressIntegrationMissingError(CharmStateValidationBaseError):
@@ -40,10 +42,16 @@ class HTTPRouteResourceInformation:
     service_port: int
     service_port_name: str
     strip_prefix: bool
+    integration: str
+    paths: list[str]
+    hostname: str
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, ingress_provider: IngressPerAppProvider
+        cls,
+        charm: ops.CharmBase,
+        ingress_provider: IngressPerAppProvider,
+        gateway_route_provider: GatewayRouteProvider,
     ) -> "HTTPRouteResourceInformation":
         """Get TLS information from a charm instance.
 
@@ -60,10 +68,20 @@ class HTTPRouteResourceInformation:
             HTTPRouteResourceInformation: Information about configured TLS certs.
         """
         ingress_integration = charm.model.get_relation(INGRESS_RELATION)
-        if ingress_integration is None:
-            raise IngressIntegrationMissingError("Ingress integration not ready.")
+        gateway_route_integration = charm.model.get_relation(GATEWAY_ROUTE_RELATION)
+        if ingress_integration is None and gateway_route_integration is None:
+            raise IngressIntegrationMissingError("Ingress or Gateway Route integration not ready.")
         try:
-            integration_data = ingress_provider.get_data(ingress_integration)
+            if ingress_integration:
+                integration_data = ingress_provider.get_data(ingress_integration)
+                integration = "ingress"
+                paths = []
+                hostname = ""
+            else:
+                integration_data = gateway_route_provider.get_data(gateway_route_integration)
+                integration = "gateway-route"
+                paths = integration_data.app.paths
+                hostname = integration_data.app.hostname
             application_name = integration_data.app.name
             requirer_model_name = integration_data.app.model
             service_name = f"{charm.app.name}-{application_name}-service"
@@ -78,6 +96,9 @@ class HTTPRouteResourceInformation:
                 service_port=service_port,
                 service_port_name=service_port_name,
                 strip_prefix=strip_prefix,
+                integration=integration,
+                paths=paths,
+                hostname=hostname,
             )
         except DataValidationError as exc:
             raise IngressIntegrationDataValidationError(

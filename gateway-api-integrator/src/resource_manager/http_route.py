@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 """gateway-api-integrator http_route resource manager."""
 
-
 import dataclasses
 import logging
 import typing
@@ -64,6 +63,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     service_name: str
     service_port: int
     http_route_type: HTTPRouteType
+    integration: str
+    paths: list[str]
     strip_prefix: bool = False
 
     def __init__(
@@ -133,17 +134,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             ],
             "rules": [
                 {
-                    "matches": [
-                        {
-                            "path": {
-                                "type": "PathPrefix",
-                                "value": (
-                                    f"/{http_route_resource_definition.requirer_model_name}"
-                                    f"-{http_route_resource_definition.application_name}"
-                                ),
-                            }
-                        }
-                    ],
+                    "matches": self.get_paths(resource_definition),
                     "filters": (
                         []
                         if not http_route_resource_definition.strip_prefix
@@ -183,6 +174,42 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
         return http_route
+
+    def get_paths(self, resource_definition: ResourceDefinition) -> list[dict]:
+        """Get the paths for the HTTPRoute resource.
+
+        Args:
+            resource_definition: The resource definition object.
+        Returns:
+            A dictionary representing the paths for the HTTPRoute resource.
+        """
+        http_route_resource_definition = typing.cast(
+            HTTPRouteResourceDefinition, resource_definition
+        )
+        if http_route_resource_definition.integration == "ingress":
+            return [
+                {
+                "path": {
+                    "type": "PathPrefix",
+                    "value": (
+                        f"/{http_route_resource_definition.requirer_model_name}"
+                        f"-{http_route_resource_definition.application_name}"
+                    ),
+                }
+                }
+            ]
+        path_list = []
+        logger.error(f"Adding paths: {http_route_resource_definition.paths=}")
+
+        for path in http_route_resource_definition.paths:
+            logger.error(f"Adding path {path} to HTTPRoute resource")
+            path_list.append({
+                "path": {
+                    "type": "PathPrefix",
+                    "value": path,
+                }
+            })
+        return path_list
 
     @map_k8s_auth_exception
     def _create_resource(self, resource: GenericNamespacedResource) -> None:

@@ -5,6 +5,7 @@
 # Disable duplicate-code as we're initializing the http-route resource the same way as in charm.py
 # pylint: disable=protected-access,duplicate-code
 """Unit tests for http_route resource."""
+
 from unittest.mock import MagicMock
 
 import pytest

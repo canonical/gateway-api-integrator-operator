@@ -30,8 +30,8 @@ async def model_fixture(ops_test: OpsTest) -> Model:
 @pytest_asyncio.fixture(scope="module", name="charm")
 async def charm_fixture(pytestconfig: pytest.Config) -> str:
     """Get value from parameter charm-file."""
-    charm = pytestconfig.getoption("--charm-file")
-    assert charm, "--charm-file must be set"
+    charm = pytestconfig.getoption("--gateway-api-integrator-charm-file")
+    assert charm, "--gateway-api-integrator-charm-file must be set"
     if not os.path.exists(charm):
         logger.info("Using parent directory for charm file")
         charm = os.path.join("..", charm)
@@ -90,9 +90,9 @@ async def ingress_requirer_application_fixture(
 def kube_config_fixture(request: pytest.FixtureRequest) -> str:
     """The kubernetes config file path."""
     kube_config = request.config.getoption("--kube-config")
-    assert (
-        kube_config
-    ), "--kube-confg argument is required which should contain the path to kube config."
+    assert kube_config, (
+        "--kube-confg argument is required which should contain the path to kube config."
+    )
     return kube_config
 
 

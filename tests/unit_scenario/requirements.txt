@@ -1,0 +1,4 @@
+cosl == 0.1.0
+coverage[toml]
+pytest
+ops[testing]

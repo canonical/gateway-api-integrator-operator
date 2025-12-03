@@ -12,7 +12,6 @@ from lightkube import Client
 from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
-
 from resource_manager.permission import map_k8s_auth_exception
 
 from .exception import CharmStateValidationBaseError
@@ -48,7 +47,7 @@ class CharmConfig:
 
     @classmethod
     @map_k8s_auth_exception
-    def from_charm(cls, charm: ops.CharmBase, client: Client) -> "CharmConfig":
+    def from_charm(cls, charm: ops.CharmBase, client: Client, hostname: typing.Optional[str] = None) -> "CharmConfig":
         """Create a CharmConfig class from a charm instance.
 
         Args:
@@ -79,10 +78,7 @@ class CharmConfig:
         if gateway_class_name not in gateway_class_names:
             available_gateway_classes = ",".join(gateway_class_names)
             logger.error(
-                (
-                    "Configured gateway class %s not present on the cluster."
-                    "Available ones are: %r"
-                ),
+                ("Configured gateway class %s not present on the cluster.Available ones are: %r"),
                 gateway_class_name,
                 available_gateway_classes,
             )
@@ -91,9 +87,10 @@ class CharmConfig:
             )
 
         try:
+            logger.error("Creating charm config with hostname: %s", hostname)
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=typing.cast(str, charm.config.get("external-hostname")),
+                external_hostname=hostname or typing.cast(str, charm.config.get("external-hostname")),
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

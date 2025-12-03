@@ -121,7 +121,7 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
         "bB0JcLv2Lf/sFgU68bEWampwgjlAuybGKSTh+tiJXm2G14eCnI5xEMwezJQS+J+7\n"
         "YXZZ153/uJZ5N8hIo9ld0LcYX5l7YrM1GH8CQ5GXN9kTgmRrpuSp/bZKd7GFmRq1\n"
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW\n"
-        "-----END CERTIFICATE-----\n"
+        "-----END CERTIFICATE-----"
     )
 
     provider_cert_mock = MagicMock()

@@ -16,24 +16,13 @@ from charms.bind.v0.dns_record import (
     RequirerEntry,
 )
 from charms.tls_certificates_interface.v4.tls_certificates import (
-    CertificateAvailableEvent,
     CertificateRequestAttributes,
     Mode,
     TLSCertificatesRequiresV4,
 )
-from charms.traefik_k8s.v2.ingress import (
-    IngressPerAppDataProvidedEvent,
-    IngressPerAppDataRemovedEvent,
-    IngressPerAppProvider,
-)
+from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
 from lightkube import Client
-from ops.charm import (
-    ActionEvent,
-    CharmBase,
-    RelationBrokenEvent,
-    RelationCreatedEvent,
-    RelationJoinedEvent,
-)
+from ops.charm import ActionEvent, CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
@@ -75,7 +64,6 @@ class GatewayAPICharm(CharmBase):
 
         # Get certificate requests based on config
         certificate_requests = self._get_certificate_requests()
-
         self.certificates = TLSCertificatesRequiresV4(
             self,
             TLS_CERT_RELATION,
@@ -88,29 +76,15 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
 
-        self.framework.observe(
-            self.on.certificates_relation_created, self._on_certificates_relation_created
-        )
-        self.framework.observe(
-            self.on.certificates_relation_joined, self._on_certificates_relation_joined
-        )
-        self.framework.observe(
-            self.on.certificates_relation_broken, self._on_certificates_relation_broken
-        )
-        self.framework.observe(
-            self.certificates.on.certificate_available, self._on_certificate_available
-        )
+        self.framework.observe(self.on.certificates_relation_broken, self._reconcile)
+        self.framework.observe(self.certificates.on.certificate_available, self._reconcile)
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
 
-        self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
-        self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
+        self.framework.observe(self._ingress_provider.on.data_provided, self._reconcile)
+        self.framework.observe(self._ingress_provider.on.data_removed, self._reconcile)
 
-        self.framework.observe(
-            self.on.dns_record_relation_created, self._on_dns_record_relation_created
-        )
-        self.framework.observe(
-            self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
-        )
+        self.framework.observe(self.on.dns_record_relation_created, self._reconcile)
+        self.framework.observe(self.on.dns_record_relation_joined, self._reconcile)
 
     def _get_certificate_requests(self) -> list[CertificateRequestAttributes]:
         """Get certificate requests based on charm configuration.
@@ -135,7 +109,7 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    @validate_config_and_integration(defer=False)
+    @validate_config_and_integration()
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
@@ -147,12 +121,12 @@ class GatewayAPICharm(CharmBase):
 
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
+    @validate_config_and_integration()
     def _on_start(self, _: typing.Any) -> None:
         """Handle the start event."""
         self._reconcile()
 
-    @validate_config_and_integration(defer=False)
+    @validate_config_and_integration()
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
         """Triggered when users run the `get-certificate` Juju action.
 
@@ -162,62 +136,21 @@ class GatewayAPICharm(CharmBase):
         hostname = event.params["hostname"]
         TLSInformation.validate(self)
 
-        for cert in self.certificates.get_provider_certificates():
-            if Certificate.from_string(cert).common_name == hostname:
+        for provider_certificate in self.certificates.get_provider_certificates():
+            certificate = provider_certificate.certificate
+            if certificate.common_name == hostname:
                 event.set_results(
                     {
-                        "certificate": str(cert.certificate),
-                        "ca": str(cert.ca),
-                        "chain": "\n\n".join([str(c) for c in cert.chain]),
+                        "certificate": str(certificate),
+                        "ca": str(provider_certificate.ca),
+                        "chain": "\n\n".join([str(c) for c in provider_certificate.chain]),
                     }
                 )
                 return
 
         event.fail(f"Missing or incomplete certificate data for {hostname}")
 
-    @validate_config_and_integration(defer=True)
-    def _on_certificates_relation_created(self, _: RelationCreatedEvent) -> None:
-        """Handle the TLS Certificate relation created event."""
-        TLSInformation.validate(self)
-        # In v4, certificates are automatically requested when the relation is established
-
-    @validate_config_and_integration(defer=True)
-    def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
-        """Handle the TLS Certificate relation joined event."""
-        TLSInformation.validate(self)
-        # In v4, certificates are automatically requested when the relation is joined
-
-    @validate_config_and_integration(defer=False)
-    def _on_certificates_relation_broken(self, _: RelationBrokenEvent) -> None:
-        """Handle the TLS Certificate relation broken event."""
-        self._reconcile()
-
-    @validate_config_and_integration(defer=False)
-    def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:
-        """Handle the TLS Certificate available event."""
-        logger.info("TLS certificate available, creating resources.")
-        self._reconcile()
-
-    @validate_config_and_integration(defer=False)
-    def _on_data_provided(self, _: IngressPerAppDataProvidedEvent) -> None:
-        """Handle the data-provided event."""
-        self._reconcile()
-
-    @validate_config_and_integration(defer=False)
-    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
-        """Handle the data-removed event."""
-        self._reconcile()
-
-    @validate_config_and_integration(defer=False)
-    def _on_dns_record_relation_created(self, _: RelationCreatedEvent) -> None:
-        """Handle the DNS record relation created event."""
-        self._reconcile()
-
-    @validate_config_and_integration(defer=False)
-    def _on_dns_record_relation_joined(self, _: RelationJoinedEvent) -> None:
-        """Handle the DNS record relation joined event."""
-        self._reconcile()
-
+    @validate_config_and_integration()
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 

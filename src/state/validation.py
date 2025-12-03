@@ -19,15 +19,12 @@ logger = logging.getLogger(__name__)
 C = typing.TypeVar("C", bound=ops.CharmBase)
 
 
-def validate_config_and_integration(
-    defer: bool = False,
-) -> typing.Callable[
-    [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]
-]:
+def validate_config_and_integration() -> (
+    typing.Callable[
+        [typing.Callable[[C, typing.Any], None]], typing.Callable[[C, typing.Any], None]
+    ]
+):
     """Create a decorator that puts the charm in blocked state if the config is wrong.
-
-    Args:
-        defer: whether to defer the event.
 
     Returns:
         the function decorator.
@@ -62,10 +59,6 @@ def validate_config_and_integration(
             try:
                 return method(instance, *args)
             except (CharmStateValidationBaseError, IngressIntegrationMissingError) as exc:
-                if defer:
-                    event: ops.EventBase
-                    event, *_ = args
-                    event.defer()
                 logger.exception("Error setting up charm state component: %s", str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 _clean_up_resources_in_blocked_state(instance)

@@ -6,36 +6,16 @@
 from unittest.mock import MagicMock
 
 import pytest
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    CertificateRequestAttributes,
+    PrivateKey,
+)
 from ops.testing import Harness
 
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-
-
-@pytest.mark.usefixtures("client_with_mock_external")
-def test_cert_relation_secret_not_found_error(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    config: dict[str, str],
-):
-    """
-    arrange: Given a charm with mocked tls module methods and valid config.
-    act: when relation with a TLS provider is established and secret is missing.
-    assert: v4 library handles missing secret gracefully by auto-generating keys.
-    """
-    # V4 library auto-generates private keys when secret is not found
-    # So we don't expect SecretNotFoundError anymore
-    harness.set_leader()
-    harness.update_config(config)
-    harness.begin()
-
-    # Should not raise an exception - v4 handles this gracefully
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
-    # Verify the relation was added successfully
-    assert harness.charm.certificates.private_key is not None
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
@@ -50,15 +30,6 @@ def test_tls_information_integration_missing(harness: Harness):
         TLSInformation.from_charm(harness.charm, harness.charm.certificates)
 
 
-# Certificate expiring is handled automatically by v4 library
-
-
-# Certificate invalidation is handled automatically by v4 library
-
-
-# All certificates invalidation is handled automatically by v4 library
-
-
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_certificate_available(
     harness: Harness,
@@ -70,8 +41,6 @@ def test_certificate_available(
     act: Fire certificate_available event.
     assert: The _reconcile method is called once.
     """
-    from charms.tls_certificates_interface.v4.tls_certificates import Certificate
-
     reconcile_mock = MagicMock()
     monkeypatch.setattr("charm.GatewayAPICharm._reconcile", reconcile_mock)
 
@@ -79,11 +48,6 @@ def test_certificate_available(
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.set_leader()
     harness.begin()
-
-    from charms.tls_certificates_interface.v4.tls_certificates import (
-        CertificateRequestAttributes,
-        PrivateKey,
-    )
 
     private_key = PrivateKey.generate()
     cert_attrs = CertificateRequestAttributes(sans_dns=[TEST_EXTERNAL_HOSTNAME_CONFIG])

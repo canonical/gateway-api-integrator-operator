@@ -68,14 +68,14 @@ class GatewayAPICharm(CharmBase):
                 sans_dns=[self.state.external_hostname],
             )
         ]
+        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
+        self.dns_record_requirer = DNSRecordRequires(self)
         self.certificates = TLSCertificatesRequiresV4(
             self,
             TLS_CERT_RELATION,
             certificate_requests=certificate_requests,
             mode=Mode.APP,
         )
-        self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
-        self.dns_record_requirer = DNSRecordRequires(self)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -98,7 +98,7 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration()
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
-        
+
         if self._certificates_revocation_needed(self.client, self.state):
             self.certificates.regenerate_private_key()
             return  # _reconcile will be triggered with certificate_available

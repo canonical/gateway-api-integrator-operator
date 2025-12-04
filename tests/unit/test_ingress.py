@@ -11,6 +11,7 @@ import pytest
 from ops.testing import Harness
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_ingress_ipa_provided(
     harness: Harness,
     monkeypatch: pytest.MonkeyPatch,
@@ -38,6 +39,7 @@ def test_ingress_ipa_provided(
     reconcile_mock.assert_called_once()
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_ingress_ipa_removed(
     harness: Harness,
     monkeypatch: pytest.MonkeyPatch,

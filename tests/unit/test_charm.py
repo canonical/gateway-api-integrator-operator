@@ -35,7 +35,7 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_deploy_missing_tls(harness: Harness):
     """
     arrange: given a stock gateway-api-integrator charm.
@@ -43,10 +43,6 @@ def test_deploy_missing_tls(harness: Harness):
     assert: the charm stays in blocked state.
     """
     harness.begin()
-
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
@@ -175,7 +171,7 @@ def test_certificate_revocation_needed_no_listeners(
     """
     mock_lightkube_client.list = MagicMock(
         return_value=[
-            GenericNamespacedResource(metadata=ObjectMeta(name="gateway"), spec={"listeners": []})
+            GenericNamespacedResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG), spec={"listeners": []})
         ]
     )
     harness.begin()

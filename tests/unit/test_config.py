@@ -16,6 +16,7 @@ from state.config import CharmConfig, InvalidCharmConfigError
 from .conftest import GATEWAY_CLASS_CONFIG
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 @pytest.mark.parametrize(
     "available_gateway_classes",
     [

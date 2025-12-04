@@ -25,6 +25,7 @@ from state.http_route import (
 )
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_http_route_resource_information_integration_missing(harness: Harness):
     """
     arrange: Given a charm missing ingress integration.
@@ -36,6 +37,7 @@ def test_http_route_resource_information_integration_missing(harness: Harness):
         HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_http_route_resource_information_validation_error(harness: Harness):
     """
     arrange: Given a charm with ingress integration with invalid data.
@@ -52,6 +54,7 @@ def test_http_route_resource_information_validation_error(harness: Harness):
         HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_httproute_gen_resource(
     harness: Harness,
     gateway_relation_application_data: dict[str, str],

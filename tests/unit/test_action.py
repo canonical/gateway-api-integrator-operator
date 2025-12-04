@@ -8,9 +8,10 @@ import ops.testing
 import pytest
 from ops.testing import Harness
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_on_get_certificates_action(harness: Harness, certificates_relation_data: dict[str, str]):
     """
     arrange: given a stock gateway-api-integrator charm.
@@ -30,6 +31,7 @@ def test_on_get_certificates_action(harness: Harness, certificates_relation_data
     )
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_on_get_certificates_action_invalid_hostname(
     harness: Harness, certificates_relation_data: dict[str, str]
 ):

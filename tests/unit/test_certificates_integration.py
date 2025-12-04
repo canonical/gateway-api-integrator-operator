@@ -15,7 +15,7 @@ from ops.testing import Harness
 
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
@@ -70,6 +70,7 @@ def test_certificate_available(
 
 
 @pytest.mark.usefixtures("mock_certificate")
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
     """
     arrange: Given a TLS relation service with mocked provider certificate.

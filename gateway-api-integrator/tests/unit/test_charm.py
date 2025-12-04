@@ -14,17 +14,17 @@ from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 from resource_manager.permission import InsufficientPermissionError
 
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import GATEWAY_CLASS_CONFIG
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
-@pytest.mark.usefixtures("patch_lightkube_client")
 def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dict):
     """
     arrange: given a stock gateway-api-integrator charm.
     act: Add a relation to tls provider while config is invalid.
     assert: the charm stays in blocked state.
     """
+    harness.update_config({})
     harness.begin()
 
     harness.add_relation(
@@ -34,18 +34,14 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_deploy_missing_tls(harness: Harness):
     """
     arrange: given a stock gateway-api-integrator charm.
     act: Change the charm's config while tls is not ready.
     assert: the charm stays in blocked state.
     """
-    harness.begin()
-
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
+    harness.begin_with_initial_hooks()
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
@@ -64,7 +60,6 @@ def test_reconcile_api_error_4xx(
     certificates_relation_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     error_code: int,
-    config: dict[str, str],
 ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
     """
     arrange: Given a charm with valid tls/gateway integration and mocked client returning 4xx.
@@ -84,10 +79,8 @@ def test_reconcile_api_error_4xx(
     client_with_mock_external.create.side_effect = ApiError(response=MagicMock(spec=Response))
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.begin()
-
     with pytest.raises(ApiError):
-        harness.update_config(config)
+        harness.begin_with_initial_hooks()
 
 
 def test_reconcile_api_error_forbidden(
@@ -95,7 +88,6 @@ def test_reconcile_api_error_forbidden(
     client_with_mock_external: MagicMock,
     certificates_relation_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
 ):
     """
     arrange: Given a charm with valid tls/gateway integration and mocked client returning 403.
@@ -114,9 +106,7 @@ def test_reconcile_api_error_forbidden(
     client_with_mock_external.create.side_effect = ApiError(response=MagicMock(spec=Response))
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.begin()
-
-    harness.update_config(config)
+    harness.begin_with_initial_hooks()
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
     assert "juju trust" in harness.charm.unit.status.message
@@ -129,7 +119,6 @@ def test_create_http_route_insufficient_permission(
     gateway_relation_application_data: dict[str, str],
     gateway_relation_unit_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
 ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
     """
     arrange: Given a charm with valid tls/gateway integration and mocked
@@ -155,9 +144,7 @@ def test_create_http_route_insufficient_permission(
         unit_data=gateway_relation_unit_data,
     )
     harness.set_leader()
-    harness.begin()
-
-    harness.update_config(config)
+    harness.begin_with_initial_hooks()
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
@@ -174,7 +161,9 @@ def test_certificate_revocation_needed_no_listeners(
     """
     mock_lightkube_client.list = MagicMock(
         return_value=[
-            GenericNamespacedResource(metadata=ObjectMeta(name="gateway"), spec={"listeners": []})
+            GenericNamespacedResource(
+                metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG), spec={"listeners": []}
+            )
         ]
     )
     harness.begin()

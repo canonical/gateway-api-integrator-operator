@@ -24,6 +24,7 @@ from state.http_route import (
 )
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_http_route_resource_information_integration_missing(harness: Harness):
     """
     arrange: Given a charm missing ingress integration.
@@ -35,6 +36,7 @@ def test_http_route_resource_information_integration_missing(harness: Harness):
         HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_http_route_resource_information_validation_error(harness: Harness):
     """
     arrange: Given a charm with ingress integration with invalid data.
@@ -51,11 +53,11 @@ def test_http_route_resource_information_validation_error(harness: Harness):
         HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_httproute_gen_resource(
     harness: Harness,
     gateway_relation_application_data: dict[str, str],
     gateway_relation_unit_data: dict[str, str],
-    config: dict[str, str],
 ):
     """
     arrange: Given a charm with valid config and mocked client.
@@ -63,7 +65,6 @@ def test_httproute_gen_resource(
     assert: The k8s resource is correctly generated.
     """
     client_mock = MagicMock(spec=Client)
-    harness.update_config(config)
     harness.add_relation(
         "gateway",
         "test-charm",
@@ -111,6 +112,7 @@ def test_httproute_gen_resource(
     )
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_patch_http_route(mock_lightkube_client: MagicMock):
     """
     arrange: Given an HTTPRouteResourceManager with mocked lightkube client.

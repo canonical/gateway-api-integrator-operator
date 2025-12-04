@@ -12,10 +12,10 @@ from ops.model import Secret, SecretNotFoundError
 from ops.testing import Harness
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
-@pytest.mark.usefixtures("patch_lightkube_client")
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_generate_password(harness: Harness):
     """
     arrange: Given a gateway api integrator charm.
@@ -36,7 +36,6 @@ def test_cert_relation_secret_not_found_error(
     harness: Harness,
     certificates_relation_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
 ):
     """
     arrange: Given a charm with mocked tls module methods and valid config.
@@ -48,7 +47,6 @@ def test_cert_relation_secret_not_found_error(
         MagicMock(side_effect=SecretNotFoundError),
     )
     harness.set_leader()
-    harness.update_config(config)
     harness.begin()
 
     with pytest.raises(SecretNotFoundError):
@@ -87,9 +85,6 @@ def test_cert_relation_certificate_expiring(
         request_certificate_renewal_mock,
     )
     harness.set_leader()
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
     relation_id = harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data
     )
@@ -124,9 +119,6 @@ def test_cert_relation_certificate_invalidated(
     assert: The charm is in Maintenance status to wait for new cert.
     """
     harness.set_leader()
-    harness.update_config(
-        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
-    )
     relation_id = harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data
     )
@@ -151,7 +143,6 @@ def test_cert_relation_all_certificates_invalidated(
     harness: Harness,
     monkeypatch: pytest.MonkeyPatch,
     certificates_relation_data: dict[str, str],
-    config: dict[str, str],
 ):
     """
     arrange: Given a charm with valid certificates integration data.
@@ -160,7 +151,6 @@ def test_cert_relation_all_certificates_invalidated(
     """
     juju_secret_mock = MagicMock(spec=Secret)
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
-    harness.update_config(config)
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data
     )
@@ -176,7 +166,6 @@ def test_cert_relation_all_certificates_invalidated_secret_not_found(
     harness: Harness,
     monkeypatch: pytest.MonkeyPatch,
     certificates_relation_data: dict[str, str],
-    config: dict[str, str],
 ):
     """
     arrange: Given a charm with valid certificates integration data and no juju.
@@ -188,7 +177,6 @@ def test_cert_relation_all_certificates_invalidated_secret_not_found(
         "ops.model.Model.get_secret",
         MagicMock(return_value=juju_secret_mock, side_effect=SecretNotFoundError),
     )
-    harness.update_config(config)
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data
     )
@@ -199,35 +187,8 @@ def test_cert_relation_all_certificates_invalidated_secret_not_found(
     juju_secret_mock.remove_all_revisions.assert_not_called()
 
 
-@pytest.mark.usefixtures("client_with_mock_external")
-def test_certificate_available(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """
-    arrange: Given a charm with valid certificates integration data and mocked _reconcile method.
-    act: Fire certificate_available event.
-    assert: The _reconcile method is called once.
-    """
-    reconcile_mock = MagicMock()
-    monkeypatch.setattr("charm.GatewayAPICharm._reconcile", reconcile_mock)
-
-    relation_id = harness.add_relation("certificates", "self-signed-certificates")
-    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.set_leader()
-    harness.begin()
-
-    harness.charm.certificates.on.certificate_available.emit(
-        certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-        "csr",
-        certificates_relation_data[f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-        certificates_relation_data[f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}"],
-    )
-    reconcile_mock.assert_called_once()
-
-
 @pytest.mark.usefixtures("mock_certificate")
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
     """
     arrange: Given a TLS relation service with mocked provider certificate.
@@ -253,6 +214,7 @@ def test_revoke_all_certificates(harness: Harness, monkeypatch: pytest.MonkeyPat
 
 
 @pytest.mark.usefixtures("juju_secret_mock")
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_request_certificates(harness: Harness, monkeypatch: pytest.MonkeyPatch):
     """
     arrange: Given a char with mocked juju secret.

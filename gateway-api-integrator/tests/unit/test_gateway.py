@@ -29,7 +29,6 @@ def test_create_gateway(  # pylint: disable=too-many-arguments, too-many-positio
     certificates_relation_data: dict[str, str],
     gateway_relation_application_data: dict[str, str],
     gateway_relation_unit_data: dict[str, str],
-    config: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ):
     """
@@ -50,9 +49,7 @@ def test_create_gateway(  # pylint: disable=too-many-arguments, too-many-positio
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.set_leader()
-    harness.begin()
-
-    harness.update_config(config)
+    harness.begin_with_initial_hooks()
 
     assert harness.charm.unit.status.name == ops.ActiveStatus.name
 
@@ -61,7 +58,6 @@ def test_gateway_resource_definition_insufficient_permission(
     harness: Harness,
     certificates_relation_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
 ):
     """
     arrange: given a charm with mocked lightkube client that returns 403.
@@ -82,8 +78,7 @@ def test_gateway_resource_definition_insufficient_permission(
         "charm.get_client",
         lightkube_client_mock,
     )
-    harness.begin()
-    harness.update_config(config)
+    harness.begin_with_initial_hooks()
 
     assert harness.charm.unit.status.name == ops.BlockedStatus.name
 
@@ -92,7 +87,6 @@ def test_gateway_resource_definition_api_error_4xx(
     harness: Harness,
     certificates_relation_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
 ):
     """
     arrange: given a charm with mocked lightkube client that returns 404.
@@ -113,15 +107,12 @@ def test_gateway_resource_definition_api_error_4xx(
         "charm.get_client",
         lightkube_client_mock,
     )
-    harness.begin()
-
     with pytest.raises(ApiError):
-        harness.update_config(config)
+        harness.begin_with_initial_hooks()
 
 
 def test_gateway_gen_resource(
     harness: Harness,
-    config: dict[str, str],
     certificates_relation_data: dict[str, str],
     client_with_mock_external: MagicMock,
 ):
@@ -132,7 +123,6 @@ def test_gateway_gen_resource(
     """
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.update_config(config)
     harness.begin()
 
     gateway_resource_information = GatewayResourceInformation.from_charm(harness.charm)

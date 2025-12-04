@@ -22,6 +22,9 @@ GATEWAY_CLASS_CONFIG = "cilium"
 def harness_fixture():
     """Enable ops test framework harness."""
     harness = Harness(GatewayAPICharm)
+    harness.update_config(
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
+    )
     yield harness
     harness.cleanup()
 
@@ -53,15 +56,6 @@ def gateway_relation_application_data_fixture() -> dict[str, str]:
 def gateway_relation_unit_data_fixture() -> dict[str, str]:
     """Mock gateway relation unit data."""
     return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
-
-
-@pytest.fixture(scope="function", name="patch_lightkube_client")
-def patch_lightkube_client_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """Patch lightkube cluster initialization."""
-    monkeypatch.setattr("client.KubeConfig", MagicMock())
-    monkeypatch.setattr("client.Client", MagicMock())
 
 
 @pytest.fixture(scope="function", name="mock_lightkube_client")
@@ -138,15 +132,6 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
         MagicMock(return_value=[provider_cert_mock]),
     )
     return cert
-
-
-@pytest.fixture(scope="function", name="config")
-def config_fixture() -> dict[str, str]:
-    """Valid charm config fixture."""
-    return {
-        "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
-        "gateway-class": GATEWAY_CLASS_CONFIG,
-    }
 
 
 @pytest.fixture(scope="function", name="client_with_mock_external")

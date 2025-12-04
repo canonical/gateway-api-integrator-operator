@@ -10,7 +10,6 @@ from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource
 from lightkube.models.meta_v1 import ObjectMeta
 from ops.testing import Harness
-
 from state.config import CharmConfig, InvalidCharmConfigError
 
 from .conftest import GATEWAY_CLASS_CONFIG

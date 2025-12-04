@@ -4,10 +4,9 @@
 """Unit tests for the charm."""
 
 import pytest
-from ops import testing
-
 from charm import GatewayAPICharm
 from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
+from ops import testing
 
 
 def test_dns_record(base_state: dict) -> None:

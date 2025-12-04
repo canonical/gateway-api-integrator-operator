@@ -12,7 +12,6 @@ from lightkube.core.client import LabelSelector
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
-
 from state.base import ResourceDefinition
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation

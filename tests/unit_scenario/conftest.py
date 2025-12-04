@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from ops import testing
-
 from state.config import CharmConfig
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"

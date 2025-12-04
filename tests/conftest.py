@@ -10,7 +10,6 @@ def pytest_addoption(parser):
     Args:
         parser: Pytest parser.
     """
-    parser.addoption("--charm-file", action="store")
-    parser.addoption("--gateway-route-configurator-charm-file", action="store")
+    parser.addoption("--charm-file", action="append")
     parser.addoption("--kube-config", action="store", default="~/.kube/config")
 

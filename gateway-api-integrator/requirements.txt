@@ -3,5 +3,4 @@ jsonschema==4.25.1
 lightkube==0.18.0
 ops==2.23.1
 pydantic==2.12.5
-rpds-py==0.29.0
-
+rpds-py==0.30.0

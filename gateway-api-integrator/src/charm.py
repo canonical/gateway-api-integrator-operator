@@ -73,18 +73,8 @@ class GatewayAPICharm(CharmBase):
         self._tls = TLSRelationService(self.model, self.certificates)
         self.dns_record_requirer = DNSRecordRequires(self)
 
-        self.client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        try:
-            self.charm_config = CharmConfig.from_charm(self, self.client)
-        except InvalidCharmConfigError as e:
-            self.unit.status = BlockedStatus(str(e))
-            return
-        except InsufficientPermissionError as e:
-            self.unit.status = BlockedStatus(str(e))
-            return
-
         self.framework.observe(self.on.start, self._reconcile)
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.config_changed, self._reconcile)
 
         self.framework.observe(
             self.on.certificates_relation_joined, self._on_certificates_relation_joined
@@ -113,17 +103,6 @@ class GatewayAPICharm(CharmBase):
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
-    @validate_config_and_integration(defer=False)
-    def _on_config_changed(self, _: typing.Any) -> None:
-        """Handle the config-changed event."""
-        TLSInformation.validate(self)
-        if self._certificates_revocation_needed(self.client, self.charm_config):
-            self._tls.revoke_all_certificates()
-            self._tls.generate_private_key(self.charm_config.external_hostname)
-            self._tls.request_certificate(self.charm_config.external_hostname)
-            return  # _reconcile will be triggered with the next certificates_available event.
-
-        self._reconcile(_)
 
     @validate_config_and_integration(defer=False)
     def _on_get_certificate_action(self, event: ActionEvent) -> None:
@@ -151,8 +130,17 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=True)
     def _on_certificates_relation_joined(self, _: RelationJoinedEvent) -> None:
         """Handle the TLS Certificate relation joined event."""
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        try:
+            charm_config = CharmConfig.from_charm(self, client)
+        except InvalidCharmConfigError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
+        except InsufficientPermissionError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
         TLSInformation.validate(self)
-        self._tls.request_certificate(self.charm_config.external_hostname)
+        self._tls.request_certificate(charm_config.external_hostname)
 
     @validate_config_and_integration(defer=True)
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
@@ -171,6 +159,15 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: The event that fires this method.
         """
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        try:
+            charm_config = CharmConfig.from_charm(self, client)
+        except InvalidCharmConfigError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
+        except InsufficientPermissionError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
         TLSInformation.validate(self)
         if event.reason == "revoked":
             self._tls.certificate_invalidated(event)
@@ -181,9 +178,17 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=True)
     def _on_all_certificates_invalidated(self, _: AllCertificatesInvalidatedEvent) -> None:
         """Handle the TLS Certificate relation broken event."""
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        try:
+            charm_config = CharmConfig.from_charm(self, client)
+        except InvalidCharmConfigError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
+        except InsufficientPermissionError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
         TLSInformation.validate(self)
-        hostname = self.charm_config.external_hostname
-
+        hostname = charm_config.external_hostname
         try:
             secret = self.model.get_secret(label=f"private-key-{hostname}")
             secret.remove_all_revisions()
@@ -205,22 +210,37 @@ class GatewayAPICharm(CharmBase):
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
         """
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        try:
+            charm_config = CharmConfig.from_charm(self, client)
+        except InvalidCharmConfigError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
+        except InsufficientPermissionError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
+        TLSInformation.validate(self)
+        if self._certificates_revocation_needed(client, charm_config):
+            self._tls.revoke_all_certificates()
+            self._tls.generate_private_key(charm_config.external_hostname)
+            self._tls.request_certificate(charm_config.external_hostname)
+            return  # _reconcile will be triggered with the next certificates_available event.
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
         self.unit.status = MaintenanceStatus("Creating resources.")
         resource_manager = GatewayResourceManager(
             labels=self._labels,
-            client=self.client,
+            client=client,
         )
         self._define_gateway_resource(
-            resource_manager, gateway_resource_information, self.charm_config, tls_information
+            resource_manager, gateway_resource_information, charm_config, tls_information
         )
-        self._define_secret_resources(self.client, self.charm_config, tls_information)
+        self._define_secret_resources(client, charm_config, tls_information)
         self._define_ingress_resources_and_publish_url(
-            self.client, self.charm_config, gateway_resource_information
+            client, charm_config, gateway_resource_information
         )
         self._update_dns_record_relation(
-            resource_manager, self.charm_config.external_hostname, gateway_resource_information
+            resource_manager, charm_config.external_hostname, gateway_resource_information
         )
         self._set_status_gateway_address(resource_manager, gateway_resource_information)
 

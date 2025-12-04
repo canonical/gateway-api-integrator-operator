@@ -116,6 +116,7 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        TLSInformation.validate(self)
         if self._certificates_revocation_needed(self.client, self.charm_config):
             self._tls.revoke_all_certificates()
             self._tls.generate_private_key(self.charm_config.external_hostname)

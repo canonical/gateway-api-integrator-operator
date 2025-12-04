@@ -24,7 +24,7 @@ from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
 from lightkube import Client
 from ops.charm import ActionEvent, CharmBase
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 
 from client import get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
@@ -34,6 +34,7 @@ from resource_manager.http_route import (
     HTTPRouteResourceManager,
     HTTPRouteType,
 )
+from resource_manager.permission import InsufficientPermissionError
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import CharmConfig
@@ -41,6 +42,7 @@ from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
+from tls_relation import TLSRelationService
 
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
@@ -62,7 +64,11 @@ class GatewayAPICharm(CharmBase):
         super().__init__(*args)
 
         self.client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        self.state = CharmConfig.from_charm(self, self.client)
+        try:
+            self.state = CharmConfig.from_charm(self, self.client)
+        except InsufficientPermissionError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
         certificate_requests = [
             CertificateRequestAttributes(
                 sans_dns=[self.state.external_hostname],
@@ -76,6 +82,7 @@ class GatewayAPICharm(CharmBase):
             certificate_requests=certificate_requests,
             mode=Mode.APP,
         )
+        self._tls = TLSRelationService(self.model, self.certificates)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -100,7 +107,10 @@ class GatewayAPICharm(CharmBase):
         """Handle the config-changed event."""
 
         if self._certificates_revocation_needed(self.client, self.state):
-            self.certificates.regenerate_private_key()
+            self._tls.revoke_all_certificates()
+            self._tls.generate_private_key(self.charm_config.external_hostname)
+            self._tls.request_certificate(self.charm_config.external_hostname)
+            # self.certificates.regenerate_private_key()
             return  # _reconcile will be triggered with certificate_available
 
         self._reconcile()

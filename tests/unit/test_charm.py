@@ -44,7 +44,7 @@ def test_deploy_missing_tls(harness: Harness):
     """
     harness.begin()
 
-    assert harness.charm.unit.status.name == ops.BlockedStatus.name
+    assert harness.charm.unit.status.name == ops.WaitingStatus.name
 
 
 @pytest.mark.parametrize(

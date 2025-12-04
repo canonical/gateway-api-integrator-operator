@@ -32,6 +32,7 @@ def test_config(harness: Harness, available_gateway_classes: str):
     """
     harness.update_config(
         {
+            "external-hostname": "",
             "gateway-class": GATEWAY_CLASS_CONFIG,
         }
     )

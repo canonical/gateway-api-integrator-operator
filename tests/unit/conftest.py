@@ -24,7 +24,7 @@ def harness_fixture():
     """Enable ops test framework harness."""
     harness = Harness(GatewayAPICharm)
     harness.update_config(
-        {"gateway-class": GATEWAY_CLASS_CONFIG, "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG}
+        {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
     )
     yield harness
     harness.cleanup()

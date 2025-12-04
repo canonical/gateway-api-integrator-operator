@@ -42,7 +42,7 @@ from resource_manager.http_route import (
 from resource_manager.permission import InsufficientPermissionError
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
-from state.config import CharmConfig
+from state.config import CharmConfig, InvalidCharmConfigError
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 from state.tls import TLSInformation
@@ -76,6 +76,9 @@ class GatewayAPICharm(CharmBase):
         self.client = get_client(field_manager=self.app.name, namespace=self.model.name)
         try:
             self.charm_config = CharmConfig.from_charm(self, self.client)
+        except InvalidCharmConfigError as e:
+            self.unit.status = BlockedStatus(str(e))
+            return
         except InsufficientPermissionError as e:
             self.unit.status = BlockedStatus(str(e))
             return
@@ -186,6 +189,7 @@ class GatewayAPICharm(CharmBase):
         except SecretNotFoundError:
             logger.warning("Juju secret for %s already does not exist", hostname)
 
+    @validate_config_and_integration(defer=False)
     def _reconcile(self, _: HookEvent) -> None:
         """Reconcile charm status based on configuration and integrations.
 

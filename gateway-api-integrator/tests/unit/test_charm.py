@@ -24,7 +24,7 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
     act: Add a relation to tls provider while config is invalid.
     assert: the charm stays in blocked state.
     """
-    harness.update_config({})
+    harness.update_config({"gateway-class": "not-available"})
     harness.begin()
 
     harness.add_relation(

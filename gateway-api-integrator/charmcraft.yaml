@@ -1,0 +1,82 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+type: charm
+base: ubuntu@24.04
+build-base: ubuntu@24.04
+
+platforms:
+  amd64:
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+    - astral-uv
+    build-packages:
+      - build-essential
+      - python3-dev
+      - pkg-config
+      - libffi-dev
+      - libssl-dev
+# parts:
+#   charm:
+#     build-packages:
+#       - build-essential
+#       - python3-dev
+#       - pkg-config
+#       - libffi-dev
+#       - libssl-dev
+#     build-snaps:
+#       - rustup
+#     override-build: |
+#       rustup default stable
+#       craftctl default
+
+name: gateway-api-integrator
+title: Gateway API Integrator
+description: |
+  A [Juju](https://juju.is/) [charm](https://juju.is/docs/olm/charmed-operators) deploying and managing external access to HTTP/HTTPS services in a
+  Kubernetes cluster via a Gateway and an HTTPRoute resource. This requires the Kubernetes
+  cluster in question to have an Gateway API controller already deployed into it.
+summary: An operator to manage gateway resources.
+links:
+  documentation: https://discourse.charmhub.io/t/gateway-api-integrator-documentation-overview/14336
+  issues: https://github.com/canonical/gateway-api-integrator-operator/issues
+  source: https://github.com/canonical/gateway-api-integrator-operator
+  contact:
+    - https://launchpad.net/~canonical-is-devops
+assumes:
+  - k8s-api
+  - juju >= 3.3
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+  dns-record:
+    interface: dns_record
+provides:
+  gateway:
+    interface: ingress
+    limit: 1
+  gateway-route:
+    interface: gateway-route
+
+config:
+  options:
+    external-hostname:
+      default: ""
+      description: The hostname of the gateway.
+      type: string
+    gateway-class:
+      default: ""
+      description: The gateway class.
+      type: string
+
+
+actions:
+  get-certificate:
+    description: Returns the TLS Certificate. Intended for testing and debugging purposes.
+    params:
+      hostname:
+        type: string
+        description: Hostname to extract certs from.

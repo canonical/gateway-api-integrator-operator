@@ -4,6 +4,7 @@
 """General configuration module for Jubilant integration tests."""
 
 import logging
+import os
 import pathlib
 
 import jubilant
@@ -38,18 +39,33 @@ def juju_model_fixture(request: pytest.FixtureRequest):
             logger.debug(log)
 
 
+@pytest.fixture(scope="module", name="charm")
+def charm_fixture(pytestconfig: pytest.Config) -> str:
+    """Get value from parameter charm-file."""
+    charm_files = pytestconfig.getoption("--charm-file")
+    if charm_files is None:
+        charm_files = []
+
+    charm = next((f for f in charm_files if "gateway-api-integrator" in f), None)
+
+    assert charm, "--charm-file must be set"
+    if not os.path.exists(charm):
+        logger.info("Using parent directory for charm file")
+        charm = os.path.join("..", charm)
+    return charm
+
+
 @pytest.fixture(scope="module")
 def app(
-    juju: jubilant.Juju, gateway_class: str, external_hostname: str, pytestconfig: pytest.Config
+    juju: jubilant.Juju,
+    gateway_class: str,
+    external_hostname: str,
+    charm: str,
+    pytestconfig: pytest.Config,
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
-    configured_charm_path = pytestconfig.getoption("--charm-file")
     juju.deploy(
-        (
-            str(configured_charm_path)
-            if configured_charm_path
-            else charm_path("gateway-api-integrator")
-        ),
+        (charm if charm else charm_path("gateway-api-integrator")),
         "gateway-api-integrator",
         base="ubuntu@24.04",
         trust=True,

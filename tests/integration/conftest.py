@@ -33,17 +33,9 @@ async def charm_fixture(pytestconfig: pytest.Config) -> str:
     charm_files = pytestconfig.getoption("--charm-file")
     if charm_files is None:
         charm_files = []
-    
-    charm = next(
-        (f for f in charm_files if "gateway-api-integrator" in f), None
-    )
-    
-    # If we couldn't find a charm with the full path, look for one with just the name pattern
-    if charm is None:
-        charm = next(
-            (f for f in charm_files if "gateway-api-integrator" in f), None
-        )
-    
+
+    charm = next((f for f in charm_files if "gateway-api-integrator" in f), None)
+
     assert charm, "--charm-file must be set"
     if not os.path.exists(charm):
         logger.info("Using parent directory for charm file")

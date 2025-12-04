@@ -7,10 +7,9 @@ import functools
 import logging
 import typing
 
+import client
 import ops
 from ops.model import SecretNotFoundError
-
-import client
 from resource_manager.resource_manager import InvalidResourceError
 from state.exception import CharmStateValidationBaseError
 from state.http_route import IngressIntegrationMissingError

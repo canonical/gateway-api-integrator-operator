@@ -7,7 +7,6 @@ import dataclasses
 
 import ops
 from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
-
 from tls_relation import get_hostname_from_cert
 
 from .exception import CharmStateValidationBaseError

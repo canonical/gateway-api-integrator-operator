@@ -8,7 +8,6 @@ import typing
 
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Secret, Service
-
 from state.base import ResourceDefinition
 
 logger = logging.getLogger(__name__)

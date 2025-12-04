@@ -10,7 +10,6 @@ from unittest.mock import MagicMock
 import pytest
 from lightkube.core.client import Client
 from ops.testing import Harness
-
 from resource_manager.http_route import (
     HTTPRouteRedirectResourceManager,
     HTTPRouteResourceDefinition,

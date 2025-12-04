@@ -7,7 +7,6 @@
 from unittest.mock import MagicMock
 
 from ops.testing import Harness
-
 from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,

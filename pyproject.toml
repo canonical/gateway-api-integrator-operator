@@ -33,6 +33,7 @@ docstring-convention = "google"
 [tool.isort]
 line_length = 99
 profile = "black"
+skip = ["gateway-api-integrator/lib"]
 
 [tool.mypy]
 check_untyped_defs = true
@@ -46,7 +47,7 @@ disallow_untyped_defs = false
 module = "tests.*"
 
 [tool.pylint]
-disable = "wrong-import-order"
+disable = "wrong-import-order,duplicate-code"
 
 [tool.pytest.ini_options]
 minversion = "6.0"

@@ -3,9 +3,8 @@
 
 """Unit tests for the charm."""
 import pytest
-from ops import testing
-
 from charm import GatewayAPICharm
+from ops import testing
 
 
 def test_dns_record(base_state: dict) -> None:

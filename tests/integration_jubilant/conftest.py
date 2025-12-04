@@ -61,7 +61,6 @@ def app(
     gateway_class: str,
     external_hostname: str,
     charm: str,
-    pytestconfig: pytest.Config,
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     juju.deploy(

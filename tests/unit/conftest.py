@@ -6,13 +6,12 @@
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
+from charm import GatewayAPICharm
 from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta
 from ops.model import Secret
 from ops.testing import Harness
-
-from charm import GatewayAPICharm
 from tls_relation import TLSRelationService, generate_private_key
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"

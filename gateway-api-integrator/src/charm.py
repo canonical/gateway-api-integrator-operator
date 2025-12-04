@@ -27,6 +27,7 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
+from client import get_client
 from lightkube import Client
 from ops.charm import (
     ActionEvent,
@@ -37,8 +38,6 @@ from ops.charm import (
 )
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
-
-from client import get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteRedirectResourceManager,

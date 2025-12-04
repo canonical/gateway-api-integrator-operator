@@ -12,7 +12,6 @@ from lightkube import Client
 from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
-
 from resource_manager.permission import map_k8s_auth_exception
 
 from .exception import CharmStateValidationBaseError

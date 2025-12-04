@@ -13,7 +13,6 @@ from lightkube.core.client import LabelSelector
 from lightkube.core.exceptions import ConfigError
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from lightkube.resources.core_v1 import Service
-
 from resource_manager.permission import map_k8s_auth_exception
 
 logger = logging.getLogger(__name__)

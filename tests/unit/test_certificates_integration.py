@@ -7,10 +7,9 @@ from unittest.mock import MagicMock
 
 import ops
 import pytest
+import tls_relation
 from ops.model import Secret, SecretNotFoundError
 from ops.testing import Harness
-
-import tls_relation
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG

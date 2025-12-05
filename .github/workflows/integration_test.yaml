@@ -21,7 +21,7 @@ jobs:
       juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
-      modules: '["test_actions.py", "test_charm.py", "test_congigurator.py"]'
+      modules: '["test_actions.py", "test_charm.py", "test_configurator.py"]'
       tmate-debug: false
   allure-report:
     if: ${{ !cancelled() && github.event_name == 'schedule' }}

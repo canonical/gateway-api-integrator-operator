@@ -24,4 +24,5 @@ header:
     - 'pyproject.toml'
     - 'zap_rules.tsv'
     - 'gateway-api-integrator/lib/charms/bind/v0/dns_record.py'
+    - '**/uv.lock'
   comment: on-failure

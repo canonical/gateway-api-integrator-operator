@@ -10,20 +10,28 @@ import re
 import typing
 
 import ops
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequires
+from charms.gateway_api_integrator.v0.gateway_route import (
+    DataValidationError as GatewayRouteDataValidationError,
+)
+from charms.gateway_api_integrator.v0.gateway_route import (
+    GatewayRouteRequires,
+)
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)
 
-HOSTNAME_REGEX = re.compile(
-    r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-)
+HOSTNAME_REGEX = re.compile(r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$")
 
 
 class GatewayRouteConfiguratorCharm(ops.CharmBase):
     """Charm the service."""
 
     def __init__(self, *args: typing.Any):
+        """Init method for the class.
+
+        Args:
+            args: Variable list of positional arguments passed to the parent constructor.
+        """
         super().__init__(*args)
 
         self.ingress = IngressPerAppProvider(self, relation_name="ingress")
@@ -35,21 +43,21 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         self.framework.observe(self.on.gateway_route_relation_joined, self._on_update)
         self.framework.observe(self.on.gateway_route_relation_changed, self._on_update)
 
-    def _on_update(self, _):
+    def _on_update(self, _: typing.Any) -> None:
         """Handle updates to config or relations."""
         self.unit.status = ops.MaintenanceStatus("Configuring gateway route")
 
         # 1. Get Config
-        hostname = self.model.config.get("hostname")
-        paths_str = self.model.config.get("paths", "/")
+        hostname = str(self.model.config.get("hostname"))
+        paths_str = str(self.model.config.get("paths", "/"))
 
         if not hostname:
             self.unit.status = ops.BlockedStatus("Missing 'hostname' config")
             return
 
         if not HOSTNAME_REGEX.match(hostname):
-             self.unit.status = ops.BlockedStatus(f"Invalid hostname: {hostname}")
-             return
+            self.unit.status = ops.BlockedStatus(f"Invalid hostname: {hostname}")
+            return
 
         paths = [p.strip() for p in paths_str.split(",")]
 
@@ -62,8 +70,8 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         try:
             # We assume single app relation for now
             if not self.ingress.relations:
-                 self.unit.status = ops.WaitingStatus("Waiting for ingress relation")
-                 return
+                self.unit.status = ops.WaitingStatus("Waiting for ingress relation")
+                return
 
             # Use the first relation that has data
             # IngressPerAppProvider.get_data returns IngressRequirerAppData
@@ -83,16 +91,6 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         except DataValidationError:
             self.unit.status = ops.BlockedStatus("Invalid ingress data")
             return
-        except Exception:
-            # If get_data fails (e.g. data not ready), wait.
-            self.unit.status = ops.WaitingStatus("Waiting for ingress data")
-            return
-
-        logging.error(f"{hostname=}")
-        logging.error(f"{paths=}")
-        logging.error(f"{port=}")
-        logging.error(f"{application_name}")
-        logging.error(f"{model_name}")
 
         # 3. Send to Gateway Route
         try:
@@ -104,7 +102,7 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
                 model=model_name,
             )
             self.unit.status = ops.ActiveStatus("Ready")
-        except Exception as e:
+        except GatewayRouteDataValidationError as e:
             logger.exception("Failed to send route configuration")
             self.unit.status = ops.BlockedStatus(f"Error sending config: {e}")
 

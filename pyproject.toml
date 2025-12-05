@@ -33,7 +33,7 @@ docstring-convention = "google"
 [tool.isort]
 line_length = 99
 profile = "black"
-skip = ["gateway-api-integrator/lib"]
+skip = ["gateway-api-integrator/lib", "gateway-route-configurator/lib"]
 
 [tool.mypy]
 check_untyped_defs = true
@@ -43,7 +43,7 @@ ignore_missing_imports = true
 namespace_packages = true
 
 [[tool.mypy.overrides]]
-module =[ 'gateway_api_integrator/tests.*' , "tests.*"]
+module =['gateway_api_integrator/tests.*', "tests.*"]
 disallow_untyped_defs = false
 
 [tool.pylint]

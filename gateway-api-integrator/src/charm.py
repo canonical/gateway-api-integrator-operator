@@ -386,6 +386,7 @@ class GatewayAPICharm(CharmBase):
         )
         secret = resource_manager.define_resource(resource_definition)
         resource_manager.cleanup_resources(exclude=[secret])
+
     def _get_hostname(self) -> str:
         """Get the hostname from the charm's config or stored attribute.
 

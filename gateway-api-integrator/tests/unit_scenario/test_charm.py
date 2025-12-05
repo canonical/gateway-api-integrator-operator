@@ -67,15 +67,15 @@ def test_gateway_route(base_state: dict) -> None:
     """
     ctx = testing.Context(GatewayAPICharm)
     state = testing.State(**base_state)
-    gateway_route_relation = testing.Relation(
-        endpoint="gateway-route",
-        interface="gateway_route",
-        remote_app_data={
-            "model": "testing-model",
-            "name": "testing-gateway-route-app",
-            "port": "8080",
-        },
-    )
+    # gateway_route_relation = testing.Relation(
+    #     endpoint="gateway-route",
+    #     interface="gateway_route",
+    #     remote_app_data={
+    #         "model": "testing-model",
+    #         "name": "testing-gateway-route-app",
+    #         "port": "8080",
+    #     },
+    # )
     state = ctx.run(ctx.on.custom(GatewayRouteProvider.on.data_provided), state)
     mock_dns_entry_str = (
         '[{"domain": "www.gateway.internal", '

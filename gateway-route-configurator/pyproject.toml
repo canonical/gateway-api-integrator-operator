@@ -103,7 +103,7 @@ lint.ignore = [
   "UP035",
   "UP045",
 ]
-lint.per-file-ignores."tests/*" = [ "B011", "D100", "D101", "D102", "D103", "D104", "D212", "D415", "D417", "S" ]
+lint.per-file-ignores."tests/*" = [ "B011", "D100", "D101", "D102", "D103", "D104", "D205", "D212", "D415", "D417", "S" ]
 lint.flake8-copyright.author = "Canonical Ltd."
 lint.flake8-copyright.min-file-size = 1
 lint.flake8-copyright.notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
@@ -132,8 +132,8 @@ ignore_missing_imports = true
 namespace_packages = true
 
 [[tool.mypy.overrides]]
-disallow_untyped_defs = false
 module = "tests.*"
+disallow_untyped_defs = false
 
 [tool.bandit]
 exclude_dirs = [ "/venv/" ]

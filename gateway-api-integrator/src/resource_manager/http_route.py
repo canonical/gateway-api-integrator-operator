@@ -53,6 +53,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
         http_route_type: Type of the HTTP route, can be http or https.
+        integration: The type of integration, can be ingress or gateway-api.
+        paths: The list of paths to be added to the HTTPRoute resource.
         strip_prefix: Whether to create a path rewrite filter for proxied requests.
     """
 
@@ -179,6 +181,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
 
         Args:
             resource_definition: The resource definition object.
+
         Returns:
             A dictionary representing the paths for the HTTPRoute resource.
         """
@@ -188,13 +191,13 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         if http_route_resource_definition.integration == "ingress":
             return [
                 {
-                "path": {
-                    "type": "PathPrefix",
-                    "value": (
-                        f"/{http_route_resource_definition.requirer_model_name}"
-                        f"-{http_route_resource_definition.application_name}"
-                    ),
-                }
+                    "path": {
+                        "type": "PathPrefix",
+                        "value": (
+                            f"/{http_route_resource_definition.requirer_model_name}"
+                            f"-{http_route_resource_definition.application_name}"
+                        ),
+                    }
                 }
             ]
         path_list = []
@@ -202,12 +205,14 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
 
         for path in http_route_resource_definition.paths:
             logger.error(f"Adding path {path} to HTTPRoute resource")
-            path_list.append({
-                "path": {
-                    "type": "PathPrefix",
-                    "value": path,
+            path_list.append(
+                {
+                    "path": {
+                        "type": "PathPrefix",
+                        "value": path,
+                    }
                 }
-            })
+            )
         return path_list
 
     @map_k8s_auth_exception

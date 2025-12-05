@@ -320,7 +320,7 @@ class _GatewayRouteEvent(RelationEvent):
         super().__init__(handle, relation)
 
         if not len(self.__args__) == len(args):
-            raise TypeError(f"expected {len(self.__args__)} args, got {len(args)}")
+            raise TypeError("expected {} args, got {}".format(len(self.__args__), len(args)))
 
         for attr, obj in zip(self.__args__, args):
             setattr(self, attr, obj)
@@ -336,9 +336,9 @@ class _GatewayRouteEvent(RelationEvent):
                 dct[attr] = obj
             except ValueError as e:
                 raise ValueError(
-                    f"cannot automagically serialize {obj}: "
+                    "cannot automagically serialize {}: "
                     "override this method and do it "
-                    "manually."
+                    "manually.".format(obj)
                 ) from e
 
         return dct
@@ -446,9 +446,9 @@ class GatewayRouteProvider(_GatewayRouteBase):
             relation.data
         except ModelError as e:
             logger.warning(
-                f"error {e} accessing relation data for {relation.name!r}. "
+                "error {} accessing relation data for {!r}. "
                 "Probably a ghost of a dead relation is still "
-                "lingering around."
+                "lingering around.".format(e, relation.name)
             )
             return
         del relation.data[self.app]["gateway-route"]
@@ -495,10 +495,10 @@ class GatewayRouteProvider(_GatewayRouteBase):
             # If we cannot validate the url as valid, publish an empty databag and log the error.
             logger.error(f"Failed to validate ingress url '{url}' - got ValidationError {e}")
             logger.error(
-
+                (
                     f"url was not published to ingress relation for {relation.app}."
                     f"This error is likely due to an error or misconfiguration of the"
                     "charm calling this library."
-
+                )
             )
             GatewayRouteProviderAppData(ingress=None).dump(relation.data[self.app])  # type: ignore

@@ -201,8 +201,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     name=name,
                 )
                 gateway_addresses = [
-                    addr["value"]
-                    for addr in gateway.status["addresses"]  # type: ignore
+                    addr["value"] for addr in gateway.status["addresses"]  # type: ignore
                 ]
                 if gateway_addresses:
                     gateway_address = ",".join(gateway_addresses)

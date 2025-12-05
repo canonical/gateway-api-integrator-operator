@@ -47,12 +47,15 @@ class CharmConfig:
 
     @classmethod
     @map_k8s_auth_exception
-    def from_charm(cls, charm: ops.CharmBase, client: Client, hostname: typing.Optional[str] = None) -> "CharmConfig":
+    def from_charm(
+        cls, charm: ops.CharmBase, client: Client, hostname: typing.Optional[str] = None
+    ) -> "CharmConfig":
         """Create a CharmConfig class from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
             client: The lightkube client
+            hostname: Optional hostname to override charm config.
 
         Raises:
             InvalidCharmConfigError: When the chamr's config is invalid.
@@ -89,7 +92,8 @@ class CharmConfig:
         try:
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=hostname or typing.cast(str, charm.config.get("external-hostname")),
+                external_hostname=hostname
+                or typing.cast(str, charm.config.get("external-hostname")),
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

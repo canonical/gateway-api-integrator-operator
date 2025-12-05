@@ -34,6 +34,9 @@ class HTTPRouteResourceInformation:
         service_port: The port of the service.
         service_port_name: The port name of the service.
         strip_prefix: Whether to strip the generated prefix.
+        integration: The type of integration, can be ingress or gateway-api.
+        paths: The list of paths to be added to the HTTPRoute resource.
+        hostname: The hostname to be used in the HTTPRoute resource.
     """
 
     application_name: str
@@ -58,6 +61,7 @@ class HTTPRouteResourceInformation:
         Args:
             charm (ops.CharmBase): The gateway-api-integrator charm.
             ingress_provider (IngressPerAppProvider): The ingress provider library.
+            gateway_route_provider (GatewayRouteProvider): The gateway route provider library.
 
 
         Raises:

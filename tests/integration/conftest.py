@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class App(NamedTuple):
     """Holds deployed application information for app_fixture.
 
-    Attrs:
-        name: The name of the deployed application.
+    Attributes:
+        name (str): The name of the deployed application.
     """
 
     name: str
@@ -67,7 +67,7 @@ def charm_fixture(pytestconfig: pytest.Config) -> str:
 
 
 @pytest.fixture(scope="module")
-def gateway_app(
+def gateway_api_integrator(
     juju: jubilant.Juju,
     gateway_class: str,
     charm: str,
@@ -88,11 +88,41 @@ def gateway_app(
         "self-signed-certificates",
     )
 
-    juju.deploy("flask-k8s", channel="latest/edge")
-    juju.integrate("gateway-api-integrator:gateway", "flask-k8s")
-    juju.wait(jubilant.all_active)
+    return App("gateway-api-integrator")
 
-    yield "gateway-api-integrator"  # run the test
+
+# @pytest.fixture(scope="module")
+# def app(juju: jubilant.Juju, gateway_api_integrator: App):
+#     """Deploy the gateway-api-integrator charm and necessary charms for it."""
+#     juju.deploy("flask-k8s", channel="latest/edge")
+#     juju.integrate(f"{gateway_api_integrator.name}:gateway", "flask-k8s")
+#     juju.wait(jubilant.all_active)
+
+#     yield gateway_api_integrator.name  # run the test
+
+
+@pytest.fixture(scope="module")
+def gateway_route_configurator(
+    juju: jubilant.Juju, external_hostname: str, pytestconfig: pytest.Config
+):
+    """Deploy the gateway-api-integrator charm and necessary charms for it."""
+    configured_charm_path = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-route-configurator" in f),
+        None,
+    )
+    juju.deploy(
+        (
+            str(configured_charm_path)
+            if configured_charm_path
+            else charm_path("gateway-route-configurator")
+        ),
+        "gateway-route-configurator",
+        base="ubuntu@24.04",
+        trust=True,
+        config={"hostname": external_hostname, "paths": "/app1,/app2"},
+    )
+
+    return App("gateway-route-configurator")
 
 
 def charm_path(name: str) -> pathlib.Path:

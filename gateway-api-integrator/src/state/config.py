@@ -87,7 +87,6 @@ class CharmConfig:
             )
 
         try:
-            logger.error("Creating charm config with hostname: %s", hostname)
             return cls(
                 gateway_class_name=gateway_class_name,
                 external_hostname=hostname or typing.cast(str, charm.config.get("external-hostname")),

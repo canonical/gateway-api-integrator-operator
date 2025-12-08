@@ -156,8 +156,7 @@ def test_cert_relation_certificate_invalidated(
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_cert_relation_all_certificates_invalidated(
     harness: Harness,
-    gateway_relation_application_data: dict[str, str],
-    gateway_relation_unit_data: dict[str, str],
+    gateway_relation: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     certificates_relation_data: dict[str, str],
     config: dict[str, str],
@@ -172,8 +171,8 @@ def test_cert_relation_all_certificates_invalidated(
     harness.add_relation(
         "gateway",
         "requirer-charm",
-        app_data=gateway_relation_application_data,
-        unit_data=gateway_relation_unit_data,
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
     )
     harness.update_config(config)
     harness.add_relation(

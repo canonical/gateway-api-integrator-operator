@@ -58,8 +58,7 @@ def test_http_route_resource_information_validation_error(harness: Harness):
 
 def test_httproute_gen_resource(
     harness: Harness,
-    gateway_relation_application_data: dict[str, str],
-    gateway_relation_unit_data: dict[str, str],
+    gateway_relation: dict[str, str],
     config: dict[str, str],
 ):
     """
@@ -72,8 +71,8 @@ def test_httproute_gen_resource(
     harness.add_relation(
         "gateway",
         "test-charm",
-        app_data=gateway_relation_application_data,
-        unit_data=gateway_relation_unit_data,
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
     )
 
     harness.begin()

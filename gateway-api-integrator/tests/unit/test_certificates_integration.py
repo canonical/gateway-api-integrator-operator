@@ -35,7 +35,7 @@ def test_generate_password(harness: Harness):
 def test_cert_relation_secret_not_found_error(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    gateway_relation: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):
@@ -156,7 +156,7 @@ def test_cert_relation_certificate_invalidated(
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_cert_relation_all_certificates_invalidated(
     harness: Harness,
-    gateway_relation: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     monkeypatch: pytest.MonkeyPatch,
     certificates_relation_data: dict[str, str],
     config: dict[str, str],

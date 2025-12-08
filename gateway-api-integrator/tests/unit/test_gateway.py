@@ -27,7 +27,7 @@ from .conftest import GATEWAY_CLASS_CONFIG
 def test_create_gateway(  # pylint: disable=too-many-arguments, too-many-positional-arguments
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    gateway_relation: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     config: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ):
@@ -90,7 +90,7 @@ def test_gateway_resource_definition_insufficient_permission(
 def test_gateway_resource_definition_api_error_4xx(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    gateway_relation: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):

@@ -58,7 +58,7 @@ def test_http_route_resource_information_validation_error(harness: Harness):
 
 def test_httproute_gen_resource(
     harness: Harness,
-    gateway_relation: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     config: dict[str, str],
 ):
     """

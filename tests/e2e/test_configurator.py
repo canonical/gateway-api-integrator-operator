@@ -101,6 +101,6 @@ def test_configurator(
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     url = f"https://{external_hostname}/app1"
 
-    response = requests.get(url, verify=False, timeout=10)
+    response = requests.get(url, verify=False, timeout=10)  # nosec
     assert response.status_code == 200
     assert "Welcome to flask-k8s Charm" in response.text

@@ -4,7 +4,7 @@
 """Unit tests for the charm."""
 
 import pytest
-import scenario
+import scenario  # pylint: disable=import-error
 from charm import GatewayAPICharm
 
 

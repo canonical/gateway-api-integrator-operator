@@ -35,8 +35,7 @@ def test_generate_password(harness: Harness):
 def test_cert_relation_secret_not_found_error(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    gateway_relation_application_data: dict[str, str],
-    gateway_relation_unit_data: dict[str, str],
+    gateway_relation: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):
@@ -52,8 +51,8 @@ def test_cert_relation_secret_not_found_error(
     harness.add_relation(
         "gateway",
         "requirer-charm",
-        app_data=gateway_relation_application_data,
-        unit_data=gateway_relation_unit_data,
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
     )
     harness.set_leader()
     harness.update_config(config)
@@ -162,7 +161,7 @@ def test_cert_relation_all_certificates_invalidated(
     monkeypatch: pytest.MonkeyPatch,
     certificates_relation_data: dict[str, str],
     config: dict[str, str],
-):
+):  # pylint: disable=too-many-arguments, too-many-positional-arguments
     """
     arrange: Given a charm with valid certificates integration data.
     act: Fire all_certificates_invalidated event.

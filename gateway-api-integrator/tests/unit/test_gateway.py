@@ -91,8 +91,7 @@ def test_gateway_resource_definition_insufficient_permission(
 def test_gateway_resource_definition_api_error_4xx(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    gateway_relation_application_data: dict[str, str],
-    gateway_relation_unit_data: dict[str, str],
+    gateway_relation: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):
@@ -107,16 +106,14 @@ def test_gateway_resource_definition_api_error_4xx(
     harness.add_relation(
         "gateway",
         "requirer-charm",
-        app_data=gateway_relation_application_data,
-        unit_data=gateway_relation_unit_data,
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
     )
     monkeypatch.setattr(
         "lightkube.models.meta_v1.Status.from_dict", MagicMock(return_value=Status(code=404))
     )
     lightkube_client_mock = MagicMock(spec=Client)
-    lightkube_client_mock.list = MagicMock(
-        side_effect=ApiError(response=MagicMock(spec=Response))
-    )
+    lightkube_client_mock.list = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
     monkeypatch.setattr(
         "charm.get_client",
         MagicMock(return_value=lightkube_client_mock),

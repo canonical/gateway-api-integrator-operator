@@ -63,7 +63,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
             "name": '"testing-gateway-route-app"',
             "port": "8080",
             "hostname": '"testing-gateway.example.com"',
-            "paths": '[]',
+            "paths": "[]",
         },
     )
 

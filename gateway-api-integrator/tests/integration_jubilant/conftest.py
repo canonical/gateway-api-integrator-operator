@@ -14,15 +14,6 @@ import pytest
 logger = logging.getLogger(__name__)
 
 
-def pytest_addoption(parser):
-    """Parse additional pytest options.
-
-    Args:
-        parser: Pytest parser.
-    """
-    parser.addoption("--charm-file", action="append")
-    parser.addoption("--kube-config", action="store", default="~/.kube/config")
-
 class App(NamedTuple):
     """Holds deployed application information for app_fixture.
 

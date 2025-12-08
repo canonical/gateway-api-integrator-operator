@@ -6,7 +6,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from ops import testing
+import scenario
 from state.config import CharmConfig
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
@@ -32,28 +32,38 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         "charm.GatewayResourceManager.gateway_address", lambda self, name: "1.2.3.4"
     )
 
-    dns_relation = testing.Relation(
+    dns_relation = scenario.Relation(
         endpoint="dns-record",
         interface="dns_record",
     )
 
-    certificates_relation = testing.Relation(
+    certificates_relation = scenario.Relation(
         endpoint="certificates",
         interface="certificates",
     )
 
-    ingress_relation = testing.Relation(
+    ingress_relation = scenario.Relation(
         endpoint="gateway",
         interface="ingress",
+        remote_app_data={
+            "model": '"testing-model"',
+            "name": '"testing-ingress-app"',
+            "port": "8080",
+        },
+        remote_units_data={
+            0: {"host": '"testing-host.example.com"'},
+        },
     )
 
-    gateway_route_relation = testing.Relation(
+    gateway_route_relation = scenario.Relation(
         endpoint="gateway-route",
         interface="gateway_route",
         remote_app_data={
-            "model": "testing-model",
-            "name": "testing-gateway-route-app",
+            "model": '"testing-model"',
+            "name": '"testing-gateway-route-app"',
             "port": "8080",
+            "hostname": '"testing-gateway.example.com"',
+            "paths": '[]',
         },
     )
 
@@ -65,7 +75,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
             ingress_relation,
             gateway_route_relation,
         ],
-        "model": testing.Model(
+        "model": scenario.Model(
             name="testmodel",
         ),
     }

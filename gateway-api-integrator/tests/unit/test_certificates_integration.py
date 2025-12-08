@@ -35,6 +35,8 @@ def test_generate_password(harness: Harness):
 def test_cert_relation_secret_not_found_error(
     harness: Harness,
     certificates_relation_data: dict[str, str],
+    gateway_relation_application_data: dict[str, str],
+    gateway_relation_unit_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):
@@ -46,6 +48,12 @@ def test_cert_relation_secret_not_found_error(
     monkeypatch.setattr(
         "ops.model.Model.get_secret",
         MagicMock(side_effect=SecretNotFoundError),
+    )
+    harness.add_relation(
+        "gateway",
+        "requirer-charm",
+        app_data=gateway_relation_application_data,
+        unit_data=gateway_relation_unit_data,
     )
     harness.set_leader()
     harness.update_config(config)
@@ -149,6 +157,8 @@ def test_cert_relation_certificate_invalidated(
 @pytest.mark.usefixtures("client_with_mock_external")
 def test_cert_relation_all_certificates_invalidated(
     harness: Harness,
+    gateway_relation_application_data: dict[str, str],
+    gateway_relation_unit_data: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
     certificates_relation_data: dict[str, str],
     config: dict[str, str],
@@ -160,6 +170,12 @@ def test_cert_relation_all_certificates_invalidated(
     """
     juju_secret_mock = MagicMock(spec=Secret)
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
+    harness.add_relation(
+        "gateway",
+        "requirer-charm",
+        app_data=gateway_relation_application_data,
+        unit_data=gateway_relation_unit_data,
+    )
     harness.update_config(config)
     harness.add_relation(
         "certificates", "self-signed-certificates", app_data=certificates_relation_data

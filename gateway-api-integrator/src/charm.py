@@ -401,6 +401,7 @@ class GatewayAPICharm(CharmBase):
             if http_route_resource_information.integration == "gateway-route":
                 logger.info("Using gateway-route integration for ingress resources.")
                 return http_route_resource_information.hostname
+            return typing.cast(str, self.model.config.get("external-hostname"))
         except DataValidationError:
             return typing.cast(str, self.model.config.get("external-hostname"))
 

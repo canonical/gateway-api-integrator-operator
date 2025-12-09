@@ -16,6 +16,7 @@ from charms.bind.v0.dns_record import (
     RequirerEntry,
 )
 from charms.gateway_api_integrator.v0.gateway_route import (
+    DataValidationError,
     GatewayRouteAppDataProvidedEvent,
     GatewayRouteProvider,
 )
@@ -393,12 +394,15 @@ class GatewayAPICharm(CharmBase):
         Returns:
             The hostname to be used for the gateway.
         """
-        # http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-        #     self, self._ingress_provider, self._gateway_route_provider
-        # )
-        # if http_route_resource_information.integration == "gateway-route":
-        #     logger.info("Using gateway-route integration for ingress resources.")
-        #     return http_route_resource_information.hostname
+        try:
+            http_route_resource_information = HTTPRouteResourceInformation.from_charm(
+                self, self._ingress_provider, self._gateway_route_provider
+            )
+            if http_route_resource_information.integration == "gateway-route":
+                logger.info("Using gateway-route integration for ingress resources.")
+                return http_route_resource_information.hostname
+        except DataValidationError:
+            pass
         return typing.cast(str, self.model.config.get("external-hostname"))
 
     def _define_ingress_resources_and_publish_url(

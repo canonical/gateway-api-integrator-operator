@@ -18,16 +18,7 @@ import logging
 import typing
 from dataclasses import dataclass
 from functools import partial
-from typing import (
-    Any,
-    Dict,
-    List,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-    cast,
-)
+from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, cast
 
 import pydantic
 from ops import EventBase
@@ -106,7 +97,7 @@ class _DatabagModel(BaseModel):
             return cls.model_validate_json(json.dumps(data))
         except ValidationError as e:
             msg = f"failed to validate databag: {databag}"
-            logger.error(str(e), exc_info=True)
+            logger.debug(msg, exc_info=True)
             raise DataValidationError(msg) from e
 
     @classmethod

@@ -47,9 +47,7 @@ class CharmConfig:
 
     @classmethod
     @map_k8s_auth_exception
-    def from_charm(
-        cls, charm: ops.CharmBase, client: Client
-    ) -> "CharmConfig":
+    def from_charm(cls, charm: ops.CharmBase, client: Client) -> "CharmConfig":
         """Create a CharmConfig class from a charm instance.
 
         Args:
@@ -94,7 +92,7 @@ class CharmConfig:
         try:
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=charm._get_hostname()
+                external_hostname=charm.get_hostname()  # type: ignore[attr-defined]
                 or typing.cast(str, charm.config.get("external-hostname")),
             )
         except ValidationError as exc:

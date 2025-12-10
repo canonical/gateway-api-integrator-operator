@@ -55,7 +55,7 @@ from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceM
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
-from state.http_route import HTTPRouteResourceInformation
+from state.http_route import HTTPRouteResourceInformation, IngressIntegrationMissingError
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService, get_hostname_from_cert
@@ -393,7 +393,7 @@ class GatewayAPICharm(CharmBase):
         secret = resource_manager.define_resource(resource_definition)
         resource_manager.cleanup_resources(exclude=[secret])
 
-    def _get_hostname(self) -> str:
+    def get_hostname(self) -> str:
         """Get the hostname from the charm's config or stored attribute.
 
         Returns:
@@ -406,7 +406,7 @@ class GatewayAPICharm(CharmBase):
             if http_route_resource_information.integration == GATEWAY_ROUTE_RELATION:
                 return http_route_resource_information.hostname
             return typing.cast(str, self.model.config.get("external-hostname"))
-        except DataValidationError:
+        except (DataValidationError, IngressIntegrationMissingError):
             return typing.cast(str, self.model.config.get("external-hostname"))
 
     def _define_ingress_resources_and_publish_url(
@@ -450,10 +450,12 @@ class GatewayAPICharm(CharmBase):
         service_resource_manager.cleanup_resources(exclude=[service])
         http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
         ingress_url = (
-                    f"https://{config.external_hostname}"
-                    f"/{http_route_resource_information.requirer_model_name}"
-                    f"-{http_route_resource_information.application_name}"
-                ),
+            (
+                f"https://{config.external_hostname}"
+                f"/{http_route_resource_information.requirer_model_name}"
+                f"-{http_route_resource_information.application_name}"
+            ),
+        )
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:
             self._ingress_provider.publish_url(

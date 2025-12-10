@@ -18,6 +18,7 @@ from charms.bind.v0.dns_record import (
 from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError,
     GatewayRouteAppDataProvidedEvent,
+    GatewayRouteAppDataRemovedEvent,
     GatewayRouteProvider,
 )
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -83,7 +84,7 @@ class GatewayAPICharm(CharmBase):
         self._ingress_provider = IngressPerAppProvider(charm=self, relation_name=INGRESS_RELATION)
         self._tls = TLSRelationService(self.model, self.certificates)
         self.dns_record_requirer = DNSRecordRequires(self)
-        self._gateway_route_provider = GatewayRouteProvider(self, "gateway-route")
+        self._gateway_route_provider = GatewayRouteProvider(self, GATEWAY_ROUTE_RELATION)
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
@@ -135,7 +136,7 @@ class GatewayAPICharm(CharmBase):
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client, hostname=self._get_hostname())
+        config = CharmConfig.from_charm(self, client)
 
         if self._certificates_revocation_needed(client, config):
             self._tls.revoke_all_certificates()
@@ -178,7 +179,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation created event."""
         TLSInformation.validate(self)
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client, hostname=self._get_hostname())
+        config = CharmConfig.from_charm(self, client)
         self._tls.generate_private_key(config.external_hostname)
 
     @validate_config_and_integration(defer=True)
@@ -186,7 +187,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation joined event."""
         TLSInformation.validate(self)
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client, hostname=self._get_hostname())
+        config = CharmConfig.from_charm(self, client)
         self._tls.request_certificate(config.external_hostname)
 
     @validate_config_and_integration(defer=False)
@@ -229,7 +230,7 @@ class GatewayAPICharm(CharmBase):
         """Handle the TLS Certificate relation broken event."""
         TLSInformation.validate(self)
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client, hostname=self._get_hostname())
+        config = CharmConfig.from_charm(self, client)
         hostname = config.external_hostname
 
         try:
@@ -244,14 +245,18 @@ class GatewayAPICharm(CharmBase):
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
-    def _on_gateway_route_data_provided(self, _: GatewayRouteAppDataProvidedEvent) -> None:
-        """Handle the gateway-route data-provided event."""
-        logger.error("Gateway route data provided event received.")
+    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
+        """Handle the data-removed event."""
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
-    def _on_data_removed(self, _: IngressPerAppDataRemovedEvent) -> None:
-        """Handle the data-removed event."""
+    def _on_gateway_route_data_provided(self, _: GatewayRouteAppDataProvidedEvent) -> None:
+        """Handle the gateway-route data-provided event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_gateway_route_data_removed(self, _: GatewayRouteAppDataRemovedEvent) -> None:
+        """Handle the gateway-route data-removed event."""
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
@@ -279,7 +284,7 @@ class GatewayAPICharm(CharmBase):
             6. Set the gateway LB address in the charm's status message.
         """
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client, hostname=self._get_hostname())
+        config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         tls_information = TLSInformation.from_charm(self, self.certificates)
         self.unit.status = MaintenanceStatus("Creating resources.")
@@ -398,8 +403,7 @@ class GatewayAPICharm(CharmBase):
             http_route_resource_information = HTTPRouteResourceInformation.from_charm(
                 self, self._ingress_provider, self._gateway_route_provider
             )
-            if http_route_resource_information.integration == "gateway-route":
-                logger.info("Using gateway-route integration for ingress resources.")
+            if http_route_resource_information.integration == GATEWAY_ROUTE_RELATION:
                 return http_route_resource_information.hostname
             return typing.cast(str, self.model.config.get("external-hostname"))
         except DataValidationError:
@@ -421,8 +425,6 @@ class GatewayAPICharm(CharmBase):
         http_route_resource_information = HTTPRouteResourceInformation.from_charm(
             self, self._ingress_provider, self._gateway_route_provider
         )
-        if http_route_resource_information.integration == "gateway-route":
-            logger.info("Using gateway-route integration for ingress resources.")
         service_resource_manager = ServiceResourceManager(self._labels, client)
         service = service_resource_manager.define_resource(
             ServiceResourceDefinition(http_route_resource_information)
@@ -447,25 +449,21 @@ class GatewayAPICharm(CharmBase):
         )
         service_resource_manager.cleanup_resources(exclude=[service])
         http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
-        relation = self.model.get_relation(INGRESS_RELATION)
-        if relation:
-            self._ingress_provider.publish_url(
-                relation,
-                (
+        ingress_url = (
                     f"https://{config.external_hostname}"
                     f"/{http_route_resource_information.requirer_model_name}"
                     f"-{http_route_resource_information.application_name}"
                 ),
+        ingress_relation = self.model.get_relation(INGRESS_RELATION)
+        if ingress_relation:
+            self._ingress_provider.publish_url(
+                ingress_relation,
+                ingress_url,
             )
         else:
-            relation = self.model.get_relation(GATEWAY_ROUTE_RELATION)
             self._gateway_route_provider.publish_url(
-                relation,
-                (
-                    f"https://{config.external_hostname}"
-                    f"/{http_route_resource_information.requirer_model_name}"
-                    f"-{http_route_resource_information.application_name}"
-                ),
+                self.model.get_relation(GATEWAY_ROUTE_RELATION),
+                ingress_url,
             )
 
     def _set_status_gateway_address(

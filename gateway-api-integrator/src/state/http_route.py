@@ -74,7 +74,8 @@ class HTTPRouteResourceInformation:
         ingress_integration = charm.model.get_relation(INGRESS_RELATION)
         gateway_route_integration = charm.model.get_relation(GATEWAY_ROUTE_RELATION)
         if ingress_integration is None and gateway_route_integration is None:
-            raise IngressIntegrationMissingError("Ingress or Gateway Route integration not ready.")
+            raise IngressIntegrationMissingError("Ingress and Gateway Route integration not ready."
+            " You must relate to either.")
         try:
             if ingress_integration:
                 integration_data = ingress_provider.get_data(ingress_integration)
@@ -83,7 +84,7 @@ class HTTPRouteResourceInformation:
                 hostname = ""
             else:
                 integration_data = gateway_route_provider.get_data(gateway_route_integration)
-                integration = "gateway-route"
+                integration = GATEWAY_ROUTE_RELATION
                 paths = integration_data.app.paths
                 hostname = integration_data.app.hostname
             application_name = integration_data.app.name

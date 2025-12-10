@@ -135,7 +135,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             ],
             "rules": [
                 {
-                    "matches": self.get_paths(resource_definition),
+                    "matches": self.get_paths(http_route_resource_definition),
                     "filters": (
                         []
                         if not http_route_resource_definition.strip_prefix
@@ -176,18 +176,15 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
 
         return http_route
 
-    def get_paths(self, resource_definition: ResourceDefinition) -> list[dict]:
+    def get_paths(self, http_route_resource_definition: HTTPRouteResourceDefinition) -> list[dict]:
         """Get the paths for the HTTPRoute resource.
 
         Args:
-            resource_definition: The resource definition object.
+            http_route_resource_definition: The HTTPRoute resource definition object.
 
         Returns:
             A dictionary representing the paths for the HTTPRoute resource.
         """
-        http_route_resource_definition = typing.cast(
-            HTTPRouteResourceDefinition, resource_definition
-        )
         if http_route_resource_definition.integration == "ingress":
             return [
                 {
@@ -201,10 +198,8 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
                 }
             ]
         path_list = []
-        logger.error(f"Adding paths: {http_route_resource_definition.paths=}")
 
         for path in http_route_resource_definition.paths:
-            logger.error(f"Adding path {path} to HTTPRoute resource")
             path_list.append(
                 {
                     "path": {

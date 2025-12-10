@@ -2,8 +2,8 @@
 # See LICENSE file for licensing details.
 
 [project]
-name = "platform-engineering-charm-template"
-version = "0.0.0"
+name = "gateway-route-configurator"
+version = "1.0.0"
 description = "A very short one-line summary of the charm."
 readme = "README.md"
 requires-python = ">=3.12"

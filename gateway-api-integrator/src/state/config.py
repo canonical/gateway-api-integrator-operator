@@ -48,14 +48,13 @@ class CharmConfig:
     @classmethod
     @map_k8s_auth_exception
     def from_charm(
-        cls, charm: ops.CharmBase, client: Client, hostname: typing.Optional[str] = None
+        cls, charm: ops.CharmBase, client: Client
     ) -> "CharmConfig":
         """Create a CharmConfig class from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
             client: The lightkube client
-            hostname: Optional hostname to override charm config.
 
         Raises:
             InvalidCharmConfigError: When the chamr's config is invalid.
@@ -81,7 +80,10 @@ class CharmConfig:
         if gateway_class_name not in gateway_class_names:
             available_gateway_classes = ",".join(gateway_class_names)
             logger.error(
-                ("Configured gateway class %s not present on the cluster.Available ones are: %r"),
+                (
+                    "Configured gateway class %s not present on the cluster."
+                    "Available ones are: %r"
+                ),
                 gateway_class_name,
                 available_gateway_classes,
             )
@@ -92,7 +94,7 @@ class CharmConfig:
         try:
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=hostname
+                external_hostname=charm._get_hostname()
                 or typing.cast(str, charm.config.get("external-hostname")),
             )
         except ValidationError as exc:

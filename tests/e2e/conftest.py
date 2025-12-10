@@ -93,16 +93,6 @@ def gateway_api_integrator(
     return App("gateway-api-integrator")
 
 
-# @pytest.fixture(scope="module")
-# def app(juju: jubilant.Juju, gateway_api_integrator: App):
-#     """Deploy the gateway-api-integrator charm and necessary charms for it."""
-#     juju.deploy("flask-k8s", channel="latest/edge")
-#     juju.integrate(f"{gateway_api_integrator.name}:gateway", "flask-k8s")
-#     juju.wait(jubilant.all_active)
-
-#     yield gateway_api_integrator.name  # run the test
-
-
 @pytest.fixture(scope="module")
 def gateway_route_configurator(
     juju: jubilant.Juju, external_hostname: str, pytestconfig: pytest.Config
@@ -136,7 +126,7 @@ def charm_path(name: str) -> pathlib.Path:
     Returns:
         The absolute path to the charm file.
     """
-    # We're in tests/integration/conftest.py, so parent*3 is repo top level.
+    # We're in tests/e2e/conftest.py, so parent*3 is repo top level.
     charm_dir = pathlib.Path(__file__).parent.parent.parent
     charms = [p.absolute() for p in charm_dir.glob(f"{name}_*.charm")]
     assert charms, f"{name}_*.charm not found"

@@ -450,11 +450,9 @@ class GatewayAPICharm(CharmBase):
         service_resource_manager.cleanup_resources(exclude=[service])
         http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
         ingress_url = (
-            (
-                f"https://{config.external_hostname}"
-                f"/{http_route_resource_information.requirer_model_name}"
-                f"-{http_route_resource_information.application_name}"
-            ),
+            f"https://{config.external_hostname}"
+            f"/{http_route_resource_information.requirer_model_name}"
+            f"-{http_route_resource_information.application_name}"
         )
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:

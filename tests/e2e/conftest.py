@@ -70,7 +70,6 @@ def charm_fixture(pytestconfig: pytest.Config) -> str:
 def gateway_api_integrator(
     juju: jubilant.Juju,
     gateway_class: str,
-    external_hostname: str,
     charm: str,
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
@@ -81,7 +80,6 @@ def gateway_api_integrator(
         trust=True,
         config={
             "gateway-class": gateway_class,
-            "external-hostname": external_hostname,
         },
     )
     juju.deploy("self-signed-certificates")

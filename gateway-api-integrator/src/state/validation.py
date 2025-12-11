@@ -10,10 +10,11 @@ import typing
 import client
 import ops
 from ops.model import SecretNotFoundError
-from resource_manager.resource_manager import InvalidResourceError
 from state.exception import CharmStateValidationBaseError
 from state.http_route import IngressIntegrationMissingError
 from tls_relation import InvalidCertificateError
+
+from resource_manager.resource_manager import InvalidResourceError
 
 logger = logging.getLogger(__name__)
 

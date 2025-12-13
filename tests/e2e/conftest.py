@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 class App(NamedTuple):
     """Holds deployed application information for app_fixture.
 
-    Attrs:
-        name: The name of the deployed application.
+    Attributes:
+        name (str): The name of the deployed application.
     """
 
     name: str
@@ -67,10 +67,9 @@ def charm_fixture(pytestconfig: pytest.Config) -> str:
 
 
 @pytest.fixture(scope="module")
-def gateway_app(
+def gateway_api_integrator(
     juju: jubilant.Juju,
     gateway_class: str,
-    external_hostname: str,
     charm: str,
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
@@ -81,7 +80,6 @@ def gateway_app(
         trust=True,
         config={
             "gateway-class": gateway_class,
-            "external-hostname": external_hostname,
         },
     )
     juju.deploy("self-signed-certificates")
@@ -90,11 +88,31 @@ def gateway_app(
         "self-signed-certificates",
     )
 
-    juju.deploy("flask-k8s", channel="latest/edge")
-    juju.integrate("gateway-api-integrator:gateway", "flask-k8s")
-    juju.wait(jubilant.all_active)
+    return App("gateway-api-integrator")
 
-    yield "gateway-api-integrator"  # run the test
+
+@pytest.fixture(scope="module")
+def gateway_route_configurator(
+    juju: jubilant.Juju, external_hostname: str, pytestconfig: pytest.Config
+):
+    """Deploy the gateway-api-integrator charm and necessary charms for it."""
+    configured_charm_path = next(
+        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-route-configurator" in f),
+        None,
+    )
+    juju.deploy(
+        (
+            str(configured_charm_path)
+            if configured_charm_path
+            else charm_path("gateway-route-configurator")
+        ),
+        "gateway-route-configurator",
+        base="ubuntu@24.04",
+        trust=True,
+        config={"hostname": external_hostname, "paths": "/app1,/app2"},
+    )
+
+    return App("gateway-route-configurator")
 
 
 def charm_path(name: str) -> pathlib.Path:
@@ -106,7 +124,7 @@ def charm_path(name: str) -> pathlib.Path:
     Returns:
         The absolute path to the charm file.
     """
-    # We're in tests/integration/conftest.py, so parent*3 is repo top level.
+    # We're in tests/e2e/conftest.py, so parent*3 is repo top level.
     charm_dir = pathlib.Path(__file__).parent.parent.parent
     charms = [p.absolute() for p in charm_dir.glob(f"{name}_*.charm")]
     assert charms, f"{name}_*.charm not found"

@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 """gateway-api-integrator http_route resource manager."""
 
-
 import dataclasses
 import logging
 import typing
@@ -54,6 +53,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
         http_route_type: Type of the HTTP route, can be http or https.
+        integration: The type of integration, can be ingress or gateway-api.
+        paths: The list of paths to be added to the HTTPRoute resource.
         strip_prefix: Whether to create a path rewrite filter for proxied requests.
     """
 
@@ -63,6 +64,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     service_name: str
     service_port: int
     http_route_type: HTTPRouteType
+    integration: str
+    paths: list[str]
     strip_prefix: bool = False
 
     def __init__(
@@ -132,17 +135,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             ],
             "rules": [
                 {
-                    "matches": [
-                        {
-                            "path": {
-                                "type": "PathPrefix",
-                                "value": (
-                                    f"/{http_route_resource_definition.requirer_model_name}"
-                                    f"-{http_route_resource_definition.application_name}"
-                                ),
-                            }
-                        }
-                    ],
+                    "matches": self.get_paths(http_route_resource_definition),
                     "filters": (
                         []
                         if not http_route_resource_definition.strip_prefix
@@ -182,6 +175,40 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
         return http_route
+
+    def get_paths(self, http_route_resource_definition: HTTPRouteResourceDefinition) -> list[dict]:
+        """Get the paths for the HTTPRoute resource.
+
+        Args:
+            http_route_resource_definition: The HTTPRoute resource definition object.
+
+        Returns:
+            A dictionary representing the paths for the HTTPRoute resource.
+        """
+        if http_route_resource_definition.integration == "ingress":
+            return [
+                {
+                    "path": {
+                        "type": "PathPrefix",
+                        "value": (
+                            f"/{http_route_resource_definition.requirer_model_name}"
+                            f"-{http_route_resource_definition.application_name}"
+                        ),
+                    }
+                }
+            ]
+        path_list = []
+
+        for path in http_route_resource_definition.paths:
+            path_list.append(
+                {
+                    "path": {
+                        "type": "PathPrefix",
+                        "value": path,
+                    }
+                }
+            )
+        return path_list
 
     @map_k8s_auth_exception
     def _create_resource(self, resource: GenericNamespacedResource) -> None:

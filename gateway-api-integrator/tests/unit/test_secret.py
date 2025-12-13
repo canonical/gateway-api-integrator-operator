@@ -4,6 +4,7 @@
 # Disable protected access rules due to the need to test charm._labels
 # pylint: disable=protected-access
 """Unit tests for secret resource."""
+
 from unittest.mock import MagicMock
 
 from ops.testing import Harness

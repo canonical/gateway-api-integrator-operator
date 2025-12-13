@@ -5,6 +5,7 @@
 # pylint: disable=protected-access
 
 """Unit tests for ingress."""
+
 from unittest.mock import MagicMock
 
 import pytest

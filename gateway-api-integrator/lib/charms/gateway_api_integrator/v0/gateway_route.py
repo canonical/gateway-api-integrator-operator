@@ -6,7 +6,7 @@
 This library contains the Requires and Provides classes for handling the gateway-route
 interface.
 
-The `GatewayRouteRequires` class is used by the Configurator charm to send route
+The `GatewayRouteRequirer` class is used by the Configurator charm to send route
 configuration to the Integrator.
 
 The `GatewayRouteProvides` class is used by the Integrator charm to receive route
@@ -100,27 +100,6 @@ class _DatabagModel(BaseModel):
             logger.debug(msg, exc_info=True)
             raise DataValidationError(msg) from e
 
-    @classmethod
-    def from_dict(cls, values: dict) -> "_DatabagModel":
-        """Load this model from a dict.
-
-        Args:
-            values: Dict values.
-
-        Raises:
-            DataValidationError: When model validation failed.
-
-        Returns:
-            _DatabagModel: The validated model.
-        """
-        try:
-            logger.info("Loading values from dictionary: %s", values)
-            return cls.model_validate(values)
-        except ValidationError as e:
-            msg = f"failed to validate: {values}"
-            logger.debug(msg, exc_info=True)
-            raise DataValidationError(msg) from e
-
     def dump(
         self, databag: Optional[MutableMapping] = None, clear: bool = True
     ) -> Optional[MutableMapping]:
@@ -150,6 +129,7 @@ class _DatabagModel(BaseModel):
         dct = self.model_dump(mode="json", by_alias=True, exclude_defaults=True)
         databag.update({k: json.dumps(v) for k, v in dct.items()})
         return databag
+
 
 class GatewayRouteRequirerAppData(_DatabagModel):
     """Gateway-route requirer application databag model."""
@@ -206,8 +186,8 @@ class GatewayRouteRequirerData:
     app: "GatewayRouteRequirerAppData"
 
 
-class GatewayRouteRequires(Object):
-    """Requires side of the gateway-route relation."""
+class GatewayRouteRequirer(Object):
+    """Requirer side of the gateway-route relation."""
 
     def __init__(self, charm: CharmBase, relation_name: str = DEFAULT_RELATION_NAME):
         super().__init__(charm, relation_name)

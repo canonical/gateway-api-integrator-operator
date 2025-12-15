@@ -13,9 +13,7 @@ import ops
 from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError as GatewayRouteDataValidationError,
 )
-from charms.gateway_api_integrator.v0.gateway_route import (
-    GatewayRouteRequires,
-)
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)
@@ -35,7 +33,7 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         super().__init__(*args)
 
         self.ingress = IngressPerAppProvider(self, relation_name="ingress")
-        self.gateway_route = GatewayRouteRequires(self, relation_name="gateway-route")
+        self.gateway_route = GatewayRouteRequirer(self, relation_name="gateway-route")
 
         self.framework.observe(self.on.config_changed, self._on_update)
         self.framework.observe(self.ingress.on.data_provided, self._on_update)

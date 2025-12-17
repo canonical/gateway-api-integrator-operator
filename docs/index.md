@@ -24,7 +24,6 @@ If there’s a particular area of documentation that you’d like to see that’
 | [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator ||
 | [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |
 
-  1. [Charm architecture](reference/charm-architecture.md)
 # Contents
 
 1. [Explanation](explanation)
@@ -32,6 +31,7 @@ If there’s a particular area of documentation that you’d like to see that’
   1. [Security overview](explanation/security-overview.md)
 1. [Reference](reference)
   1. [Actions](reference/actions.md)
+  1. [Charm architecture](reference/charm-architecture.md)
 1. [Tutorial](tutorial)
   1. [Tutorial: Deploy the Gateway API integrator charm](tutorial/getting-started.md)
 1. [How-to](how-to)

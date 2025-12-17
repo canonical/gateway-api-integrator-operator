@@ -78,22 +78,30 @@ class HTTPRouteResourceInformation:
                 "Ingress and Gateway Route integration not ready." + " You must relate to either."
             )
         try:
+            strip_prefix = False
             if ingress_integration:
                 integration_data = ingress_provider.get_data(ingress_integration)
                 integration = "ingress"
                 paths = []
                 hostname = ""
+                strip_prefix = integration_data.app.strip_prefix
+                application_name = integration_data.app.name
+                requirer_model_name = integration_data.app.model
+                service_port = integration_data.app.port
             else:
                 integration_data = gateway_route_provider.get_data(gateway_route_integration)
+                if integration_data.requirer_data is None:
+                    raise IngressIntegrationMissingError(
+                        "Gateway Route integration data not ready."
+                    )
                 integration = GATEWAY_ROUTE_RELATION
-                paths = integration_data.app.paths
-                hostname = integration_data.app.hostname
-            application_name = integration_data.app.name
-            requirer_model_name = integration_data.app.model
+                paths = integration_data.requirer_data.application_data.paths
+                hostname = integration_data.requirer_data.application_data.hostname
+                application_name = integration_data.requirer_data.application_data.name
+                requirer_model_name = integration_data.requirer_data.application_data.model
+                service_port = integration_data.requirer_data.application_data.port
             service_name = f"{charm.app.name}-{application_name}-service"
-            service_port = integration_data.app.port
             service_port_name = f"tcp-{service_port}"
-            strip_prefix = integration_data.app.strip_prefix
 
             return cls(
                 application_name=application_name,

@@ -13,7 +13,9 @@ import ops
 from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError as GatewayRouteDataValidationError,
 )
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
+from charms.gateway_api_integrator.v0.gateway_route import (
+    GatewayRouteRequirer,
+)
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)
@@ -38,8 +40,8 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_update)
         self.framework.observe(self.ingress.on.data_provided, self._on_update)
         self.framework.observe(self.ingress.on.data_removed, self._on_update)
-        self.framework.observe(self.on.gateway_route_relation_joined, self._on_update)
-        self.framework.observe(self.on.gateway_route_relation_changed, self._on_update)
+        self.framework.observe(self.gateway_route.on.ready, self._on_update)
+        self.framework.observe(self.gateway_route.on.removed, self._on_update)
 
     def _on_update(self, _: typing.Any) -> None:
         """Handle updates to config or relations."""
@@ -71,15 +73,6 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
                 self.unit.status = ops.WaitingStatus("Waiting for ingress relation")
                 return
 
-            # Use the first relation that has data
-            # IngressPerAppProvider.get_data returns IngressRequirerAppData
-            # But get_data takes a relation object.
-            # We need to iterate over relations and find one with data.
-
-            # Note: IngressPerAppProvider usually handles multiple relations.
-            # We should probably aggregate or just pick one.
-            # The spec implies this charm sits between ONE workload and ONE integrator.
-
             data = self.ingress.get_data(self.ingress.relations[0])
 
             application_name = data.app.name
@@ -90,14 +83,13 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Invalid ingress data")
             return
 
-        # 3. Send to Gateway Route
         try:
-            self.gateway_route.send_route_configuration(
-                hostname=hostname,
-                paths=paths,
-                port=port,
+            self.gateway_route.provide_gateway_route_requirements(
                 name=application_name,
                 model=model_name,
+                port=port,
+                paths=paths,
+                hostname=hostname,
             )
             self.unit.status = ops.ActiveStatus("Ready")
         except GatewayRouteDataValidationError as e:

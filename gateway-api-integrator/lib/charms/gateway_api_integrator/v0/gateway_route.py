@@ -1,31 +1,116 @@
-# Copyright 2025 Canonical Ltd.
-# See LICENSE file for licensing details.
+# pylint: disable=too-many-lines
+"""gateway-route interface library.
 
-"""Library for the gateway-route relation.
+## Getting Started
 
-This library contains the Requires and Provides classes for handling the gateway-route
-interface.
+To get started using the library, you just need to fetch the library using `charmcraft`.
 
-The `GatewayRouteRequirer` class is used by the Configurator charm to send route
-configuration to the Integrator.
+```shell
+cd some-charm
+charmcraft fetch-lib charms.gateway_api_integrator.v0.gateway_route
+```
 
-The `GatewayRouteProvides` class is used by the Integrator charm to receive route
-configuration.
+In the `metadata.yaml` of the charm, add the following:
+
+```yaml
+requires:
+    gateway-route:
+        interface: gateway-route
+        limit: 1
+```
+
+Then, to initialise the library:
+
+```python
+from charms.gateway_api_integrator.v0.haproxy_route import GatewayRouteRequirer
+
+class SomeCharm(CharmBase):
+  def __init__(self, *args):
+    # ...
+
+    # There are 2 ways you can use the requirer implementation:
+    # 1. To initialize the requirer with parameters:
+    self.gateway_route_requirer = GatewayRouteRequirer(self,
+        relation_name=<required>,
+        name=<optional>,
+        model=<optional>,
+        port=<optional>,
+        paths=<optional>,
+        hostname=<optional>,
+    )
+
+    # 2.To initialize the requirer with no parameters, i.e
+    # self.gateway_route_requirer = GatewayRouteRequirer(self)
+    # This will simply initialize the requirer class and it won't perfom any action.
+
+    # Afterwards regardless of how you initialized the requirer you can call the
+    # provide_gateway_route_requirements method anywhere in your charm to update the requirer data.
+    # The method takes the same number of parameters as the requirer class.
+    # provide_gateway_route_requirements(name=, model=, ...)
+
+    self.framework.observe(
+        self.framework.on.config_changed, self._on_config_changed
+    )
+    self.framework.observe(
+        self.gateway_route_requirer.on.ready, self._on_endpoints_ready
+    )
+    self.framework.observe(
+        self.gateway_route_requirer.on.removed, self._on_endpoints_removed
+    )
+
+    def _on_config_changed(self, event: ConfigChangedEvent) -> None:
+        self.gateway_route_requirer.provide_gateway_route_requirements(...)
+
+    def _on_endpoints_ready(self, _: EventBase) -> None:
+        # Handle endpoints ready event
+        ...
+
+    def _on_endpoints_removed(self, _: EventBase) -> None:
+        # Handle endpoints removed event
+        ...
+
+## Using the library as the provider
+The provider charm should expose the interface as shown below:
+```yaml
+provides:
+    gateway-route:
+        interface: gateway-route
+```
+Note that this interface supports relating to multiple endpoints.
+
+Then, to initialise the library:
+```python
+from charms.haproxy.v1.haproxy_route import GatewayRouteProvider
+
+class SomeCharm(CharmBase):
+    self.gateway_route_provider = GatewayRouteProvider(self)
+    self.framework.observe(
+        self.gateway_route_provider.on.data_available, self._on_gateway_route_data_available
+    )
+
+    def _on_gateway_route_data_available(self, event: EventBase) -> None:
+        data = self.gateway_route_provider.get_data(self.gateway_route_provider.relation)
+        ...
 """
 
 import json
 import logging
-import typing
-from dataclasses import dataclass
 from functools import partial
-from typing import Any, Dict, List, MutableMapping, Optional, Sequence, Tuple, cast
+from typing import Annotated, Any, MutableMapping, Optional, cast
 
-import pydantic
-from ops import EventBase
-from ops.charm import CharmBase, RelationEvent
-from ops.framework import EventSource, Object, ObjectEvents
-from ops.model import ModelError, Relation
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError, field_validator
+from ops import CharmBase, ModelError, RelationBrokenEvent
+from ops.charm import CharmEvents
+from ops.framework import EventBase, EventSource, Object
+from ops.model import Relation
+from pydantic import (
+    AnyHttpUrl,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    ValidationError,
+)
+from pydantic.dataclasses import dataclass
 
 # The unique Charmhub library identifier, never change it
 LIBID = "e9aa842e-9df3-4ae9-affc-2ed3dcf12788"
@@ -38,12 +123,50 @@ LIBAPI = 0
 LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
+GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
+GATEWAY_CONFIG_INVALID_CHARACTERS = "\n\t#\\'\"\r$ "
+GATEWAY_EXPR_INVALID_CHARACTERS = "\n"
 
-DEFAULT_RELATION_NAME = "gateway-route"
-RELATION_INTERFACE = "gateway-route"
+
+def value_contains_invalid_characters(
+    invalid_characters: str, value: Optional[str]
+) -> Optional[str]:
+    """Validate if value contains invalid config characters.
+
+    Args:
+        invalid_characters: String with the list of invalid characters.
+        value: The value to validate.
+
+    Raises:
+        ValueError: When value contains invalid characters.
+
+    Returns:
+        The validated value.
+    """
+    if value is None:
+        return value
+
+    if [char for char in value if char in invalid_characters]:
+        raise ValueError(f"Relation data contains invalid character(s) {value}")
+    return value
 
 
-input_validator = partial(field_validator, mode="before")  # type: ignore
+VALIDSTR = Annotated[
+    str,
+    BeforeValidator(partial(value_contains_invalid_characters, GATEWAY_CONFIG_INVALID_CHARACTERS)),
+]
+VALIDEXPRSTR = Annotated[
+    str,
+    BeforeValidator(partial(value_contains_invalid_characters, GATEWAY_EXPR_INVALID_CHARACTERS)),
+]
+
+
+class DataValidationError(Exception):
+    """Raised when data validation fails."""
+
+
+class GatewayRouteInvalidRelationDataError(Exception):
+    """Rasied when data validation of the gateway-route relation fails."""
 
 
 class _DatabagModel(BaseModel):
@@ -97,6 +220,27 @@ class _DatabagModel(BaseModel):
             return cls.model_validate_json(json.dumps(data))
         except ValidationError as e:
             msg = f"failed to validate databag: {databag}"
+            logger.error(str(e), exc_info=True)
+            raise DataValidationError(msg) from e
+
+    @classmethod
+    def from_dict(cls, values: dict) -> "_DatabagModel":
+        """Load this model from a dict.
+
+        Args:
+            values: Dict values.
+
+        Raises:
+            DataValidationError: When model validation failed.
+
+        Returns:
+            _DatabagModel: The validated model.
+        """
+        try:
+            logger.info("Loading values from dictionary: %s", values)
+            return cls.model_validate(values)
+        except ValidationError as e:
+            msg = f"failed to validate: {values}"
             logger.debug(msg, exc_info=True)
             raise DataValidationError(msg) from e
 
@@ -131,345 +275,426 @@ class _DatabagModel(BaseModel):
         return databag
 
 
-class GatewayRouteRequirerAppData(_DatabagModel):
-    """Gateway-route requirer application databag model."""
+class RequirerApplicationData(_DatabagModel):
+    """Configuration model for Gateway route requirer application data.
 
-    hostname: str = Field(description="The hostname to serve the application on.")
-    paths: List[str] = Field(description="List of paths to serve.")
+    Attributes:
+        hostname: Optional: The hostname of this service.
+        paths: List of URL paths to route to this service. Defaults to an empty list.
+        model: The model the application is in.
+        name: Name of the app requesting gateway route.
+        port: The port number on which the service is listening.
+    """
+
+    hostname: Optional[VALIDSTR] = Field(description="Hostname of this service.", default=None)
+    paths: list[VALIDSTR] = Field(
+        description="The list of paths to route to this service.", default=[]
+    )
     model: str = Field(description="The model the application is in.")
-    name: str = Field(description="the name of the app requesting gateway-route.")
-    port: int = Field(description="The port the app wishes to be exposed.")
-
-    # fields on top of vanilla 'gateway-route' interface:
-    strip_prefix: Optional[bool] = Field(
-        default=False,
-        description="Whether to strip the prefix from the gateway-route url.",
-        alias="strip-prefix",
-    )
-    redirect_https: Optional[bool] = Field(
-        default=False,
-        description="Whether to redirect http traffic to https.",
-        alias="redirect-https",
-    )
-
-    scheme: Optional[str] = Field(
-        default="http", description="What scheme to use in the generated gateway-route url"
-    )
-
-    # pydantic wants 'cls' as first arg
-    @input_validator("scheme")
-    def validate_scheme(cls, scheme: str) -> str:  # noqa: N805
-        """Validate scheme arg."""
-        if scheme not in {"http", "https"}:
-            raise ValueError("invalid scheme: should be one of `http|https`")
-        return scheme
-
-    # pydantic wants 'cls' as first arg
-    @input_validator("port")
-    def validate_port(cls, port: int) -> int:  # noqa: N805
-        """Validate port."""
-        assert isinstance(port, int), type(port)
-        assert 0 < port < 65535, "port out of TCP range"
-        return port
+    name: str = Field(description="The name of the app requesting gateway route.")
+    port: int = Field(description="The port number on which the service is listening.", ge=1, le=65535)
 
 
-class RequirerSchema(BaseModel):
-    """Requirer schema for GatewayRoute."""
+class GatewayRouteProviderAppData(_DatabagModel):
+    """gateway-route provider databag schema.
 
-    app: GatewayRouteRequirerAppData
+    Attributes:
+        endpoint: The proxied endpoint that maps to the backend.
+    """
+
+    endpoint: Optional[AnyHttpUrl]
 
 
 @dataclass
 class GatewayRouteRequirerData:
-    """Data exposed by the gateway-route requirer to the provider."""
+    """gateway-route requirer data.
 
-    app: "GatewayRouteRequirerAppData"
+    Attributes:
+        relation_id: Id of the relation.
+        application_data: Application data.
+    """
 
-
-class GatewayRouteRequirer(Object):
-    """Requirer side of the gateway-route relation."""
-
-    def __init__(self, charm: CharmBase, relation_name: str = DEFAULT_RELATION_NAME):
-        super().__init__(charm, relation_name)
-        self.charm = charm
-        self.relation_name = relation_name
-        self._strip_prefix: bool = False
-        self._redirect_https: bool = False
-
-    def send_route_configuration(
-        self,
-        hostname: str,
-        paths: List[str],
-        port: int,
-        name: str,
-        model: str,
-        scheme: str = "https",
-        strip_prefix: bool = False,
-        redirect_https: bool = False,
-    ):
-        """Send route configuration to the integrator.
-
-        Args:
-            hostname: The hostname to serve the application on.
-            paths: List of paths to serve.
-            port: The port of the service.
-            name: The application name.
-            model: The model name.
-        """
-        relation = self.charm.model.get_relation(self.relation_name)
-        if not relation:
-            logger.warning(f"Relation {self.relation_name} not found")
-            return
-
-        app_databag = relation.data[self.charm.app]
-        try:
-            # Ignore pyright errors since pyright does not like aliases.
-            GatewayRouteRequirerAppData(  # type: ignore
-                hostname=hostname,
-                model=model,
-                name=name,
-                paths=paths,
-                scheme=scheme,
-                port=port,
-                strip_prefix=strip_prefix,
-                redirect_https=redirect_https
-            ).dump(app_databag)
-        except ValidationError as e:
-            msg = "failed to validate app data"
-            logger.info(msg, exc_info=True)  # log to INFO because this might be expected
-            raise DataValidationError(msg) from e
+    relation_id: int
+    application_data: RequirerApplicationData
 
 
-class _GatewayRouteBase(Object):
-    """Base class for _GatewayRoute interface classes."""
+@dataclass
+class GatewayRouteRequirersData:
+    """gateway-route requirers data.
 
-    def __init__(self, charm: CharmBase, relation_name: str = DEFAULT_RELATION_NAME):
-        super().__init__(charm, relation_name)
+    Attributes:
+        requirer_data: List of requirer data.
+        relation_id_with_invalid_data: List of relation ids that contains invalid data.
+    """
 
-        self.charm: CharmBase = charm
-        self.relation_name = relation_name
-        self.app = self.charm.app
-        self.unit = self.charm.unit
-
-        observe = self.framework.observe
-        rel_events = charm.on[relation_name]
-        observe(rel_events.relation_created, self._handle_relation)
-        observe(rel_events.relation_joined, self._handle_relation)
-        observe(rel_events.relation_changed, self._handle_relation)
-        observe(rel_events.relation_departed, self._handle_relation)
-        observe(rel_events.relation_broken, self._handle_relation_broken)
-        observe(charm.on.leader_elected, self._handle_upgrade_or_leader)  # type: ignore
-        observe(charm.on.upgrade_charm, self._handle_upgrade_or_leader)  # type: ignore
-
-    @property
-    def relations(self) -> List[Relation]:
-        """The list of Relation instances associated with this endpoint."""
-        return list(self.charm.model.relations[self.relation_name])
-
-    def _handle_relation(self, event: RelationEvent) -> None:
-        """Subclasses should implement this method to handle a relation update."""
-        pass
-
-    def _handle_relation_broken(self, event: RelationEvent) -> None:
-        """Subclasses should implement this method to handle a relation breaking."""
-        pass
-
-    def _handle_upgrade_or_leader(self, event: EventBase) -> None:
-        """Subclasses should implement this method to handle upgrades or leadership change."""
-        pass
+    requirer_data: Optional[GatewayRouteRequirerData]
+    relation_id_with_invalid_data: Optional[int]
 
 
-class _GatewayRouteEvent(RelationEvent):
-    __args__: Tuple[str, ...] = ()
-    __optional_kwargs__: Dict[str, Any] = {}
+class GatewayRouteDataAvailableEvent(EventBase):
+    """GatewayRouteDataAvailableEvent custom event.
 
-    @classmethod
-    def __attrs__(cls):  # type: ignore
-        return cls.__args__ + tuple(cls.__optional_kwargs__.keys())
-
-    def __init__(self, handle, relation, *args, **kwargs):  # type: ignore
-        super().__init__(handle, relation)
-
-        if not len(self.__args__) == len(args):
-            raise TypeError("expected {} args, got {}".format(len(self.__args__), len(args)))
-
-        for attr, obj in zip(self.__args__, args):
-            setattr(self, attr, obj)
-        for attr, default in self.__optional_kwargs__.items():
-            obj = kwargs.get(attr, default)
-            setattr(self, attr, obj)
-
-    def snapshot(self) -> Dict[str, Any]:
-        dct = super().snapshot()
-        for attr in self.__attrs__():
-            obj = getattr(self, attr)
-            try:
-                dct[attr] = obj
-            except ValueError as e:
-                raise ValueError(
-                    "cannot automagically serialize {}: "
-                    "override this method and do it "
-                    "manually.".format(obj)
-                ) from e
-
-        return dct
-
-    def restore(self, snapshot: Any) -> None:
-        super().restore(snapshot)
-        for attr, obj in snapshot.items():
-            setattr(self, attr, obj)
+    This event indicates that the requirers data are available.
+    """
 
 
-class GatewayRouteAppDataProvidedEvent(_GatewayRouteEvent):
-    """Event representing that gateway-route data has been provided for an app."""
+class GatewayRouteDataRemovedEvent(EventBase):
+    """GatewayRouteDataRemovedEvent custom event.
 
-    __args__ = ("name", "model", "hosts", "strip_prefix", "redirect_https")
-
-    if typing.TYPE_CHECKING:
-        name: Optional[str] = None
-        model: Optional[str] = None
-        # sequence of hostname, port dicts
-        hosts: Sequence[str] = ()
-        strip_prefix: bool = False
-        redirect_https: bool = False
+    This event indicates that one of the endpoints was removed.
+    """
 
 
-class GatewayRouteAppDataRemovedEvent(RelationEvent):
-    """Event representing that gateway-route data has been removed for an app."""
+class GatewayRouteProviderEvents(CharmEvents):
+    """List of events that the TLS Certificates requirer charm can leverage.
+
+    Attributes:
+        data_available: This event indicates that
+            the gateway-route endpoints are available.
+        data_removed: This event indicates that one of the endpoints was removed.
+    """
+
+    data_available = EventSource(GatewayRouteDataAvailableEvent)
+    data_removed = EventSource(GatewayRouteDataRemovedEvent)
 
 
-class GatewayRouteEndpointsUpdatedEvent(RelationEvent):
-    """Event representing that the proxied endpoints have been updated."""
+class GatewayRouteProvider(Object):
+    """Gateway-route interface provider implementation.
 
-
-class GatewayRouteProviderEvents(ObjectEvents):
-    """Container for IPA Provider events."""
-
-    data_provided = EventSource(GatewayRouteAppDataProvidedEvent)
-    data_removed = EventSource(GatewayRouteAppDataRemovedEvent)
-    endpoints_updated = EventSource(GatewayRouteEndpointsUpdatedEvent)
-
-
-class IngressError(RuntimeError):
-    """Base class for custom errors raised by this library."""
-
-
-class NotReadyError(IngressError):
-    """Raised when a relation is not ready."""
-
-
-class DataValidationError(IngressError):
-    """Raised when data validation fails on IPU relation data."""
-
-
-class IngressUrl(BaseModel):
-    """Ingress url schema."""
-
-    url: AnyHttpUrl
-
-
-class GatewayRouteProviderAppData(_DatabagModel):
-    """Ingress application databag schema."""
-
-    ingress: Optional[IngressUrl] = None
-
-
-class GatewayRouteProvider(_GatewayRouteBase):
-    """Implementation of the provider of gateway-route."""
+    Attributes:
+        on: Custom events of the provider.
+        relation: Related appliations.
+    """
 
     on = GatewayRouteProviderEvents()  # type: ignore
 
     def __init__(
         self,
         charm: CharmBase,
-        relation_name: str = DEFAULT_RELATION_NAME,
-    ):
-        """Constructor for GatewayRouteProvider.
+        relation_name: str = GATEWAY_ROUTE_RELATION_NAME,
+        raise_on_validation_error: bool = False,
+    ) -> None:
+        """Initialize the GatewayRouteProvider.
 
         Args:
-            charm: The charm that is instantiating the instance.
-            relation_name: The name of the relation endpoint to bind to
-                (defaults to "gateway-route").
+            charm: The charm that is instantiating the library.
+            relation_name: The name of the relation.
+            raise_on_validation_error: Whether the library should raise
+                GatewayRouteInvalidRelationDataError when requirer data validation fails.
+                If this is set to True the provider charm needs to also catch and handle the
+                thrown exception.
         """
         super().__init__(charm, relation_name)
 
-    def _handle_relation(self, event: RelationEvent) -> None:
-        # created, joined or changed: if remote side has sent the required data:
-        # notify listeners.
-        if self.is_ready(event.relation):
-            data = self.get_data(event.relation)
-            self.on.data_provided.emit(  # type: ignore
-                event.relation,
-                data.app.name,
-                data.app.model,
-                data.app.hostname,
-                data.app.strip_prefix or False,
-                data.app.redirect_https or False,
-            )
+        self._relation_name = relation_name
+        self.charm = charm
+        self.raise_on_validation_error = raise_on_validation_error
+        on = self.charm.on
+        self.framework.observe(on[self._relation_name].relation_created, self._configure)
+        self.framework.observe(on[self._relation_name].relation_changed, self._configure)
+        self.framework.observe(on[self._relation_name].relation_broken, self._on_endpoint_removed)
+        self.framework.observe(
+            on[self._relation_name].relation_departed, self._on_endpoint_removed
+        )
 
-    def _handle_relation_broken(self, event: RelationEvent) -> None:
-        self.on.data_removed.emit(event.relation, event.relation.app)  # type: ignore
+    @property
+    def relation(self) -> Relation:
+        """The list of Relation instances associated with this endpoint."""
+        return list(self.charm.model.relations.get(self._relation_name, []))[0]
 
-    def wipe_gateway_route_data(self, relation: Relation) -> None:
-        """Clear gateway-route data from relation."""
-        assert self.unit.is_leader(), "only leaders can do this"
-        try:
-            relation.data
-        except ModelError as e:
-            logger.warning(
-                "error {} accessing relation data for {!r}. "
-                "Probably a ghost of a dead relation is still "
-                "lingering around.".format(e, relation.name)
-            )
-            return
-        del relation.data[self.app]["gateway-route"]
-        self.on.endpoints_updated.emit(relation=relation, app=relation.app)
+    def _configure(self, _event: EventBase) -> None:
+        """Handle relation events."""
+        if relation := self.relation:
+            # Only for data validation
+            _ = self.get_data(relation)
+            self.on.data_available.emit()
 
-    @staticmethod
-    def _get_requirer_app_data(relation: Relation) -> "GatewayRouteRequirerAppData":
-        """Fetch and validate the requirer's app databag."""
-        app = relation.app
-        if app is None:
-            raise NotReadyError(relation)
+    def _on_endpoint_removed(self, _: EventBase) -> None:
+        """Handle relation broken/departed events."""
+        self.on.data_removed.emit()
 
-        databag = relation.data[app]
-        return cast(GatewayRouteRequirerAppData, GatewayRouteRequirerAppData.load(databag))
+    def get_data(self, relation: Relation) -> GatewayRouteRequirersData:
+        """Fetch requirer data.
 
-    def get_data(self, relation: Relation) -> GatewayRouteRequirerData:
-        """Fetch the remote (requirer) app and units' databags."""
-        try:
-            return GatewayRouteRequirerData(self._get_requirer_app_data(relation))
-        except (pydantic.ValidationError, DataValidationError) as e:
-            raise DataValidationError(
-                "failed to validate gateway-route requirer data: %s" % str(e)
-            ) from e
+        Args:
+            relation: A list of Relation instances to fetch data from.
 
-    def is_ready(self, relation: Optional[Relation] = None) -> bool:
-        """The Provider is ready if the requirer has sent valid data."""
-        if not relation:
-            return any(map(self.is_ready, self.relations))
+        Raises:
+            GatewayRouteInvalidRelationDataError: When requirer data validation fails.
 
-        try:
-            self.get_data(relation)
-        except (DataValidationError, NotReadyError) as e:
-            logger.info("Provider not ready; validation error encountered: %s" % str(e))
-            return False
-        return True
-
-    def publish_url(self, relation: Relation, url: str) -> None:
-        """Publish to the app databag the ingress url."""
-        ingress_url = {"url": url}
-        try:
-            GatewayRouteProviderAppData(ingress=ingress_url).dump(relation.data[self.app])  # type: ignore
-            self.on.endpoints_updated.emit(relation=relation, app=relation.app)
-        except pydantic.ValidationError as e:
-            # If we cannot validate the url as valid, publish an empty databag and log the error.
-            logger.error(f"Failed to validate ingress url '{url}' - got ValidationError {e}")
-            logger.error(
-                (
-                    f"url was not published to ingress relation for {relation.app}."
-                    f"This error is likely due to an error or misconfiguration of the"
-                    "charm calling this library."
+        Returns:
+            GatewayRouteRequirersData: Validated data from all gateway-route requirers.
+        """
+        requirer_data: Optional[GatewayRouteRequirerData] = None
+        relation_id_with_invalid_data: Optional[int] = None
+        if relation:
+            try:
+                application_data = self._get_requirer_application_data(relation)
+                gateway_route_requirer_data = GatewayRouteRequirerData(
+                    application_data=application_data,
+                    relation_id=relation.id,
                 )
+                requirer_data = gateway_route_requirer_data
+            except DataValidationError as exc:
+                if self.raise_on_validation_error:
+                    logger.error(
+                        "gateway-route data validation failed for relation %s: %s",
+                        relation,
+                        str(exc),
+                    )
+                    raise GatewayRouteInvalidRelationDataError(
+                        f"gateway-route data validation failed for relation: {relation}"
+                    ) from exc
+                relation_id_with_invalid_data = relation.id
+        return GatewayRouteRequirersData(
+            requirer_data=requirer_data,
+            relation_id_with_invalid_data=relation_id_with_invalid_data,
+        )
+
+    def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
+        """Fetch and validate the requirer's application databag.
+
+        Args:
+            relation: The relation to fetch application data from.
+
+        Raises:
+            DataValidationError: When requirer application data validation fails.
+
+        Returns:
+            RequirerApplicationData: Validated application data from the requirer.
+        """
+        try:
+            return cast(
+                RequirerApplicationData, RequirerApplicationData.load(relation.data.get(relation.app, {}))
             )
-            GatewayRouteProviderAppData(ingress=None).dump(relation.data[self.app])  # type: ignore
+        except DataValidationError:
+            logger.error("Invalid requirer application data for %s", relation.app.name)
+            raise
+
+    def publish_proxied_endpoints(self, endpoint: str, relation: Relation) -> None:
+        """Publish to the app databag the proxied endpoints.
+
+        Args:
+            endpoint: The list of proxied endpoints to publish.
+            relation: The relation with the requirer application.
+        """
+        GatewayRouteProviderAppData(endpoint=cast(AnyHttpUrl, endpoint)).dump(
+            relation.data.get(self.charm.app), clear=True
+        )
+
+
+class GatewayRouteEnpointsReadyEvent(EventBase):
+    """GatewayRouteEnpointsReadyEvent custom event."""
+
+
+class GatewayRouteEndpointsRemovedEvent(EventBase):
+    """GatewayRouteEndpointsRemovedEvent custom event."""
+
+
+class GatewayRouteRequirerEvents(CharmEvents):
+    """List of events that the TLS Certificates requirer charm can leverage.
+
+    Attributes:
+        ready: when the provider proxied endpoints are ready.
+        removed: when the provider
+    """
+
+    ready = EventSource(GatewayRouteEnpointsReadyEvent)
+    removed = EventSource(GatewayRouteEndpointsRemovedEvent)
+
+
+class GatewayRouteRequirer(Object):
+    """gateway-route interface requirer implementation.
+
+    Attributes:
+        on: Custom events of the requirer.
+    """
+
+    on = GatewayRouteRequirerEvents()  # type: ignore
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    def __init__(
+        self,
+        charm: CharmBase,
+        relation_name: str = GATEWAY_ROUTE_RELATION_NAME,
+        name: Optional[str] = None,
+        model: Optional[str] = None,
+        port: Optional[int] = None,
+        paths: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+    ) -> None:
+        """Initialize the GatewayRouteRequirer.
+
+        Args:
+            charm: The charm that is instantiating the library.
+            relation_name: The name of the relation to bind to.
+            name: The name of the service to route traffic to.
+            model: The model of the service to route traffic to.
+            port: The port the service is listening on.
+            paths: List of URL paths to route to this service.
+            hostname: Hostname of this service.
+        """
+        super().__init__(charm, relation_name)
+
+        self._relation_name = relation_name
+        self.relation = self.model.get_relation(self._relation_name)
+        self.charm = charm
+        self.app = self.charm.app
+
+        # build the full application data
+        self._application_data = self._generate_application_data(
+            name,
+            model,
+            port,
+            paths,
+            hostname,
+        )
+
+        on = self.charm.on
+        self.framework.observe(on[self._relation_name].relation_created, self._configure)
+        self.framework.observe(on[self._relation_name].relation_changed, self._configure)
+        self.framework.observe(on[self._relation_name].relation_broken, self._on_relation_broken)
+
+    def _configure(self, _: EventBase) -> None:
+        """Handle relation events."""
+        self.update_relation_data()
+        if self.relation and self.get_proxied_endpoints():
+            # This event is only emitted when the provider databag changes
+            # which only happens when relevant changes happened
+            # Additionally this event is purely informational and it's up to the requirer to
+            # fetch the proxied endpoints in their code using get_proxied_endpoints
+            self.on.ready.emit()
+
+    def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
+        """Handle relation broken event."""
+        self.on.removed.emit()
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def provide_gateway_route_requirements(
+        self,
+        name: str,
+        model: str,
+        port: int,
+        paths: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+
+    ) -> None:
+        """Update gateway-route requirements data in the relation.
+
+        Args:
+            name: The name of the service to route traffic to.
+            model: The model of the service to route traffic to.
+            port: The port the service is listening on.
+            paths: List of URL paths to route to this service.
+            hostname: Hostname of this service.
+        """
+        self._application_data = self._generate_application_data(
+            name,
+            model,
+            port,
+            paths,
+            hostname,
+        )
+        self.update_relation_data()
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    def _generate_application_data(  # noqa: C901
+        self,
+        name: Optional[str] = None,
+        model: Optional[str] = None,
+        port: Optional[int] = None,
+        paths: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+    ) -> dict[str, Any]:
+        """Generate the complete application data structure.
+
+        Args:
+            name: The name of the service to route traffic to.
+            model: The model of the service to route traffic to.
+            port: The port the service is listening on.
+            paths: List of URL paths to route to this service.
+            hostname: Hostname of this service.
+
+        Returns:
+            dict: A dictionary containing the complete application data structure.
+        """
+        # Apply default value to list parameters to avoid problems with mutable default args.
+        if not paths:
+            paths = []
+
+        application_data: dict[str, Any] = {
+            "name": name,
+            "model": model,
+            "port": port,
+            "paths": paths,
+            "hostname": hostname,
+        }
+
+        return application_data
+
+    def update_relation_data(self) -> None:
+        """Update the application data in the relation."""
+        if not self._application_data.get("hostname") and not self._application_data.get("port"):
+            logger.warning("Required field(s) are missing, skipping update of the relation data.")
+            return
+
+        if relation := self.relation:
+            self._update_application_data(relation)
+
+    def _update_application_data(self, relation: Relation) -> None:
+        """Update application data in the relation databag.
+
+        Args:
+            relation: The relation instance.
+        """
+        if self.charm.unit.is_leader():
+            application_data = self._prepare_application_data()
+            application_data.dump(relation.data.get(self.app), clear=True)
+
+    def _prepare_application_data(self) -> RequirerApplicationData:
+        """Prepare and validate the application data.
+
+        Raises:
+            DataValidationError: When validation of application data fails.
+
+        Returns:
+            RequirerApplicationData: The validated application data model.
+        """
+        try:
+            return cast(
+                RequirerApplicationData, RequirerApplicationData.from_dict(self._application_data)
+            )
+        except ValidationError as exc:
+            logger.error("Validation error when preparing requirer application data.")
+            raise DataValidationError(
+                "Validation error when preparing requirer application data."
+            ) from exc
+
+    def get_proxied_endpoints(self) -> Optional[AnyHttpUrl]:
+        """The full ingress URL to reach the current unit.
+
+        Returns:
+            The provider URL or None if the URL isn't available yet or is not valid.
+        """
+        relation = self.relation
+        if not relation or not relation.app:
+            return None
+
+        # Fetch the provider's app databag
+        try:
+            databag = relation.data.get(relation.app)
+        except ModelError:
+            logger.exception("Error reading remote app data.")
+            return None
+
+        if not databag:  # not ready yet
+            return None
+
+        try:
+            provider_data = cast(
+                GatewayRouteProviderAppData, GatewayRouteProviderAppData.load(databag)
+            )
+            return provider_data.endpoint
+        except DataValidationError:
+            logger.exception("Invalid provider url.")
+            return None

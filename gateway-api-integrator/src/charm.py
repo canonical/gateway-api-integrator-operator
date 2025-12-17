@@ -17,8 +17,8 @@ from charms.bind.v0.dns_record import (
 )
 from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError,
-    GatewayRouteAppDataProvidedEvent,
-    GatewayRouteAppDataRemovedEvent,
+    GatewayRouteDataAvailableEvent,
+    GatewayRouteDataRemovedEvent,
     GatewayRouteProvider,
 )
 from charms.tls_certificates_interface.v3.tls_certificates import (
@@ -55,7 +55,11 @@ from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceM
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
-from state.http_route import HTTPRouteResourceInformation, IngressIntegrationMissingError
+from state.http_route import (
+    HTTPRouteResourceInformation,
+    IngressIntegrationDataValidationError,
+    IngressIntegrationMissingError,
+)
 from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 from tls_relation import TLSRelationService, get_hostname_from_cert
@@ -117,7 +121,7 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
 
         self.framework.observe(
-            self._gateway_route_provider.on.data_provided, self._on_gateway_route_data_provided
+            self._gateway_route_provider.on.data_available, self._on_gateway_route_data_provided
         )
         self.framework.observe(self._gateway_route_provider.on.data_removed, self._on_data_removed)
         self.framework.observe(
@@ -250,12 +254,12 @@ class GatewayAPICharm(CharmBase):
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
-    def _on_gateway_route_data_provided(self, _: GatewayRouteAppDataProvidedEvent) -> None:
+    def _on_gateway_route_data_provided(self, _: GatewayRouteDataAvailableEvent) -> None:
         """Handle the gateway-route data-provided event."""
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
-    def _on_gateway_route_data_removed(self, _: GatewayRouteAppDataRemovedEvent) -> None:
+    def _on_gateway_route_data_removed(self, _: GatewayRouteDataRemovedEvent) -> None:
         """Handle the gateway-route data-removed event."""
         self._reconcile()
 
@@ -400,13 +404,18 @@ class GatewayAPICharm(CharmBase):
             The hostname to be used for the gateway.
         """
         try:
+            if not self.model.get_relation(GATEWAY_ROUTE_RELATION):
+                return typing.cast(str, self.model.config.get("external-hostname"))
+
             http_route_resource_information = HTTPRouteResourceInformation.from_charm(
                 self, self._ingress_provider, self._gateway_route_provider
             )
-            if http_route_resource_information.integration == GATEWAY_ROUTE_RELATION:
-                return http_route_resource_information.hostname
-            return typing.cast(str, self.model.config.get("external-hostname"))
-        except (DataValidationError, IngressIntegrationMissingError):
+            return http_route_resource_information.hostname
+        except (
+            DataValidationError,
+            IngressIntegrationMissingError,
+            IngressIntegrationDataValidationError,
+        ):
             return typing.cast(str, self.model.config.get("external-hostname"))
 
     def _define_ingress_resources_and_publish_url(
@@ -461,9 +470,9 @@ class GatewayAPICharm(CharmBase):
                 ingress_url,
             )
         else:
-            self._gateway_route_provider.publish_url(
-                self.model.get_relation(GATEWAY_ROUTE_RELATION),
+            self._gateway_route_provider.publish_proxied_endpoints(
                 ingress_url,
+                self.model.get_relation(GATEWAY_ROUTE_RELATION),
             )
 
     def _set_status_gateway_address(

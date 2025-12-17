@@ -6,7 +6,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-import scenario  # pylint: disable=import-error
+from ops import testing
 from state.config import CharmConfig
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
@@ -32,17 +32,17 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         "charm.GatewayResourceManager.gateway_address", lambda self, name: "1.2.3.4"
     )
 
-    dns_relation = scenario.Relation(
+    dns_relation = testing.Relation(
         endpoint="dns-record",
         interface="dns_record",
     )
 
-    certificates_relation = scenario.Relation(
+    certificates_relation = testing.Relation(
         endpoint="certificates",
         interface="certificates",
     )
 
-    ingress_relation = scenario.Relation(
+    ingress_relation = testing.Relation(
         endpoint="gateway",
         interface="ingress",
         remote_app_data={
@@ -55,7 +55,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         },
     )
 
-    gateway_route_relation = scenario.Relation(
+    gateway_route_relation = testing.Relation(
         endpoint="gateway-route",
         interface="gateway_route",
         remote_app_data={
@@ -75,7 +75,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
             ingress_relation,
             gateway_route_relation,
         ],
-        "model": scenario.Model(
+        "model": testing.Model(
             name="testmodel",
         ),
     }

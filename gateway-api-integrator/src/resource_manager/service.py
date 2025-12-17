@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 """gateway-api-integrator service resource manager."""
 
+
 import dataclasses
 import logging
 import typing

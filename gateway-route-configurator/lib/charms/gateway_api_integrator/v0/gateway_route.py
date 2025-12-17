@@ -1,4 +1,6 @@
-# pylint: disable=too-many-lines
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
 """gateway-route interface library.
 
 ## Getting Started

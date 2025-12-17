@@ -121,7 +121,7 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
 
         self.framework.observe(
-            self._gateway_route_provider.on.data_available, self._on_gateway_route_data_provided
+            self._gateway_route_provider.on.data_available, self._on_gateway_route_data_available
         )
         self.framework.observe(self._gateway_route_provider.on.data_removed, self._on_data_removed)
         self.framework.observe(
@@ -254,8 +254,8 @@ class GatewayAPICharm(CharmBase):
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
-    def _on_gateway_route_data_provided(self, _: GatewayRouteDataAvailableEvent) -> None:
-        """Handle the gateway-route data-provided event."""
+    def _on_gateway_route_data_available(self, _: GatewayRouteDataAvailableEvent) -> None:
+        """Handle the gateway-route data-available event."""
         self._reconcile()
 
     @validate_config_and_integration(defer=False)
@@ -458,18 +458,23 @@ class GatewayAPICharm(CharmBase):
         )
         service_resource_manager.cleanup_resources(exclude=[service])
         http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
-        ingress_url = (
-            f"https://{config.external_hostname}"
-            f"/{http_route_resource_information.requirer_model_name}"
-            f"-{http_route_resource_information.application_name}"
-        )
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:
+            ingress_url = (
+                f"https://{config.external_hostname}"
+                f"/{http_route_resource_information.requirer_model_name}"
+                f"-{http_route_resource_information.application_name}"
+            )
+
             self._ingress_provider.publish_url(
                 ingress_relation,
                 ingress_url,
             )
         else:
+            ingress_url = (
+                f"https://{self.get_hostname()}/{http_route_resource_information.paths[0]}"
+            )
+
             self._gateway_route_provider.publish_proxied_endpoints(
                 ingress_url,
                 self.model.get_relation(GATEWAY_ROUTE_RELATION),

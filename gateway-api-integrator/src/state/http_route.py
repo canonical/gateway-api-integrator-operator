@@ -75,10 +75,9 @@ class HTTPRouteResourceInformation:
         gateway_route_integration = charm.model.get_relation(GATEWAY_ROUTE_RELATION)
         if ingress_integration is None and gateway_route_integration is None:
             raise IngressIntegrationMissingError(
-                "Ingress and Gateway Route integration not ready." + " You must relate to either."
+                "Ingress and Gateway Route integration not ready. You must relate to either."
             )
         try:
-            strip_prefix = False
             if ingress_integration:
                 integration_data = ingress_provider.get_data(ingress_integration)
                 integration = "ingress"
@@ -100,6 +99,7 @@ class HTTPRouteResourceInformation:
                 application_name = integration_data.requirer_data.application_data.name
                 requirer_model_name = integration_data.requirer_data.application_data.model
                 service_port = integration_data.requirer_data.application_data.port
+                strip_prefix = False
             service_name = f"{charm.app.name}-{application_name}-service"
             service_port_name = f"tcp-{service_port}"
 

@@ -13,7 +13,9 @@ import ops
 from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError as GatewayRouteDataValidationError,
 )
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteDynamicRequirer
+from charms.gateway_api_integrator.v0.gateway_route import (
+    GatewayRouteDynamicRequirer,
+)
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)

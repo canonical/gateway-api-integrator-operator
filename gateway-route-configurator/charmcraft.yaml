@@ -26,10 +26,12 @@ platforms:
 provides:
   ingress:
     interface: ingress
+    limit: 1
 
 requires:
   gateway-route:
     interface: gateway-route
+    limit: 1
 
 config:
   options:

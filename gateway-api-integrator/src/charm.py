@@ -471,12 +471,12 @@ class GatewayAPICharm(CharmBase):
                 ingress_url,
             )
         else:
-            ingress_url = (
-                f"https://{self.get_hostname()}/{http_route_resource_information.paths[0]}"
-            )
+            ingress_urls = []
+            for path in http_route_resource_information.paths:
+                ingress_urls.append(f"https://{self.get_hostname()}/{path}")
 
-            self._gateway_route_provider.publish_proxied_endpoints(
-                ingress_url,
+            self._gateway_route_provider.publish_endpoints(
+                ingress_urls,
                 self.model.get_relation(GATEWAY_ROUTE_RELATION),
             )
 

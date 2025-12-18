@@ -5,7 +5,6 @@
 
 import logging
 import os
-import pathlib
 from typing import NamedTuple
 
 import jubilant
@@ -45,10 +44,6 @@ def juju_model_fixture(request: pytest.FixtureRequest):
 
         yield juju_model  # run the test
 
-        if request.session.testsfailed:
-            log = juju_model.debug_log(limit=1000)
-            logger.debug(log)
-
 
 @pytest.fixture(scope="module", name="charm")
 def charm_fixture(pytestconfig: pytest.Config) -> str:
@@ -74,7 +69,7 @@ def gateway_api_integrator(
 ):
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     juju.deploy(
-        (charm if charm else charm_path("gateway-api-integrator")),
+        charm,
         "gateway-api-integrator",
         base="ubuntu@24.04",
         trust=True,
@@ -101,11 +96,7 @@ def gateway_route_configurator(
         None,
     )
     juju.deploy(
-        (
-            str(configured_charm_path)
-            if configured_charm_path
-            else charm_path("gateway-route-configurator")
-        ),
+        str(configured_charm_path),
         "gateway-route-configurator",
         base="ubuntu@24.04",
         trust=True,
@@ -113,20 +104,3 @@ def gateway_route_configurator(
     )
 
     return App("gateway-route-configurator")
-
-
-def charm_path(name: str) -> pathlib.Path:
-    """Return full absolute path to given test charm.
-
-    Args:
-        name: The name of the charm, e.g. "gateway-api-integrator".
-
-    Returns:
-        The absolute path to the charm file.
-    """
-    # We're in tests/e2e/conftest.py, so parent*3 is repo top level.
-    charm_dir = pathlib.Path(__file__).parent.parent.parent
-    charms = [p.absolute() for p in charm_dir.glob(f"{name}_*.charm")]
-    assert charms, f"{name}_*.charm not found"
-    assert len(charms) == 1, "more than one .charm file, unsure which to use"
-    return charms[0]

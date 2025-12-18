@@ -444,8 +444,8 @@ class GatewayRouteRequirerEvents(CharmEvents):
     removed = EventSource(GatewayRouteEndpointsRemovedEvent)
 
 
-class GatewayRouteRequirer(Object):
-    """gateway-route interface requirer implementation.
+class GatewayRouteDynamicRequirer(Object):
+    """gateway-route interface dynamic requirer implementation.
 
     Attributes:
         on: Custom events of the requirer.
@@ -458,39 +458,20 @@ class GatewayRouteRequirer(Object):
         self,
         charm: CharmBase,
         relation_name: str,
-        name: str,
-        model: str,
-        port: int,
-        paths: list[str],
-        hostname: str,
     ) -> None:
-        """Initialize the GatewayRouteRequirer.
+        """Initialize the GatewayRouteDynamicRequirer.
 
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
-            name: The name of the service to route traffic to.
-            model: The model of the service to route traffic to.
-            port: The port the service is listening on.
-            paths: List of URL paths to route to this service.
-            hostname: Hostname of this service.
         """
         super().__init__(charm, relation_name)
 
         self._relation_name = relation_name
-        self.relation = self.model.get_relation(self._relation_name)
         self.charm = charm
+        self.relation = self.model.get_relation(self._relation_name)
 
-        # build the full application data
-        self._application_data = self._generate_application_data(
-            name,
-            model,
-            port,
-            paths,
-            hostname,
-        )
-        self.update_relation_data()
-
+        self._application_data = self._generate_application_data()
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -509,6 +490,34 @@ class GatewayRouteRequirer(Object):
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
         """Handle relation broken event."""
         self.on.removed.emit()
+
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    def provide_gateway_route_requirements(
+        self,
+        name: str,
+        model: str,
+        port: int,
+        paths: Optional[list[str]] = None,
+        hostname: Optional[str] = None,
+
+    ) -> None:
+        """Update gateway-route requirements data in the relation.
+
+        Args:
+            name: The name of the service to route traffic to.
+            model: The model of the service to route traffic to.
+            port: The port the service is listening on.
+            paths: List of URL paths to route to this service.
+            hostname: Hostname of this service.
+        """
+        self._application_data = self._generate_application_data(
+            name,
+            model,
+            port,
+            paths,
+            hostname,
+        )
+        self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
     def _generate_application_data(  # noqa: C901

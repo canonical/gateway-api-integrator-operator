@@ -54,9 +54,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         service_name: The configured gateway hostname.
         service_port: The configured gateway class.
         http_route_type: Type of the HTTP route, can be http or https.
-        integration: The type of integration, can be ingress or gateway-api.
         paths: The list of paths to be added to the HTTPRoute resource.
-        strip_prefix: Whether to create a path rewrite filter for proxied requests.
+        filters: The list of filters to be applied to the HTTPRoute resource.
     """
 
     application_name: str
@@ -65,16 +64,14 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     service_name: str
     service_port: int
     http_route_type: HTTPRouteType
-    integration: str
     paths: list[str]
-    strip_prefix: bool = False
+    filters: list[dict]
 
     def __init__(
         self,
         http_route_resource_information: HTTPRouteResourceInformation,
         gateway_resource_information: GatewayResourceInformation,
         http_route_type: HTTPRouteType,
-        strip_prefix: bool,
     ):
         """Create the state object with state components.
 
@@ -82,11 +79,9 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
             http_route_resource_information: HTTPRouteResourceInformation state component.
             gateway_resource_information: GatewayResourceInformation state component.
             http_route_type: Type of the HTTP route, can be http or https.
-            strip_prefix: Whether to add rewrite rule to strip the generated prefix.
         """
         super().__init__(http_route_resource_information, gateway_resource_information)
         self.http_route_type = http_route_type
-        self.strip_prefix = strip_prefix
 
 
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -137,21 +132,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             "rules": [
                 {
                     "matches": self.get_paths(http_route_resource_definition),
-                    "filters": (
-                        []
-                        if not http_route_resource_definition.strip_prefix
-                        else [
-                            {
-                                "type": "URLRewrite",
-                                "urlRewrite": {
-                                    "path": {
-                                        "type": "ReplacePrefixMatch",
-                                        "replacePrefixMatch": "/",
-                                    }
-                                },
-                            }
-                        ]
-                    ),
+                    "filters": http_route_resource_definition.filters,
                     "backendRefs": [
                         {
                             "name": http_route_resource_definition.service_name,
@@ -186,18 +167,6 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         Returns:
             A dictionary representing the paths for the HTTPRoute resource.
         """
-        if http_route_resource_definition.integration == "ingress":
-            return [
-                {
-                    "path": {
-                        "type": "PathPrefix",
-                        "value": (
-                            f"/{http_route_resource_definition.requirer_model_name}"
-                            f"-{http_route_resource_definition.application_name}"
-                        ),
-                    }
-                }
-            ]
         path_list = []
 
         for path in http_route_resource_definition.paths:

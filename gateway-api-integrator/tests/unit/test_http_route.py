@@ -94,7 +94,6 @@ def test_httproute_gen_resource(
             http_route_resource_information,
             gateway_resource_information,
             HTTPRouteType.HTTP,
-            http_route_resource_information.strip_prefix,
         )
     )
     https_route_resource = http_route_resource_manager._gen_resource(
@@ -102,7 +101,6 @@ def test_httproute_gen_resource(
             http_route_resource_information,
             gateway_resource_information,
             HTTPRouteType.HTTPS,
-            http_route_resource_information.strip_prefix,
         )
     )
     assert (

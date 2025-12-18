@@ -57,6 +57,7 @@ from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
     HTTPRouteResourceInformation,
+    IngressGatewayRouteConflictError,
     IngressIntegrationDataValidationError,
     IngressIntegrationMissingError,
 )
@@ -415,6 +416,7 @@ class GatewayAPICharm(CharmBase):
             DataValidationError,
             IngressIntegrationMissingError,
             IngressIntegrationDataValidationError,
+            IngressGatewayRouteConflictError,
         ):
             return typing.cast(str, self.model.config.get("external-hostname"))
 
@@ -445,7 +447,6 @@ class GatewayAPICharm(CharmBase):
                 http_route_resource_information,
                 gateway_resource_information,
                 HTTPRouteType.HTTP,
-                http_route_resource_information.strip_prefix,
             )
         )
         https_route = http_route_resource_manager.define_resource(
@@ -453,7 +454,6 @@ class GatewayAPICharm(CharmBase):
                 http_route_resource_information,
                 gateway_resource_information,
                 HTTPRouteType.HTTPS,
-                http_route_resource_information.strip_prefix,
             )
         )
         service_resource_manager.cleanup_resources(exclude=[service])

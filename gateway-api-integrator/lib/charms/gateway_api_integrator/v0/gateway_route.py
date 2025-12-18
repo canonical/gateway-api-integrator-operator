@@ -277,19 +277,6 @@ class GatewayRouteRequirerData:
     application_data: RequirerApplicationData
 
 
-@dataclass
-class GatewayRouteRequirersData:
-    """gateway-route requirers data.
-
-    Attributes:
-        requirer_data: List of requirer data.
-        relation_id_with_invalid_data: List of relation ids that contains invalid data.
-    """
-
-    requirer_data: Optional[GatewayRouteRequirerData]
-    relation_id_with_invalid_data: Optional[int]
-
-
 class GatewayRouteDataAvailableEvent(EventBase):
     """GatewayRouteDataAvailableEvent custom event.
 
@@ -372,26 +359,25 @@ class GatewayRouteProvider(Object):
         """Handle relation broken/departed events."""
         self.on.data_removed.emit()
 
-    def get_data(self, relation: Relation) -> GatewayRouteRequirersData:
+    def get_data(self, relation: Relation) -> Optional[GatewayRouteRequirerData]:
         """Fetch requirer data.
 
         Args:
-            relation: A list of Relation instances to fetch data from.
+            relation: The relation instance to fetch data from.
 
         Raises:
             GatewayRouteInvalidRelationDataError: When requirer data validation fails.
 
         Returns:
-            GatewayRouteRequirersData: Validated data from all gateway-route requirers.
+            GatewayRouteRequirerData: Validated data from the gateway-route requirer.
         """
         requirer_data: Optional[GatewayRouteRequirerData] = None
-        relation_id_with_invalid_data: Optional[int] = None
         if relation:
             try:
                 application_data = self._get_requirer_application_data(relation)
                 gateway_route_requirer_data = GatewayRouteRequirerData(
-                    application_data=application_data,
                     relation_id=relation.id,
+                    application_data=application_data,
                 )
                 requirer_data = gateway_route_requirer_data
             except DataValidationError as exc:
@@ -404,11 +390,7 @@ class GatewayRouteProvider(Object):
                     raise GatewayRouteInvalidRelationDataError(
                         f"gateway-route data validation failed for relation: {relation}"
                     ) from exc
-                relation_id_with_invalid_data = relation.id
-        return GatewayRouteRequirersData(
-            requirer_data=requirer_data,
-            relation_id_with_invalid_data=relation_id_with_invalid_data,
-        )
+        return requirer_data
 
     def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
         """Fetch and validate the requirer's application databag.

@@ -89,16 +89,16 @@ class HTTPRouteResourceInformation:
                 service_port = integration_data.app.port
             else:
                 integration_data = gateway_route_provider.get_data(gateway_route_integration)
-                if integration_data.requirer_data is None:
+                if integration_data is None:
                     raise IngressIntegrationMissingError(
                         "Gateway Route integration data not ready."
                     )
                 integration = GATEWAY_ROUTE_RELATION
-                paths = integration_data.requirer_data.application_data.paths
-                hostname = integration_data.requirer_data.application_data.hostname
-                application_name = integration_data.requirer_data.application_data.name
-                requirer_model_name = integration_data.requirer_data.application_data.model
-                service_port = integration_data.requirer_data.application_data.port
+                paths = integration_data.application_data.paths
+                hostname = integration_data.application_data.hostname
+                application_name = integration_data.application_data.name
+                requirer_model_name = integration_data.application_data.model
+                service_port = integration_data.application_data.port
                 strip_prefix = False
             service_name = f"{charm.app.name}-{application_name}-service"
             service_port_name = f"tcp-{service_port}"

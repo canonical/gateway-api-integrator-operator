@@ -473,7 +473,9 @@ class GatewayAPICharm(CharmBase):
         else:
             ingress_urls = []
             for path in http_route_resource_information.paths:
-                ingress_urls.append(f"https://{self.get_hostname()}/{path}")
+                ingress_urls.append(
+                    f"https://{self.get_hostname()}/{path.lstrip('/')}"
+                )
 
             self._gateway_route_provider.publish_endpoints(
                 ingress_urls,

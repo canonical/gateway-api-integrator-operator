@@ -43,7 +43,7 @@ class SomeCharm(CharmBase):
 
     # 2.To initialize the requirer with no parameters, i.e
     # self.gateway_route_requirer = GatewayRouteRequirer(self)
-    # This will simply initialize the requirer class and it won't perfom any action.
+    # This will simply initialize the requirer class and it won't perform any action.
 
     # Afterwards regardless of how you initialized the requirer you can call the
     # provide_gateway_route_requirements method anywhere in your charm to update the requirer data.
@@ -125,7 +125,7 @@ class DataValidationError(Exception):
 
 
 class GatewayRouteInvalidRelationDataError(Exception):
-    """Rasied when data validation of the gateway-route relation fails."""
+    """Raised when data validation of the gateway-route relation fails."""
 
 
 class _DatabagModel(BaseModel):
@@ -309,7 +309,7 @@ class GatewayRouteProvider(Object):
 
     Attributes:
         on: Custom events of the provider.
-        relation: Related appliations.
+        relation: Related applications.
     """
 
     on = GatewayRouteProviderEvents()  # type: ignore
@@ -437,7 +437,8 @@ class GatewayRouteRequirerEvents(CharmEvents):
 
     Attributes:
         ready: when the provider proxied endpoints are ready.
-        removed: when the provider
+        removed: when the provider removes or withdraws the proxied endpoints, or the
+            relation with the provider is removed/broken.
     """
 
     ready = EventSource(GatewayRouteEnpointsReadyEvent)

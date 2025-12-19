@@ -421,7 +421,7 @@ requires-dist = [
     { name = "cryptography", specifier = "==46.0.3" },
     { name = "jsonschema", specifier = "==4.25.1" },
     { name = "lightkube", specifier = "==0.18.0" },
-    { name = "ops", specifier = "==2.23.1" },
+    { name = "ops", specifier = "==3.5.0" },
     { name = "pydantic", specifier = "==2.12.4" },
     { name = "rpds-py", specifier = "==0.29.0" },
 ]
@@ -707,17 +707,16 @@ wheels = [
 
 [[package]]
 name = "ops"
-version = "2.23.1"
+version = "3.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "importlib-metadata" },
     { name = "opentelemetry-api" },
     { name = "pyyaml" },
     { name = "websocket-client" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/38/2d/488896632da371da6af1265c5fc6e39142f14b31d4c78a6c69cf453fcfd9/ops-2.23.1.tar.gz", hash = "sha256:aecacd67ef7ca913f63f397e0330bfa93d70529a3ef71ed2d99e2bc232564ae3", size = 527723 }
+sdist = { url = "https://files.pythonhosted.org/packages/65/0d/c351db0b13bb1872c9a8235c7529109dcee2a053439c76e6720444184238/ops-3.5.0.tar.gz", hash = "sha256:e3427889054285bd2711a3a297a77218384eacaf0d1001590ee4437cca115577", size = 575897 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ac/62/4b7bb8fa879c672d53cd3b58dc4df0f8cd8007e32d8bc73ec21d8bf238c6/ops-2.23.1-py3-none-any.whl", hash = "sha256:fdf58163beafd25180c12a4c7efaf1e76e5f8710508a97840c07055bb78b0c77", size = 188414 },
+    { url = "https://files.pythonhosted.org/packages/1e/46/f3c6f4553a338e0551eb09464f0c93273f347b3fdf21cd26bda8a5d2fad6/ops-3.5.0-py3-none-any.whl", hash = "sha256:07b1d1dbc0f3ca59534d5fe5020a66ee95c528f2430e004922350274509420c6", size = 211356 },
 ]
 
 [package.optional-dependencies]
@@ -727,15 +726,16 @@ testing = [
 
 [[package]]
 name = "ops-scenario"
-version = "7.23.1"
+version = "8.5.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ops" },
     { name = "pyyaml" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/dd/5d/bb3b6fd722b2b1f0831252e5cbd5a632ecce5361b5c4c009caf67ac30c19/ops_scenario-7.23.1.tar.gz", hash = "sha256:ae71a9a27c953b65d621495008f9f785aff28543810660063541d0b2990b2101", size = 109493 }
+sdist = { url = "https://files.pythonhosted.org/packages/46/b0/beee165ffd15078bf23dcd69dec6690cdeee5420828df0ab0c96d8aca935/ops_scenario-8.5.0.tar.gz", hash = "sha256:66e8ce8ee17e9eec50e899da7cdb8988e30765b9ed51e2aec90faea70e0a3053", size = 112542 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/78/75811a1368507f66660c3e38a69da4a1c8f2b9968b10e67741c786576686/ops_scenario-7.23.1-py3-none-any.whl", hash = "sha256:fe56f4cd19fb003285505b2fe22bc5c5beda77e06496bd0ed833456b55008324", size = 64312 },
+    { url = "https://files.pythonhosted.org/packages/4d/01/0edc24c3e403d6fda89e1b9d6534c322a911b72aeeb41992823ce3d3f9e3/ops_scenario-8.5.0-py3-none-any.whl", hash = "sha256:eb19764a4f1ecc493cfb0a4bfb1c55b4a5808679882a687473838416cd3b9bd2", size = 63947 },
 ]
 
 [[package]]

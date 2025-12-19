@@ -92,7 +92,7 @@ class CharmConfig:
         try:
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=typing.cast(str, charm.config.get("external-hostname")),
+                external_hostname=charm.get_hostname(),  # type: ignore[attr-defined]
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

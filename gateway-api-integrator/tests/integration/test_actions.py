@@ -4,9 +4,8 @@
 """Integration test for actions."""
 
 import pytest
+from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 from juju.application import Application
-
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.abort_on_fail

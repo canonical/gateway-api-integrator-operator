@@ -18,19 +18,6 @@ parts:
       - pkg-config
       - libffi-dev
       - libssl-dev
-# parts:
-#   charm:
-#     build-packages:
-#       - build-essential
-#       - python3-dev
-#       - pkg-config
-#       - libffi-dev
-#       - libssl-dev
-#     build-snaps:
-#       - rustup
-#     override-build: |
-#       rustup default stable
-#       craftctl default
 
 name: gateway-api-integrator
 title: Gateway API Integrator

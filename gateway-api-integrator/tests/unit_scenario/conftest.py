@@ -45,10 +45,36 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     ingress_relation = testing.Relation(
         endpoint="gateway",
         interface="ingress",
+        remote_app_data={
+            "model": '"testing-model"',
+            "name": '"testing-ingress-app"',
+            "port": "8080",
+        },
+        remote_units_data={
+            0: {"host": '"testing-host.example.com"'},
+        },
     )
+
+    gateway_route_relation = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway_route",
+        remote_app_data={
+            "model": '"testing-model"',
+            "name": '"testing-gateway-route-app"',
+            "port": "8080",
+            "hostname": '"testing-gateway.example.com"',
+            "paths": "[]",
+        },
+    )
+
     yield {
         "leader": True,
-        "relations": [dns_relation, certificates_relation, ingress_relation],
+        "relations": [
+            dns_relation,
+            certificates_relation,
+            ingress_relation,
+            gateway_route_relation,
+        ],
         "model": testing.Model(
             name="testmodel",
         ),

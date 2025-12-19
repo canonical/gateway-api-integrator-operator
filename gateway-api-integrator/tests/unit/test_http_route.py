@@ -5,6 +5,7 @@
 # Disable duplicate-code as we're initializing the http-route resource the same way as in charm.py
 # pylint: disable=protected-access,duplicate-code
 """Unit tests for http_route resource."""
+
 from unittest.mock import MagicMock
 
 import pytest
@@ -32,7 +33,9 @@ def test_http_route_resource_information_integration_missing(harness: Harness):
     """
     harness.begin()
     with pytest.raises(IngressIntegrationMissingError):
-        HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
+        HTTPRouteResourceInformation.from_charm(
+            harness.charm, harness.charm._ingress_provider, harness.charm._gateway_route_provider
+        )
 
 
 def test_http_route_resource_information_validation_error(harness: Harness):
@@ -48,13 +51,14 @@ def test_http_route_resource_information_validation_error(harness: Harness):
 
     harness.begin()
     with pytest.raises(IngressIntegrationDataValidationError):
-        HTTPRouteResourceInformation.from_charm(harness.charm, harness.charm._ingress_provider)
+        HTTPRouteResourceInformation.from_charm(
+            harness.charm, harness.charm._ingress_provider, harness.charm._gateway_route_provider
+        )
 
 
 def test_httproute_gen_resource(
     harness: Harness,
-    gateway_relation_application_data: dict[str, str],
-    gateway_relation_unit_data: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     config: dict[str, str],
 ):
     """
@@ -67,14 +71,14 @@ def test_httproute_gen_resource(
     harness.add_relation(
         "gateway",
         "test-charm",
-        app_data=gateway_relation_application_data,
-        unit_data=gateway_relation_unit_data,
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
     )
 
     harness.begin()
     charm = harness.charm
     http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-        charm, charm._ingress_provider
+        charm, charm._ingress_provider, harness.charm._gateway_route_provider
     )
     gateway_resource_information = GatewayResourceInformation.from_charm(charm)
     http_route_resource_manager = HTTPRouteResourceManager(
@@ -90,7 +94,6 @@ def test_httproute_gen_resource(
             http_route_resource_information,
             gateway_resource_information,
             HTTPRouteType.HTTP,
-            http_route_resource_information.strip_prefix,
         )
     )
     https_route_resource = http_route_resource_manager._gen_resource(
@@ -98,7 +101,6 @@ def test_httproute_gen_resource(
             http_route_resource_information,
             gateway_resource_information,
             HTTPRouteType.HTTPS,
-            http_route_resource_information.strip_prefix,
         )
     )
     assert (

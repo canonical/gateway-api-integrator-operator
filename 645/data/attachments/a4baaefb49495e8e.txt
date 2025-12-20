@@ -1,0 +1,135 @@
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju add-model --no-switch jubilant-cd1df7ef
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju deploy --model jubilant-cd1df7ef /home/ubuntu/snap/juju/common/tmpwqwafwdx/_temp.charm gateway-api-integrator --base ubuntu@24.04 --config gateway-class=cilium --config external-hostname=www.gateway.internal --trust
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju deploy --model jubilant-cd1df7ef self-signed-certificates
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju integrate --model jubilant-cd1df7ef gateway-api-integrator self-signed-certificates
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju deploy --model jubilant-cd1df7ef flask-k8s --channel latest/edge
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju integrate --model jubilant-cd1df7ef gateway-api-integrator:gateway flask-k8s
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
++ .model.name = 'jubilant-cd1df7ef'
++ .model.type = 'caas'
++ .model.controller = 'github-pr-0d965-k8s'
++ .model.cloud = 'k8s'
++ .model.version = '3.6.12'
++ .model.model_status.current = 'available'
++ .apps['flask-k8s'].charm = 'flask-k8s'
++ .apps['flask-k8s'].charm_origin = 'charmhub'
++ .apps['flask-k8s'].charm_name = 'flask-k8s'
++ .apps['flask-k8s'].charm_rev = 19
++ .apps['flask-k8s'].exposed = False
++ .apps['flask-k8s'].base.name = 'ubuntu'
++ .apps['flask-k8s'].base.channel = '22.04'
++ .apps['flask-k8s'].charm_channel = 'latest/edge'
++ .apps['flask-k8s'].scale = 1
++ .apps['flask-k8s'].app_status.current = 'waiting'
++ .apps['flask-k8s'].app_status.message = 'installing agent'
++ .apps['flask-k8s'].relations['ingress'][0].related_app = 'gateway-api-integrator'
++ .apps['flask-k8s'].relations['ingress'][0].interface = 'ingress'
++ .apps['flask-k8s'].relations['ingress'][0].scope = 'global'
++ .apps['flask-k8s'].relations['secret-storage'][0].related_app = 'flask-k8s'
++ .apps['flask-k8s'].relations['secret-storage'][0].interface = 'secret-storage'
++ .apps['flask-k8s'].relations['secret-storage'][0].scope = 'global'
++ .apps['flask-k8s'].units['flask-k8s/0'].workload_status.current = 'waiting'
++ .apps['flask-k8s'].units['flask-k8s/0'].workload_status.message = 'installing agent'
++ .apps['flask-k8s'].units['flask-k8s/0'].juju_status.current = 'allocating'
++ .apps['flask-k8s'].endpoint_bindings[''] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['grafana-dashboard'] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['ingress'] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['logging'] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['metrics-endpoint'] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['mysql'] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['postgresql'] = 'alpha'
++ .apps['flask-k8s'].endpoint_bindings['secret-storage'] = 'alpha'
++ .apps['gateway-api-integrator'].charm = 'local:gateway-api-integrator-0'
++ .apps['gateway-api-integrator'].charm_origin = 'local'
++ .apps['gateway-api-integrator'].charm_name = 'gateway-api-integrator'
++ .apps['gateway-api-integrator'].charm_rev = 0
++ .apps['gateway-api-integrator'].exposed = False
++ .apps['gateway-api-integrator'].base.name = 'ubuntu'
++ .apps['gateway-api-integrator'].base.channel = '24.04'
++ .apps['gateway-api-integrator'].scale = 1
++ .apps['gateway-api-integrator'].app_status.current = 'waiting'
++ .apps['gateway-api-integrator'].app_status.message = 'agent initialising'
++ .apps['gateway-api-integrator'].relations['certificates'][0].related_app = 'self-signed-certificates'
++ .apps['gateway-api-integrator'].relations['certificates'][0].interface = 'tls-certificates'
++ .apps['gateway-api-integrator'].relations['certificates'][0].scope = 'global'
++ .apps['gateway-api-integrator'].relations['gateway'][0].related_app = 'flask-k8s'
++ .apps['gateway-api-integrator'].relations['gateway'][0].interface = 'ingress'
++ .apps['gateway-api-integrator'].relations['gateway'][0].scope = 'global'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.current = 'waiting'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.message = 'agent initialising'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'allocating'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.version = '3.6.12'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].leader = True
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].provider_id = 'gateway-api-integrator-0'
++ .apps['gateway-api-integrator'].endpoint_bindings[''] = 'alpha'
++ .apps['gateway-api-integrator'].endpoint_bindings['certificates'] = 'alpha'
++ .apps['gateway-api-integrator'].endpoint_bindings['dns-record'] = 'alpha'
++ .apps['gateway-api-integrator'].endpoint_bindings['gateway'] = 'alpha'
++ .apps['gateway-api-integrator'].endpoint_bindings['gateway-route'] = 'alpha'
++ .apps['self-signed-certificates'].charm = 'self-signed-certificates'
++ .apps['self-signed-certificates'].charm_origin = 'charmhub'
++ .apps['self-signed-certificates'].charm_name = 'self-signed-certificates'
++ .apps['self-signed-certificates'].charm_rev = 317
++ .apps['self-signed-certificates'].exposed = False
++ .apps['self-signed-certificates'].base.name = 'ubuntu'
++ .apps['self-signed-certificates'].base.channel = '24.04'
++ .apps['self-signed-certificates'].charm_channel = '1/stable'
++ .apps['self-signed-certificates'].scale = 1
++ .apps['self-signed-certificates'].app_status.current = 'waiting'
++ .apps['self-signed-certificates'].app_status.message = 'installing agent'
++ .apps['self-signed-certificates'].relations['certificates'][0].related_app = 'gateway-api-integrator'
++ .apps['self-signed-certificates'].relations['certificates'][0].interface = 'tls-certificates'
++ .apps['self-signed-certificates'].relations['certificates'][0].scope = 'global'
++ .apps['self-signed-certificates'].units['self-signed-certificates/0'].workload_status.current = 'waiting'
++ .apps['self-signed-certificates'].units['self-signed-certificates/0'].workload_status.message = 'installing agent'
++ .apps['self-signed-certificates'].units['self-signed-certificates/0'].juju_status.current = 'allocating'
++ .apps['self-signed-certificates'].endpoint_bindings[''] = 'alpha'
++ .apps['self-signed-certificates'].endpoint_bindings['certificates'] = 'alpha'
++ .apps['self-signed-certificates'].endpoint_bindings['send-ca-cert'] = 'alpha'
++ .apps['self-signed-certificates'].endpoint_bindings['tracing'] = 'alpha'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
++ .apps['gateway-api-integrator'].provider_id = 'e10f9f54-94a0-4f1c-be41-10e08ff79dc2'
++ .apps['gateway-api-integrator'].address = '10.152.183.79'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].address = '10.1.0.53'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].app_status.current = 'waiting'
+- .apps['gateway-api-integrator'].app_status.message = 'agent initialising'
++ .apps['gateway-api-integrator'].app_status.current = 'maintenance'
++ .apps['gateway-api-integrator'].app_status.message = 'installing charm software'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.current = 'waiting'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.message = 'agent initialising'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'allocating'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.current = 'maintenance'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.message = 'installing charm software'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'executing'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running install hook'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'executing'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running install hook'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'idle'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'idle'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'executing'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running gateway-relation-created hook'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running gateway-relation-created hook'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running leader-elected hook'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].app_status.current = 'maintenance'
+- .apps['gateway-api-integrator'].app_status.message = 'installing charm software'
++ .apps['gateway-api-integrator'].app_status.current = 'blocked'
++ .apps['gateway-api-integrator'].app_status.message = 'Certificate data missing or incomplete.'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.current = 'maintenance'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.message = 'installing charm software'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.current = 'blocked'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].workload_status.message = 'Certificate data missing or incomplete.'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running leader-elected hook'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running config-changed hook'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running config-changed hook'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running start hook'
+[32mINFO    [0m jubilant.wait:_juju.py:1409 wait: status changed:
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'executing'
+- .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.message = 'running start hook'
++ .apps['gateway-api-integrator'].units['gateway-api-integrator/0'].juju_status.current = 'idle'
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju debug-log --model jubilant-cd1df7ef --limit 1000

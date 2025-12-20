@@ -1,0 +1,1 @@
+[{"uid":"b963b2a270289df0","name":"test_deploy_charm","time":{"start":1766243696674,"stop":1766243696674,"duration":0},"status":"broken","severity":"normal"},{"uid":"1a9d8d2f76a444f5","name":"test_deploy","time":{"start":1766243625068,"stop":1766243695977,"duration":70909},"status":"passed","severity":"normal"}]

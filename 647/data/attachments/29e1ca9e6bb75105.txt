@@ -1,0 +1,112 @@
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model github-pr-0d965-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:927 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:gateway-api-integrator-0
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  gateway-api-integrator/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-513
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  gateway-api-integrator/0 [idle] blocked: Ingress integration not ready.
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/flask-k8s-19
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  flask-k8s/0 [allocating] waiting: installing agent
+  gateway-api-integrator/0 [idle] blocked: Ingress integration not ready.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  flask-k8s/0 [idle] active: 
+  gateway-api-integrator/0 [idle] active: Gateway addresses: 10.151.33.100
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.151.33.97:6443/apis/gateway.networking.k8s.io/v1/namespaces/testing/gateways/gateway-api-integrator "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller           Cloud/Region  Version  SLA          Timestamp
+testing  github-pr-0d965-k8s  k8s           3.6.12   unsupported  15:12:02Z
+
+App                       Version  Status  Scale  Charm                     Channel      Rev  Address         Exposed  Message
+flask-k8s                          active      1  flask-k8s                 latest/edge   19  10.152.183.52   no       
+gateway-api-integrator             active      1  gateway-api-integrator                   0  10.152.183.103  no       Gateway addresses: 10.151.33.100
+self-signed-certificates           active      1  self-signed-certificates  latest/edge  513  10.152.183.162  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+flask-k8s/0*                 active    idle   10.1.0.235         
+gateway-api-integrator/0*    active    idle   10.1.0.226         Gateway addresses: 10.151.33.100
+self-signed-certificates/0*  active    idle   10.1.0.236         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-gateway-api-integrator-0: 15:09:05 ERROR unit.gateway-api-integrator/0.juju-log Configured gateway class  not present on the cluster.Available ones are: 'cilium,ck-gateway'
+unit-gateway-api-integrator-0: 15:09:05 ERROR unit.gateway-api-integrator/0.juju-log Error setting up charm state component: Gateway class must be one of: [cilium,ck-gateway]
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/validation.py", line 66, in wrapper
+    return method(instance, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 127, in _on_config_changed
+    config = CharmConfig.from_charm(self, client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/resource_manager/permission.py", line 46, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/config.py", line 88, in from_charm
+    raise InvalidCharmConfigError(
+state.config.InvalidCharmConfigError: Gateway class must be one of: [cilium,ck-gateway]
+unit-gateway-api-integrator-0: 15:09:06 ERROR unit.gateway-api-integrator/0.juju-log Configured gateway class  not present on the cluster.Available ones are: 'cilium,ck-gateway'
+unit-gateway-api-integrator-0: 15:09:06 ERROR unit.gateway-api-integrator/0.juju-log Error setting up charm state component: Gateway class must be one of: [cilium,ck-gateway]
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/validation.py", line 66, in wrapper
+    return method(instance, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 140, in _on_start
+    self._reconcile()
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 265, in _reconcile
+    config = CharmConfig.from_charm(self, client)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/resource_manager/permission.py", line 46, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/config.py", line 88, in from_charm
+    raise InvalidCharmConfigError(
+state.config.InvalidCharmConfigError: Gateway class must be one of: [cilium,ck-gateway]
+unit-gateway-api-integrator-0: 15:10:04 ERROR unit.gateway-api-integrator/0.juju-log Error setting up charm state component: Certificates integration not ready.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/validation.py", line 66, in wrapper
+    return method(instance, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 135, in _on_config_changed
+    self._reconcile()
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 267, in _reconcile
+    tls_information = TLSInformation.from_charm(self, self.certificates)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/tls.py", line 48, in from_charm
+    cls.validate(charm)
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/tls.py", line 87, in validate
+    raise TlsIntegrationMissingError("Certificates integration not ready.")
+state.tls.TlsIntegrationMissingError: Certificates integration not ready.
+unit-gateway-api-integrator-0: 15:10:08 ERROR unit.gateway-api-integrator/0.juju-log certificates:0: Error setting up charm state component: Ingress integration not ready.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/validation.py", line 66, in wrapper
+    return method(instance, *args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 190, in _on_certificate_available
+    self._reconcile()
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 277, in _reconcile
+    self._define_ingress_resources_and_publish_url(
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/charm.py", line 387, in _define_ingress_resources_and_publish_url
+    http_route_resource_information = HTTPRouteResourceInformation.from_charm(
+                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-gateway-api-integrator-0/charm/src/state/http_route.py", line 64, in from_charm
+    raise IngressIntegrationMissingError("Ingress integration not ready.")
+state.http_route.IngressIntegrationMissingError: Ingress integration not ready.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

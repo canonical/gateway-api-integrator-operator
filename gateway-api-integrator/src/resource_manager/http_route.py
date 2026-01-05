@@ -56,6 +56,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         http_route_type: Type of the HTTP route, can be http or https.
         paths: The list of paths to be added to the HTTPRoute resource.
         filters: The list of filters to be applied to the HTTPRoute resource.
+        matches: The list of matches for the HTTPRoute resource.
     """
 
     application_name: str
@@ -82,6 +83,26 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         """
         super().__init__(http_route_resource_information, gateway_resource_information)
         self.http_route_type = http_route_type
+
+    @property
+    def matches(self) -> list[dict[str, dict[str, str]]]:
+        """Get the list of matches for the HTTPRoute resource.
+
+        Returns:
+            The list of matches.
+        """
+        match_list = []
+
+        for path in self.paths:
+            match_list.append(
+                {
+                    "path": {
+                        "type": "PathPrefix",
+                        "value": path,
+                    }
+                }
+            )
+        return match_list
 
 
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -131,7 +152,7 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             ],
             "rules": [
                 {
-                    "matches": self.get_paths(http_route_resource_definition),
+                    "matches": http_route_resource_definition.matches,
                     "filters": http_route_resource_definition.filters,
                     "backendRefs": [
                         {
@@ -157,28 +178,6 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
         )
 
         return http_route
-
-    def get_paths(self, http_route_resource_definition: HTTPRouteResourceDefinition) -> list[dict]:
-        """Get the paths for the HTTPRoute resource.
-
-        Args:
-            http_route_resource_definition: The HTTPRoute resource definition object.
-
-        Returns:
-            A dictionary representing the paths for the HTTPRoute resource.
-        """
-        path_list = []
-
-        for path in http_route_resource_definition.paths:
-            path_list.append(
-                {
-                    "path": {
-                        "type": "PathPrefix",
-                        "value": path,
-                    }
-                }
-            )
-        return path_list
 
     @map_k8s_auth_exception
     def _create_resource(self, resource: GenericNamespacedResource) -> None:

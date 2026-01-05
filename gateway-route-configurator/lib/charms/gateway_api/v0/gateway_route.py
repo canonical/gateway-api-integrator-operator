@@ -9,7 +9,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.gateway_api_integrator.v0.gateway_route
+charmcraft fetch-lib charms.gateway_api.v0.gateway_route
 ```
 
 In the `metadata.yaml` of the charm, add the following:
@@ -24,10 +24,10 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.gateway_api_integrator.v0.haproxy_route import GatewayRouteRequirer
+from charms.gateway_api.v0.gateway_route import GatewayRouteRequirer
 
 class SomeCharm(CharmBase):
-  def __init__(self, *args):
+def __init__(self, *args):
     # ...
 
     # There are 2 ways you can use the requirer implementation:
@@ -37,8 +37,8 @@ class SomeCharm(CharmBase):
         name=<optional>,
         model=<optional>,
         port=<optional>,
-        paths=<optional>,
         hostname=<optional>,
+        paths=<optional>,
     )
 
     # 2.To initialize the requirer with no parameters, i.e
@@ -69,29 +69,6 @@ class SomeCharm(CharmBase):
 
     def _on_endpoints_removed(self, _: EventBase) -> None:
         # Handle endpoints removed event
-        ...
-
-## Using the library as the provider
-The provider charm should expose the interface as shown below:
-```yaml
-provides:
-    gateway-route:
-        interface: gateway-route
-```
-Note that this interface supports relating to multiple endpoints.
-
-Then, to initialise the library:
-```python
-from charms.haproxy.v1.haproxy_route import GatewayRouteProvider
-
-class SomeCharm(CharmBase):
-    self.gateway_route_provider = GatewayRouteProvider(self)
-    self.framework.observe(
-        self.gateway_route_provider.on.data_available, self._on_gateway_route_data_available
-    )
-
-    def _on_gateway_route_data_available(self, event: EventBase) -> None:
-        data = self.gateway_route_provider.get_data(self.gateway_route_provider.relation)
         ...
 """
 
@@ -245,7 +222,7 @@ class RequirerApplicationData(_DatabagModel):
         port: The port number on which the service is listening.
     """
 
-    hostname: Optional[str] = Field(description="Hostname of this service.", default=None)
+    hostname: str = Field(description="Hostname of this service.")
     paths: list[str] = Field(
         description="The list of paths to route to this service.", default=[]
     )
@@ -346,13 +323,13 @@ class GatewayRouteProvider(Object):
     @property
     def relation(self) -> Relation:
         """The list of Relation instances associated with this endpoint."""
-        return list(self.charm.model.relations.get(self._relation_name, []))[0]
+        return self.charm.model.get_relation(self._relation_name)
 
     def _configure(self, _event: EventBase) -> None:
         """Handle relation events."""
-        if relation := self.relation:
+        if self.relation:
             # Only for data validation
-            _ = self.get_data(relation)
+            _ = self.get_data(self.relation)
             self.on.data_available.emit()
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
@@ -375,11 +352,10 @@ class GatewayRouteProvider(Object):
         if relation:
             try:
                 application_data = self._get_requirer_application_data(relation)
-                gateway_route_requirer_data = GatewayRouteRequirerData(
+                requirer_data = GatewayRouteRequirerData(
                     relation_id=relation.id,
                     application_data=application_data,
                 )
-                requirer_data = gateway_route_requirer_data
             except DataValidationError as exc:
                 if self.raise_on_validation_error:
                     logger.error(
@@ -445,8 +421,8 @@ class GatewayRouteRequirerEvents(CharmEvents):
     removed = EventSource(GatewayRouteEndpointsRemovedEvent)
 
 
-class GatewayRouteDynamicRequirer(Object):
-    """gateway-route interface dynamic requirer implementation.
+class GatewayRouteRequirer(Object):
+    """gateway-route interface requirer implementation.
 
     Attributes:
         on: Custom events of the requirer.
@@ -459,12 +435,22 @@ class GatewayRouteDynamicRequirer(Object):
         self,
         charm: CharmBase,
         relation_name: str,
+        name: str | None = None,
+        model: str | None = None,
+        port: int | None = None,
+        hostname: str | None = None,
+        paths: Optional[list[str]] = None,
     ) -> None:
-        """Initialize the GatewayRouteDynamicRequirer.
+        """Initialize the GatewayRouteRequirer.
 
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation to bind to.
+            name: The name of the service to route traffic to.
+            model: The model of the service to route traffic to.
+            port: The port the service is listening on.
+            hostname: Hostname of this service.
+            paths: List of URL paths to route to this service.
         """
         super().__init__(charm, relation_name)
 
@@ -472,7 +458,18 @@ class GatewayRouteDynamicRequirer(Object):
         self.charm = charm
         self.relation = self.model.get_relation(self._relation_name)
 
-        self._application_data = self._generate_application_data()
+        if name and model and port and hostname:
+            # If all required parameters are provided, immediately provide the requirements
+            self.provide_gateway_route_requirements(
+                name,
+                model,
+                port,
+                hostname,
+                paths,
+            )
+        else:
+            self._application_data = self._generate_application_data()
+            
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -481,11 +478,11 @@ class GatewayRouteDynamicRequirer(Object):
     def _configure(self, _: EventBase) -> None:
         """Handle relation events."""
         self.update_relation_data()
-        if self.relation and self.get_proxied_endpoints():
+        if self.relation and self.get_routed_endpoints():
             # This event is only emitted when the provider databag changes
             # which only happens when relevant changes happened
             # Additionally this event is purely informational and it's up to the requirer to
-            # fetch the proxied endpoints in their code using get_proxied_endpoints
+            # fetch the routed endpoints in their code using get_routed_endpoints
             self.on.ready.emit()
 
     def _on_relation_broken(self, _: RelationBrokenEvent) -> None:
@@ -498,8 +495,8 @@ class GatewayRouteDynamicRequirer(Object):
         name: str,
         model: str,
         port: int,
+        hostname: str,
         paths: Optional[list[str]] = None,
-        hostname: Optional[str] = None,
 
     ) -> None:
         """Update gateway-route requirements data in the relation.
@@ -508,15 +505,15 @@ class GatewayRouteDynamicRequirer(Object):
             name: The name of the service to route traffic to.
             model: The model of the service to route traffic to.
             port: The port the service is listening on.
-            paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
+            paths: List of URL paths to route to this service.
         """
         self._application_data = self._generate_application_data(
             name,
             model,
             port,
-            paths,
             hostname,
+            paths,
         )
         self.update_relation_data()
 
@@ -526,8 +523,8 @@ class GatewayRouteDynamicRequirer(Object):
         name: Optional[str] = None,
         model: Optional[str] = None,
         port: Optional[int] = None,
-        paths: Optional[list[str]] = None,
         hostname: Optional[str] = None,
+        paths: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
 
@@ -546,11 +543,11 @@ class GatewayRouteDynamicRequirer(Object):
             paths = []
 
         application_data: dict[str, Any] = {
-            "name": name,
-            "model": model,
-            "port": port,
-            "paths": paths,
             "hostname": hostname,
+            "model": model,
+            "name": name,
+            "paths": paths,
+            "port": port,
         }
 
         return application_data
@@ -593,7 +590,7 @@ class GatewayRouteDynamicRequirer(Object):
                 "Validation error when preparing requirer application data."
             ) from exc
 
-    def get_proxied_endpoints(self) -> list[AnyHttpUrl]:
+    def get_routed_endpoints(self) -> list[AnyHttpUrl]:
         """The full ingress URL to reach the current unit.
 
         Returns:

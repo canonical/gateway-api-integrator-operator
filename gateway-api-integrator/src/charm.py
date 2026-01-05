@@ -15,7 +15,7 @@ from charms.bind.v0.dns_record import (
     RecordType,
     RequirerEntry,
 )
-from charms.gateway_api_integrator.v0.gateway_route import (
+from charms.gateway_api.v0.gateway_route import (
     DataValidationError,
     GatewayRouteDataAvailableEvent,
     GatewayRouteDataRemovedEvent,
@@ -471,12 +471,12 @@ class GatewayAPICharm(CharmBase):
                 ingress_url,
             )
         else:
-            ingress_urls = []
+            endpoints = []
             for path in http_route_resource_information.paths:
-                ingress_urls.append(f"https://{self.get_hostname()}/{path.lstrip('/')}")
+                endpoints.append(f"https://{self.get_hostname()}/{path.lstrip('/')}")
 
             self._gateway_route_provider.publish_endpoints(
-                ingress_urls,
+                endpoints,
                 self.model.get_relation(GATEWAY_ROUTE_RELATION),
             )
 

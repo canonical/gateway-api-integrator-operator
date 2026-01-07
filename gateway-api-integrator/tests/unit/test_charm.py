@@ -62,6 +62,7 @@ def test_reconcile_api_error_4xx(
     harness: Harness,
     client_with_mock_external: MagicMock,
     certificates_relation_data: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     monkeypatch: pytest.MonkeyPatch,
     error_code: int,
     config: dict[str, str],
@@ -82,6 +83,12 @@ def test_reconcile_api_error_4xx(
     )
 
     client_with_mock_external.create.side_effect = ApiError(response=MagicMock(spec=Response))
+    harness.add_relation(
+        "gateway",
+        "requirer-charm",
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
+    )
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.begin()
@@ -94,9 +101,10 @@ def test_reconcile_api_error_forbidden(
     harness: Harness,
     client_with_mock_external: MagicMock,
     certificates_relation_data: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
-):
+):  # pylint: disable=too-many-arguments, too-many-positional-arguments
     """
     arrange: Given a charm with valid tls/gateway integration and mocked client returning 403.
     act: Update the charm with valid config.
@@ -112,6 +120,12 @@ def test_reconcile_api_error_forbidden(
         MagicMock(return_value=None),
     )
     client_with_mock_external.create.side_effect = ApiError(response=MagicMock(spec=Response))
+    harness.add_relation(
+        "gateway",
+        "requirer-charm",
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
+    )
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
     harness.begin()
@@ -126,8 +140,7 @@ def test_reconcile_api_error_forbidden(
 def test_create_http_route_insufficient_permission(
     harness: Harness,
     certificates_relation_data: dict[str, str],
-    gateway_relation_application_data: dict[str, str],
-    gateway_relation_unit_data: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
     monkeypatch: pytest.MonkeyPatch,
     config: dict[str, str],
 ):  # pylint: disable=too-many-arguments, too-many-positional-arguments
@@ -151,8 +164,8 @@ def test_create_http_route_insufficient_permission(
     harness.add_relation(
         "gateway",
         "ingress-requirer",
-        app_data=gateway_relation_application_data,
-        unit_data=gateway_relation_unit_data,
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
     )
     harness.set_leader()
     harness.begin()

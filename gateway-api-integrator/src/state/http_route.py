@@ -6,11 +6,13 @@
 import dataclasses
 
 import ops
+from charms.gateway_api.v0.gateway_route import GatewayRouteProvider
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 from .exception import CharmStateValidationBaseError
 
 INGRESS_RELATION = "gateway"
+GATEWAY_ROUTE_RELATION = "gateway-route"
 
 
 class IngressIntegrationMissingError(CharmStateValidationBaseError):
@@ -19,6 +21,10 @@ class IngressIntegrationMissingError(CharmStateValidationBaseError):
 
 class IngressIntegrationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when ingress integration is not established."""
+
+
+class IngressGatewayRouteConflictError(CharmStateValidationBaseError):
+    """Exception raised when both ingress and gateway-route integrations are established."""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -31,7 +37,9 @@ class HTTPRouteResourceInformation:
         service_name: The name of the service we're creating.
         service_port: The port of the service.
         service_port_name: The port name of the service.
-        strip_prefix: Whether to strip the generated prefix.
+        filters: The list of filters to be applied to the HTTPRoute resource.
+        paths: The list of paths to be added to the HTTPRoute resource.
+        hostname: The hostname to be used in the HTTPRoute resource.
     """
 
     application_name: str
@@ -39,47 +47,125 @@ class HTTPRouteResourceInformation:
     service_name: str
     service_port: int
     service_port_name: str
-    strip_prefix: bool
+    filters: list[dict]
+    paths: list[str]
+    hostname: str
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, ingress_provider: IngressPerAppProvider
+        cls,
+        charm: ops.CharmBase,
+        ingress_provider: IngressPerAppProvider,
+        gateway_route_provider: GatewayRouteProvider,
     ) -> "HTTPRouteResourceInformation":
         """Get TLS information from a charm instance.
 
         Args:
             charm (ops.CharmBase): The gateway-api-integrator charm.
             ingress_provider (IngressPerAppProvider): The ingress provider library.
+            gateway_route_provider (GatewayRouteProvider): The gateway route provider library.
 
 
         Raises:
             IngressIntegrationMissingError: When integration is not ready.
             IngressIntegrationDataValidationError: When data validation failed.
+            IngressGatewayRouteConflictError: When both integrations are established.
 
         Returns:
             HTTPRouteResourceInformation: Information about configured TLS certs.
         """
         ingress_integration = charm.model.get_relation(INGRESS_RELATION)
-        if ingress_integration is None:
-            raise IngressIntegrationMissingError("Ingress integration not ready.")
-        try:
-            integration_data = ingress_provider.get_data(ingress_integration)
-            application_name = integration_data.app.name
-            requirer_model_name = integration_data.app.model
-            service_name = f"{charm.app.name}-{application_name}-service"
-            service_port = integration_data.app.port
-            service_port_name = f"tcp-{service_port}"
-            strip_prefix = integration_data.app.strip_prefix
-
-            return cls(
-                application_name=application_name,
-                requirer_model_name=requirer_model_name,
-                service_name=service_name,
-                service_port=service_port,
-                service_port_name=service_port_name,
-                strip_prefix=strip_prefix,
+        gateway_route_integration = charm.model.get_relation(GATEWAY_ROUTE_RELATION)
+        if ingress_integration is None and gateway_route_integration is None:
+            raise IngressIntegrationMissingError(
+                "Ingress and Gateway Route integration not ready. You must relate to either."
             )
+        if ingress_integration and gateway_route_integration:
+            raise IngressGatewayRouteConflictError(
+                "Both Ingress and Gateway Route integrations are established. Only one is allowed."
+            )
+        try:
+            if ingress_integration:
+                return cls._from_ingress(charm, ingress_provider, ingress_integration)
+            else:
+                return cls._from_gateway_route(
+                    charm, gateway_route_provider, gateway_route_integration
+                )
         except DataValidationError as exc:
             raise IngressIntegrationDataValidationError(
                 "Validation of ingress relation data failed."
             ) from exc
+
+    @classmethod
+    def _from_ingress(
+        cls,
+        charm: ops.CharmBase,
+        ingress_provider: IngressPerAppProvider,
+        ingress_integration: ops.Relation | None,
+    ) -> "HTTPRouteResourceInformation":
+        """Populate fields from ingress integration.
+
+        Args:
+            charm (ops.CharmBase): The gateway-api-integrator charm.
+            ingress_provider (IngressPerAppProvider): The ingress provider class.
+            ingress_integration (ops.Relation): The ingress integration.
+        """
+        integration_data = ingress_provider.get_data(ingress_integration)
+        application_name = integration_data.app.name
+        service_port = integration_data.app.port
+        service_name = f"{charm.app.name}-{application_name}-service"
+        return cls(
+            application_name=application_name,
+            requirer_model_name=integration_data.app.model,
+            service_name=service_name,
+            service_port=service_port,
+            service_port_name=f"tcp-{service_port}",
+            filters=(
+                []
+                if not integration_data.app.strip_prefix
+                else [
+                    {
+                        "type": "URLRewrite",
+                        "urlRewrite": {
+                            "path": {
+                                "type": "ReplacePrefixMatch",
+                                "replacePrefixMatch": "/",
+                            }
+                        },
+                    }
+                ]
+            ),
+            paths=[f"/{integration_data.app.model}-{application_name}"],
+            hostname="",
+        )
+
+    @classmethod
+    def _from_gateway_route(
+        cls,
+        charm: ops.CharmBase,
+        gateway_route_provider: GatewayRouteProvider,
+        gateway_route_integration: ops.Relation | None,
+    ) -> "HTTPRouteResourceInformation":
+        """Populate fields from ingress integration.
+
+        Args:
+            charm (ops.CharmBase): The gateway-api-integrator charm.
+            gateway_route_provider (GatewayRouteProvider): The gateway-route provider class
+            gateway_route_integration (ops.Relation): The gateway-route integration.
+        """
+        integration_data = gateway_route_provider.get_data(gateway_route_integration)
+        if integration_data is None:
+            raise IngressIntegrationMissingError("Gateway Route integration data not ready.")
+        application_name = integration_data.application_data.name
+        service_port = integration_data.application_data.port
+
+        return cls(
+            application_name=application_name,
+            requirer_model_name=integration_data.application_data.model,
+            service_name=f"{charm.app.name}-{application_name}-service",
+            service_port=service_port,
+            service_port_name=f"tcp-{service_port}",
+            filters=[],
+            paths=integration_data.application_data.paths,
+            hostname=integration_data.application_data.hostname,
+        )

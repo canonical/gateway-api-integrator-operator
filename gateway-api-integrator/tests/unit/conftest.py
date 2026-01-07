@@ -37,22 +37,19 @@ def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
     }
 
 
-@pytest.fixture(scope="function", name="gateway_relation_application_data")
-def gateway_relation_application_data_fixture() -> dict[str, str]:
-    """Mock gateway relation application data."""
+@pytest.fixture(scope="function", name="gateway_relation")
+def gateway_relation_fixture() -> dict[str, dict[str, str]]:
+    """Mock gateway relation data."""
     return {
-        "name": '"gateway-api-integrator"',
-        "model": '"testing"',
-        "port": "8080",
-        "strip_prefix": "false",
-        "redirect_https": "false",
+        "app_data": {
+            "name": '"gateway-api-integrator"',
+            "model": '"testing"',
+            "port": "8080",
+            "strip_prefix": "false",
+            "redirect_https": "false",
+        },
+        "unit_data": {"host": '"testing.ingress"', "ip": '"10.0.0.1"'},
     }
-
-
-@pytest.fixture(scope="function", name="gateway_relation_unit_data")
-def gateway_relation_unit_data_fixture() -> dict[str, str]:
-    """Mock gateway relation unit data."""
-    return {"host": '"testing.ingress"', "ip": '"10.0.0.1"'}
 
 
 @pytest.fixture(scope="function", name="patch_lightkube_client")

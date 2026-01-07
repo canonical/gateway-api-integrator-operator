@@ -1,0 +1,53 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+# This file configures Charmcraft.
+# See https://canonical-charmcraft.readthedocs-hosted.com/stable/howto/manage-charmcraft/ 
+# for guidance.
+
+type: charm
+name: gateway-route-configurator
+title: Gateway Route Configurator
+summary: Configurator for Gateway API routes.
+links:
+  issues: https://github.com/canonical/gateway-api-integrator-operator/issues
+  source: https://github.com/canonical/gateway-api-integrator-operator/tree/main/gateway-route-configurator
+  contact: https://launchpad.net/~canonical-is-devops
+
+description: |
+  A charm that acts as a bridge between a workload charm (via ingress relation)
+  and the Gateway API Integrator (via gateway-route relation).
+  It allows users to configure custom hostnames and paths for their applications.
+
+base: ubuntu@24.04
+platforms:
+  amd64:
+
+provides:
+  ingress:
+    interface: ingress
+    limit: 1
+
+requires:
+  gateway-route:
+    interface: gateway-route
+    limit: 1
+
+config:
+  options:
+    hostname:
+      description: The hostname to serve the application on.
+      type: string
+    paths:
+      description: Comma-separated list of paths to serve.
+      type: string
+      default: "/"
+parts:
+  charm:
+    source: .
+    plugin: uv
+    build-snaps:
+    - astral-uv
+
+assumes:
+  - k8s-api
+  - juju >= 3.3

@@ -7,13 +7,12 @@ import logging
 
 import lightkube
 import pytest
+from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 from juju.application import Application
 from lightkube.generic_resource import create_namespaced_resource
 from pytest_operator.plugin import OpsTest
 from requests import Session
-
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from .helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
 
 logger = logging.getLogger(__name__)
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"

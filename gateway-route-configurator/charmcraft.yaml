@@ -9,9 +9,8 @@ name: gateway-route-configurator
 title: Gateway Route Configurator
 summary: Configurator for Gateway API routes.
 links:
-  documentation: https://discourse.charmhub.io
-  issues: https://github.com/canonical/gateway-route-configurator/issues
-  source: https://github.com/canonical/gateway-route-configurator
+  issues: https://github.com/canonical/gateway-api-integrator-operator/issues
+  source: https://github.com/canonical/gateway-api-integrator-operator/tree/main/gateway-route-configurator
   contact: https://launchpad.net/~canonical-is-devops
 
 description: |

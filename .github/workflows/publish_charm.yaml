@@ -1,4 +1,4 @@
-name: Publish to edge
+name: Publish the gateway-api-integrator-operator charm to edge
 
 on:
   workflow_dispatch:
@@ -8,9 +8,24 @@ on:
 
 jobs:
   publish-to-edge:
+    strategy:
+      matrix:
+        configuration:
+          [
+            {
+              working-directory: "./gateway-api-integrator-operator",
+              channel: "latest/edge",
+              tag-prefix: "gateway-api-integrator",
+            },
+            {
+              working-directory: "./gateway-route-operator",
+              channel: "latest/edge",
+              tag-prefix: "gateway-route",
+            },
+          ]
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
     secrets: inherit
     with:
-      channel: latest/edge
-      charmcraft-channel: latest/edge
-      working-directory: ./gateway-api-integrator
+      channel: ${{ matrix.configuration.channel }}
+      working-directory: ${{ matrix.configuration.working-directory }}
+      tag-prefix: ${{ matrix.configuration.tag-prefix }}

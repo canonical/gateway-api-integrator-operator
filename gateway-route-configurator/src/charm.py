@@ -93,6 +93,5 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             self.unit.status = ops.MaintenanceStatus("Waiting for gateway route endpoints")
 
 
-
 if __name__ == "__main__":  # pragma: nocover
     ops.main.main(GatewayRouteConfiguratorCharm)

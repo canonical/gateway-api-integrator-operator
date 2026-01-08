@@ -1,3 +1,13 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[project]
+name = "gateway-api-monorepo"
+version = "0.0.0"
+description = "A group of related gateway API charms."
+readme = "README.md"
+requires-python = ">=3.12"
+
 [tool.bandit]
 exclude_dirs = ["/venv/"]
 [tool.bandit.assert_used]

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Place any unreleased changes here, that are subject to release in coming versions :).
 
+## 2025-01-08
+
+- Added project section to `pyproject.toml`.
+
 ## 2025-09-01
 
 - Added security overview documentation.

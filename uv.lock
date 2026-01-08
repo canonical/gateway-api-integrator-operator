@@ -396,7 +396,7 @@ dev = [
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "jubilant", specifier = ">=1.6.1" },
     { name = "juju", specifier = ">=3.6.1.3" },
-    { name = "lightkube", specifier = "==0.18.0" },
+    { name = "lightkube", specifier = "==0.19.0" },
     { name = "ops", specifier = "==2.23.1" },
     { name = "pydantic", specifier = "==2.12.5" },
     { name = "pytest", specifier = ">=9.0.1" },
@@ -700,16 +700,16 @@ wheels = [
 
 [[package]]
 name = "lightkube"
-version = "0.18.0"
+version = "0.19.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "lightkube-models" },
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/7f/c4b48a5e3086a423457f1bfc535c761e957aa95ef5cb3f3093bbd3f0a360/lightkube-0.18.0.tar.gz", hash = "sha256:b42dc8f00baab3f34d10b58808f73d3f48c89115db292db0c30e8810d769cb29", size = 28591, upload-time = "2025-11-12T11:09:59.546Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/83/7b/062b57a6aa952b9fbf344152998723485fb24e2b0fccce89f40c1e41002d/lightkube-0.19.0.tar.gz", hash = "sha256:0d1e6c004b4a0ebc6a15d9c4db9663261fb84f3ad2ee00aa8cb520af11639069", size = 29761, upload-time = "2025-12-26T14:00:32.901Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e7/7f/a906af8dc7cf91a39d89ca2dd47a3fecd81661b5849438024ecbbde15a76/lightkube-0.18.0-py3-none-any.whl", hash = "sha256:418fd6202962484222f92c7ee4f323b07d31988a08d101ede445aba7f516fa7d", size = 40626, upload-time = "2025-11-12T11:10:02.102Z" },
+    { url = "https://files.pythonhosted.org/packages/49/18/1e90d5403fe61d597dafa9fc43721dbf39ab41eeb2a14dead026ade24af7/lightkube-0.19.0-py3-none-any.whl", hash = "sha256:f0ec92ce11ec07e98619e65de3381180a676fe7a62342e0996e19d3928d21650", size = 42350, upload-time = "2025-12-26T14:00:34.771Z" },
 ]
 
 [[package]]

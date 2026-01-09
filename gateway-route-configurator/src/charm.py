@@ -82,7 +82,15 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             paths=paths,
             hostname=hostname,
         )
-        self.unit.status = ops.ActiveStatus("Ready")
+        # Publish the ingress URL to the requirer charm
+        if endpoints := self.gateway_route.get_routed_endpoints():
+            self.ingress.publish_url(
+                ingress_relation,
+                endpoints[0],
+            )
+            self.unit.status = ops.ActiveStatus("Ready")
+        else:
+            self.unit.status = ops.MaintenanceStatus("Waiting for gateway route endpoints")
 
 
 if __name__ == "__main__":  # pragma: nocover

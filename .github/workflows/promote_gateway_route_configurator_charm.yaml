@@ -1,4 +1,4 @@
-name: Promote charm
+name: Promote Gateway Route Configurator charm
 
 on:
   workflow_dispatch:

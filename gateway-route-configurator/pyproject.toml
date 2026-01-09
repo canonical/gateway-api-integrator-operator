@@ -16,7 +16,7 @@ classifiers = [
 dependencies = [
   "cryptography==46.0.3",
   "jsonschema==4.26.0",
-  "lightkube==0.19.0",
+  "lightkube==0.19.1",
   "ops[testing]==3.5.0",
   "pydantic==2.12.5",
   "pytest>=9.0.1",

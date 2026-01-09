@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'gateway-api-integrator/**'
 
 jobs:
   publish-to-edge:

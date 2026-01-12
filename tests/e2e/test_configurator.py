@@ -27,12 +27,12 @@ def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
     Returns:
         str: The ingress IP address.
     """
-    unit_data = yaml.load(juju.cli("show-unit", unit_name), Loader=yaml.CLoader)
+    unit_data = yaml.safe_load(juju.cli("show-unit", unit_name))
 
     for relation in unit_data[unit_name]["relation-info"]:
         if relation["endpoint"] == "ingress":
             # app data is encoded as a string so we have to load it as yaml again :(
-            return yaml.load(relation["application-data"]["ingress"], Loader=yaml.CLoader)["url"]
+            return yaml.safe_load(relation["application-data"]["ingress"])["url"]
     return ""
 
 

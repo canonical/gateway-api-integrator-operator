@@ -3,7 +3,7 @@
 <!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 [![CharmHub Badge](https://charmhub.io/gateway-api-integrator/badge.svg)](https://charmhub.io/gateway-api-integrator)
-[![Publish to edge](https://github.com/canonical/gateway-api-integrator-operator/actions/workflows/publish_charm.yaml/badge.svg)](https://github.com/canonical/gateway-api-integrator-operator/actions/workflows/publish_charm.yaml)
+[![Publish to edge](https://github.com/canonical/gateway-api-integrator-operator/actions/workflows/publish_gateway_api_integrator_charm.yaml/badge.svg)](https://github.com/canonical/gateway-api-integrator-operator/actions/workflows/publish_gateway_api_integrator_charm.yaml)
 [![Promote charm](https://github.com/canonical/gateway-api-integrator-operator/actions/workflows/promote_gateway_api_integrator_charm.yaml/badge.svg)](https://github.com/canonical/gateway-api-integrator-operator/actions/workflows/promote_gateway_api_integrator_charm.yaml)
 [![Discourse Status](https://img.shields.io/discourse/status?server=https%3A%2F%2Fdiscourse.charmhub.io&style=flat&label=CharmHub%20Discourse)](https://discourse.charmhub.io)
 

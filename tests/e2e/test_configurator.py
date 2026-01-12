@@ -16,24 +16,26 @@ from .conftest import App  # pylint: disable=no-name-in-module
 # Disable SSL warnings when using verify=False
 urllib3.disable_warnings(InsecureRequestWarning)
 
-def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:                                                                                                                        
-    """Get the ingress url from the units relation data.                                                                                                                                      
-                                                                                                                                                                                              
-    Args:                                                                                                                                                                                     
-        juju (jubilant.Juju): The jubilant Juju instance.                                                                                                                                     
-        unit_name (str): The target unit's name.                                                                                                                                              
-                                                                                                                                                                                              
-    Returns:                                                                                                                                                                                  
-        str: The ingress IP address.                                                                                                                                                          
-    """                                                                                                                                                                                       
-    unit_data = yaml.load(juju.cli("show-unit", unit_name), Loader=yaml.CLoader)                                                                                                              
-                                                                                                                                                                                              
-    for relation in unit_data[unit_name]["relation-info"]:                                                                                                                                    
-        if relation["endpoint"] == "ingress":                                                                                                                                                 
-            # app data is encoded as a string so we have to load it as yaml again :(                                                                                                          
-            return yaml.load(relation["application-data"]["ingress"], Loader=yaml.CLoader)["url"]                                                                                             
-    return ""                                                                                                                                                                                 
-              
+
+def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
+    """Get the ingress url from the units relation data.
+
+    Args:
+        juju (jubilant.Juju): The jubilant Juju instance.
+        unit_name (str): The target unit's name.
+
+    Returns:
+        str: The ingress IP address.
+    """
+    unit_data = yaml.load(juju.cli("show-unit", unit_name), Loader=yaml.CLoader)
+
+    for relation in unit_data[unit_name]["relation-info"]:
+        if relation["endpoint"] == "ingress":
+            # app data is encoded as a string so we have to load it as yaml again :(
+            return yaml.load(relation["application-data"]["ingress"], Loader=yaml.CLoader)["url"]
+    return ""
+
+
 def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: App) -> str:
     """Get the gateway IP from the charm status message.
 

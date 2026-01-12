@@ -4,25 +4,25 @@
 module "gateway_api_integrator" {
   source = "../modules/gateway-api-integrator"
 
-  app_name   = var.gateway_api_integrator_app_name
-  channel    = var.gateway_api_integrator_channel
-  config     = var.gateway_api_integrator_config
+  app_name   = var.gateway_api_integrator.app_name
+  channel    = var.gateway_api_integrator.channel
+  config     = var.gateway_api_integrator.config
   model_uuid = var.model_uuid
-  revision   = var.gateway_api_integrator_revision
-  base       = var.gateway_api_integrator_base
-  units      = var.gateway_api_integrator_units
+  revision   = var.gateway_api_integrator.revision
+  base       = var.gateway_api_integrator.base
+  units      = var.gateway_api_integrator.units
 }
 
 module "gateway_route_configurator" {
   source = "../modules/gateway-route-configurator"
 
-  app_name   = var.gateway_route_configurator_app_name
-  channel    = var.gateway_route_configurator_channel
-  config     = var.gateway_route_configurator_config
+  app_name   = var.gateway_route_configurator.app_name
+  channel    = var.gateway_route_configurator.channel
+  config     = var.gateway_route_configurator.config
   model_uuid = var.model_uuid
-  revision   = var.gateway_route_configurator_revision
-  base       = var.gateway_route_configurator_base
-  units      = var.gateway_route_configurator_units
+  revision   = var.gateway_route_configurator.revision
+  base       = var.gateway_route_configurator.base
+  units      = var.gateway_route_configurator.units
 }
 
 # Create relation between gateway-api-integrator and gateway-route-configurator

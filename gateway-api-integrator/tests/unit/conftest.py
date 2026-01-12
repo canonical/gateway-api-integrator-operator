@@ -39,7 +39,7 @@ def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
 
 @pytest.fixture(scope="function", name="gateway_relation")
 def gateway_relation_fixture() -> dict[str, dict[str, str]]:
-    """Mock gateway relation unit data."""
+    """Mock gateway relation data."""
     return {
         "app_data": {
             "name": '"gateway-api-integrator"',

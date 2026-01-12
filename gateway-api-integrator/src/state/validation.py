@@ -12,7 +12,7 @@ import ops
 from ops.model import SecretNotFoundError
 from resource_manager.resource_manager import InvalidResourceError
 from state.exception import CharmStateValidationBaseError
-from state.http_route import IngressIntegrationMissingError
+from state.http_route import IngressGatewayRouteConflictError, IngressIntegrationMissingError
 from tls_relation import InvalidCertificateError
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,11 @@ def validate_config_and_integration(
             """
             try:
                 return method(instance, *args)
-            except (CharmStateValidationBaseError, IngressIntegrationMissingError) as exc:
+            except (
+                CharmStateValidationBaseError,
+                IngressIntegrationMissingError,
+                IngressGatewayRouteConflictError,
+            ) as exc:
                 if defer:
                     event: ops.EventBase
                     event, *_ = args

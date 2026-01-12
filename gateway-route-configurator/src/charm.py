@@ -10,10 +10,7 @@ import re
 import typing
 
 import ops
-from charms.gateway_api_integrator.v0.gateway_route import (
-    DataValidationError as GatewayRouteDataValidationError,
-)
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
+from charms.gateway_api.v0.gateway_route import GatewayRouteRequirer
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)
@@ -38,14 +35,14 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_update)
         self.framework.observe(self.ingress.on.data_provided, self._on_update)
         self.framework.observe(self.ingress.on.data_removed, self._on_update)
-        self.framework.observe(self.on.gateway_route_relation_joined, self._on_update)
-        self.framework.observe(self.on.gateway_route_relation_changed, self._on_update)
+        self.framework.observe(self.gateway_route.on.ready, self._on_update)
+        self.framework.observe(self.gateway_route.on.removed, self._on_update)
 
     def _on_update(self, _: typing.Any) -> None:
         """Handle updates to config or relations."""
         self.unit.status = ops.MaintenanceStatus("Configuring gateway route")
 
-        # 1. Get Config
+        # Check config values
         hostname = str(self.model.config.get("hostname"))
         paths_str = str(self.model.config.get("paths", "/"))
 
@@ -59,29 +56,17 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
 
         paths = [p.strip() for p in paths_str.split(",")]
 
-        # 2. Get Ingress Data
+        # Check both relations exist
         ingress_relation = self.model.get_relation("ingress")
         if not ingress_relation:
             self.unit.status = ops.BlockedStatus("Missing 'ingress' relation")
             return
+        if not self.model.get_relation("gateway-route"):
+            self.unit.status = ops.BlockedStatus("Missing 'gateway-route' relation")
+            return
 
         try:
-            # We assume single app relation for now
-            if not self.ingress.relations:
-                self.unit.status = ops.WaitingStatus("Waiting for ingress relation")
-                return
-
-            # Use the first relation that has data
-            # IngressPerAppProvider.get_data returns IngressRequirerAppData
-            # But get_data takes a relation object.
-            # We need to iterate over relations and find one with data.
-
-            # Note: IngressPerAppProvider usually handles multiple relations.
-            # We should probably aggregate or just pick one.
-            # The spec implies this charm sits between ONE workload and ONE integrator.
-
-            data = self.ingress.get_data(self.ingress.relations[0])
-
+            data = self.ingress.get_data(ingress_relation)
             application_name = data.app.name
             model_name = data.app.model
             port = data.app.port
@@ -90,19 +75,22 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             self.unit.status = ops.BlockedStatus("Invalid ingress data")
             return
 
-        # 3. Send to Gateway Route
-        try:
-            self.gateway_route.send_route_configuration(
-                hostname=hostname,
-                paths=paths,
-                port=port,
-                name=application_name,
-                model=model_name,
+        self.gateway_route.provide_gateway_route_requirements(
+            name=application_name,
+            model=model_name,
+            port=port,
+            paths=paths,
+            hostname=hostname,
+        )
+        # Publish the ingress URL to the requirer charm
+        if endpoints := self.gateway_route.get_routed_endpoints():
+            self.ingress.publish_url(
+                ingress_relation,
+                endpoints[0],
             )
             self.unit.status = ops.ActiveStatus("Ready")
-        except GatewayRouteDataValidationError as e:
-            logger.exception("Failed to send route configuration")
-            self.unit.status = ops.BlockedStatus(f"Error sending config: {e}")
+        else:
+            self.unit.status = ops.MaintenanceStatus("Waiting for gateway route endpoints")
 
 
 if __name__ == "__main__":  # pragma: nocover

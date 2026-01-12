@@ -66,8 +66,8 @@ def test_gateway_route(base_state: dict) -> None:
     act: Run reconcile via the start event.
     assert: The charm updates the dns-record relation with the expected DNS entries.
     """
-    ctx = scenario.Context(GatewayAPICharm)
-    state = scenario.State(**base_state)
+    ctx = testing.Context(GatewayAPICharm)
+    state = testing.State(**base_state)
     gateway_route_relation = [rel for rel in state.relations if rel.endpoint == "gateway-route"][0]
     state = ctx.run(ctx.on.relation_changed(gateway_route_relation), state)
     mock_dns_entry_str = (

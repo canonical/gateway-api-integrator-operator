@@ -55,7 +55,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         },
     )
 
-    gateway_route_relation = scenario.Relation(
+    gateway_route_relation = testing.Relation(
         endpoint="gateway-route",
         interface="gateway_route",
         remote_app_data={
@@ -75,7 +75,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
             ingress_relation,
             gateway_route_relation,
         ],
-        "model": scenario.Model(
+        "model": testing.Model(
             name="testmodel",
         ),
     }

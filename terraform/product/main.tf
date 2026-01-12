@@ -1,15 +1,6 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-terraform {
-  required_providers {
-    juju = {
-      source  = "juju/juju"
-      version = ">= 0.12.0"
-    }
-  }
-}
-
 module "gateway_api_integrator" {
   source = "../modules/gateway-api-integrator"
 

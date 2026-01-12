@@ -6,7 +6,7 @@ This terraform configuration deploys the complete Gateway API Integrator solutio
 
 The product consists of:
 - **gateway-api-integrator**: Main charm that manages Gateway API resources
-- **gateway-route-configurator**: Companion charm that configures routes through the gateway-route relation
+- **gateway-route-configurator**: Companion charm that configures the gateway-route relation for charms with only ingress relation.
 
 ## Prerequisites
 
@@ -16,27 +16,69 @@ The product consists of:
 
 ## Usage
 
-1. Copy the example variables file:
-   ```bash
-   cp terraform.tfvars.example terraform.tfvars
-   ```
-
-2. Edit `terraform.tfvars` to customize your deployment:
+1. Edit `main.tf` to add the module:
    ```hcl
-   model_uuid = "your-juju-model-uuid-here"
-   
-   # Configure gateway-api-integrator
-   gateway_api_integrator_config = {
-     "external-hostname"     = "gateway.example.com"
-     "gateway-class-name"    = "cilium"
-     "gateway-name"          = "cilium-gateway"
-     "gateway-namespace"     = "cilium-gateway"
-   }
-   
-   # Optional: specify TLS certificates provider
-   tls_certificates_app_name = "self-signed-certificates"
+    # Gateway API Integrator Product Module
+    module "gateway" {
+      source = "git::https://github.com/canonical/gateway-api-integrator-operator//terraform/product?depth=1"
+      model_uuid = local.juju_model_uuid
+
+      gateway_api_integrator = {
+        channel = "latest/edge"
+        revision = 123
+        base    = "ubuntu@24.04"
+        config = {
+          gateway-class = "cilium"
+        }
+      }
+
+      gateway_route_configurator = {
+        channel = "latest/edge"
+        revision = 2
+        base    = "ubuntu@24.04"
+        config = {
+          hostname = "your_hostname"
+          paths = "/path1,/path2"
+        }
+      }
+    }
    ```
 
+2. Edit `main.tf` to integrate Gateway API Integrator with tls provider charm:
+   ```hcl
+
+    resource "juju_integration" "gai_lego" {
+      model_uuid = local.juju_model_uuid
+
+      application {
+        name     = module.gateway.gateway_api_integrator_app_name
+        endpoint = "certificates"
+      }
+
+      application {
+        name     = juju_application.lego.name
+        endpoint = "certificates"
+      }
+    }
+   ```
+
+2. Edit `main.tf` to integrate Gateway Route Configurator with ingress requirer charm:
+   ```hcl
+
+    resource "juju_integration" "app_ingress" {
+      model_uuid = var.model_uuid
+
+      application {
+        name     = module.gateway.gateway_route_configurator_app_name
+        endpoint = "ingress"
+      }
+
+      application {
+        name     = module.my_charm.netbox_app_name
+        endpoint = "ingress"
+      }
+    }
+   ```
 3. Initialize and apply terraform:
    ```bash
    terraform init
@@ -50,20 +92,16 @@ The product consists of:
 - `model_uuid`: UUID of the Juju model where charms will be deployed
 
 ### Gateway API Integrator
-- `gateway_api_integrator_app_name`: Application name (default: "gateway-api-integrator")
-- `gateway_api_integrator_channel`: Charm channel (default: "latest/edge")
-- `gateway_api_integrator_config`: Application configuration map
-- `gateway_api_integrator_units`: Number of units (default: 1)
+- `gateway_api_integrator.app_name`: Application name (default: "gateway-api-integrator")
+- `gateway_api_integrator.channel`: Charm channel (default: "latest/edge")
+- `gateway_api_integrator.config`: Application configuration map
+- `gateway_api_integrator.units`: Number of units (default: 1)
 
 ### Gateway Route Configurator
-- `gateway_route_configurator_app_name`: Application name (default: "gateway-route-configurator")
-- `gateway_route_configurator_channel`: Charm channel (default: "latest/edge")
-- `gateway_route_configurator_config`: Application configuration map
-- `gateway_route_configurator_units`: Number of units (default: 1)
-
-### Optional Integrations
-- `tls_certificates_app_name`: Name of TLS certificates provider (e.g., "self-signed-certificates")
-- `ingress_app_name`: Name of ingress provider (e.g., "traefik-k8s")
+- `gateway_route_configurator.app_name`: Application name (default: "gateway-route-configurator")
+- `gateway_route_configurator.channel`: Charm channel (default: "latest/edge")
+- `gateway_route_configurator.config`: Application configuration map
+- `gateway_route_configurator.units`: Number of units (default: 1)
 
 ## Outputs
 
@@ -78,29 +116,3 @@ The product consists of:
 
 The following integrations are automatically created:
 - Gateway-route relation between gateway-api-integrator and gateway-route-configurator
-- Optional TLS certificates relation (if `tls_certificates_app_name` is specified)
-- Optional ingress relation (if `ingress_app_name` is specified)
-
-## Examples
-
-### Basic deployment
-```hcl
-model_uuid = "12345678-1234-1234-1234-123456789abc"
-
-gateway_api_integrator_config = {
-  "external-hostname"  = "api.example.com"
-  "gateway-class-name" = "cilium"
-}
-```
-
-### Deployment with TLS
-```hcl
-model_uuid = "12345678-1234-1234-1234-123456789abc"
-
-gateway_api_integrator_config = {
-  "external-hostname"  = "api.example.com"
-  "gateway-class-name" = "cilium"
-}
-
-tls_certificates_app_name = "self-signed-certificates"
-```

@@ -25,7 +25,10 @@ def test_gateway_route(base_state: dict) -> None:
         "name": '"testing-ingress-app"',
         "port": "8080",
     }
-
+    ingress_relation = [rel for rel in state.relations if rel.endpoint == "ingress"][0]
+    assert ingress_relation.local_app_data == {
+        "ingress": '{"url": "https://testing-gateway.example.com/app1"}'
+    }
 
 def test_gateway_route_no_hostname(base_state: dict) -> None:
     """

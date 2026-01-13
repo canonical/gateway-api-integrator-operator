@@ -10,8 +10,8 @@ The product consists of:
 
 ## Prerequisites
 
-- Terraform >= 1.5
-- Juju provider for Terraform >= 0.12.0
+- Terraform >= 1.6
+- Juju provider for Terraform >= 1.1
 - A Juju model where you want to deploy the charms
 
 ## Usage
@@ -114,5 +114,5 @@ The product consists of:
 
 ## Relations
 
-The following integrations are automatically created:
-- Gateway-route relation between gateway-api-integrator and gateway-route-configurator
+The following integration is automatically created:
+- `gateway-route` relation between `gateway-api-integrator` and `gateway-route-configurator`.

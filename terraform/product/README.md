@@ -24,8 +24,8 @@ The product consists of:
       model_uuid = local.juju_model_uuid
 
       gateway_api_integrator = {
-        channel = "latest/edge"
-        revision = 123
+        channel = "latest/stable"
+        revision = 127
         base    = "ubuntu@24.04"
         config = {
           gateway-class = "cilium"
@@ -33,7 +33,7 @@ The product consists of:
       }
 
       gateway_route_configurator = {
-        channel = "latest/edge"
+        channel = "latest/stable"
         revision = 2
         base    = "ubuntu@24.04"
         config = {

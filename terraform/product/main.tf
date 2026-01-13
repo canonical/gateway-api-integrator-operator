@@ -26,7 +26,7 @@ module "gateway_route_configurator" {
 }
 
 # Create relation between gateway-api-integrator and gateway-route-configurator
-resource "juju_integration" "gateway_api_integrator_to_route_configurator" {
+resource "juju_integration" "gateway_api_integrator_route_configurator" {
   model_uuid = var.model_uuid
 
   application {

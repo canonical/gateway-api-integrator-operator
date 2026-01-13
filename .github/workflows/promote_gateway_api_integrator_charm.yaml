@@ -25,4 +25,5 @@ jobs:
       destination-channel: ${{ github.event.inputs.destination-channel }}
       doc-automation-disabled: false
       working-directory: ./gateway-api-integrator
+      base-channel: 24.04
     secrets: inherit

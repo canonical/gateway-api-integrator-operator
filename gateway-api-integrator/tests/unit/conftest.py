@@ -75,28 +75,21 @@ def gateway_class_resource_fixture():
     return GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))
 
 
-@pytest.fixture(scope="function", name="private_key_and_password")
-def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
+@pytest.fixture(scope="function", name="private_key")
+def private_key_fixture() -> str:
     """Mock private key juju secret."""
     # In v4, password is not used for private key generation
     # Generate a simple private key for testing
-    import secrets
-    import string
-    
-    password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
-    private_key = generate_private_key()
-    return (password, str(private_key))
+    return str(generate_private_key())
 
 
 @pytest.fixture(scope="function", name="juju_secret_mock")
 def juju_secret_mock_fixture(
     monkeypatch: pytest.MonkeyPatch,
-    private_key_and_password: tuple[str, str],
+    private_key: str,
 ) -> tuple[str, str]:
     """Mock certificates integration."""
-    password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    # In v4, the secret key name is "private-key" instead of "key"
     juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     return juju_secret_mock
@@ -131,17 +124,19 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     # Create a mock Certificate object with a raw attribute
     cert_mock = MagicMock()
     cert_mock.raw = cert
-    cert_mock.__str__ = MagicMock(return_value=cert)
-    
+    cert_mock.__str__ = MagicMock(return_value=cert)  # type: ignore[method-assign]
+
     # Create CSR mock with common_name
     csr_mock = MagicMock()
     csr_mock.common_name = TEST_EXTERNAL_HOSTNAME_CONFIG
-    
+
     provider_cert_mock = MagicMock()
     provider_cert_mock.certificate = cert_mock
     provider_cert_mock.certificate_signing_request = csr_mock
     provider_cert_mock.ca = cert_mock
-    provider_cert_mock.chain = [cert_mock]  # Chain should be list of Certificate objects with .raw attribute
+    provider_cert_mock.chain = [
+        cert_mock
+    ]  # Chain should be list of Certificate objects with .raw attribute
     monkeypatch.setattr(
         (
             "charms.tls_certificates_interface.v4.tls_certificates"
@@ -165,7 +160,7 @@ def config_fixture() -> dict[str, str]:
 def client_with_mock_external_fixture(
     mock_lightkube_client: MagicMock,
     gateway_class_resource: GenericGlobalResource,
-    private_key_and_password: tuple[str, str],
+    private_key: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> MagicMock:
     """Mock necessary external methods for the charm to work properly with harness."""
@@ -174,7 +169,6 @@ def client_with_mock_external_fixture(
         return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),
     )
     monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
-    password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
     # In v4, the secret key name is "private-key" instead of "key"
     juju_secret_mock.get_content.return_value = {"private-key": private_key}

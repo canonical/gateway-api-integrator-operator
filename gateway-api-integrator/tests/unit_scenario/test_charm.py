@@ -8,13 +8,17 @@ from charm import GatewayAPICharm
 from ops import testing
 
 
-def test_dns_record(base_state: dict) -> None:
+def test_dns_record(
+    base_state: dict, gateway_relation: testing.Relation, certificates_relation: testing.Relation
+) -> None:
     """
     arrange: Charm is initialized with a mock state.
     act: Run reconcile via the start event.
     assert: The charm updates the dns-record relation with the expected DNS entries.
     """
     ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].append(gateway_relation)
+    base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
     mock_dns_entry_str = (
@@ -31,7 +35,12 @@ def test_dns_record(base_state: dict) -> None:
     assert dns_relation.local_app_data["dns_entries"] == mock_dns_entry_str
 
 
-def test_dns_record_no_gateway_resource(base_state: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dns_record_no_gateway_resource(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
     """
     arrange: Charm is initialized with a mock state without a gateway resource.
     act: Run reconcile via the start event.
@@ -42,12 +51,19 @@ def test_dns_record_no_gateway_resource(base_state: dict, monkeypatch: pytest.Mo
         lambda self: None,
     )
     ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].append(gateway_relation)
+    base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
     assert "dns_entries" not in list(state.relations)[0].local_app_data
 
 
-def test_dns_record_no_gateway_address(base_state: dict, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_dns_record_no_gateway_address(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
     """
     arrange: Charm is initialized with a mock state without a gateway address.
     act: Run reconcile via the start event.
@@ -55,18 +71,26 @@ def test_dns_record_no_gateway_address(base_state: dict, monkeypatch: pytest.Mon
     """
     monkeypatch.setattr("charm.GatewayResourceManager.gateway_address", lambda self, name: None)
     ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].append(gateway_relation)
+    base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
     assert "dns_entries" not in list(state.relations)[0].local_app_data
 
 
-def test_gateway_route(base_state: dict) -> None:
+def test_gateway_route(
+    base_state: dict,
+    gateway_route_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
     """
     arrange: Charm is initialized with a mock state.
     act: Run reconcile via the start event.
     assert: The charm updates the dns-record relation with the expected DNS entries.
     """
     ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].append(gateway_route_relation)
+    base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
     gateway_route_relation = [rel for rel in state.relations if rel.endpoint == "gateway-route"][0]
     state = ctx.run(ctx.on.relation_changed(gateway_route_relation), state)

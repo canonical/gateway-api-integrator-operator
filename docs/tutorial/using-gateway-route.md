@@ -74,5 +74,5 @@ self-signed-certificates:certificates  gateway-api-integrator:certificates      
 
 Now curl the endpoint:
 ```
-$ curl -k --resolve testing.com:443:10.43.45.1 https://testing.com/app1      
+curl -k --resolve testing.com:443:10.43.45.1 https://testing.com/app1      
 ```

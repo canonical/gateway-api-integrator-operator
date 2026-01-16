@@ -7,12 +7,12 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from charm import GatewayAPICharm
+from charms.tls_certificates_interface.v4.tls_certificates import generate_private_key
 from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta
 from ops.model import Secret
 from ops.testing import Harness
-from tls_relation import TLSRelationService, generate_private_key
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -78,10 +78,14 @@ def gateway_class_resource_fixture():
 @pytest.fixture(scope="function", name="private_key_and_password")
 def private_key_and_password_fixture(harness: Harness) -> tuple[str, str]:
     """Mock private key juju secret."""
-    tls = TLSRelationService(harness.model, MagicMock())
-    password = tls.generate_password().encode()
-    private_key = generate_private_key(password=password)
-    return (password.decode(), private_key.decode())
+    # In v4, password is not used for private key generation
+    # Generate a simple private key for testing
+    import secrets
+    import string
+    
+    password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+    private_key = generate_private_key()
+    return (password, str(private_key))
 
 
 @pytest.fixture(scope="function", name="juju_secret_mock")
@@ -129,8 +133,8 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     provider_cert_mock.chain_as_pem_string = MagicMock(return_value=cert)
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v3.tls_certificates"
-            ".TLSCertificatesRequiresV3.get_provider_certificates"
+            "charms.tls_certificates_interface.v4.tls_certificates"
+            ".TLSCertificatesRequiresV4.get_provider_certificates"
         ),
         MagicMock(return_value=[provider_cert_mock]),
     )

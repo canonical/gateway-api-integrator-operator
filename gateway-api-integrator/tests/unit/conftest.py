@@ -96,7 +96,8 @@ def juju_secret_mock_fixture(
     """Mock certificates integration."""
     password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    # In v4, the secret key name is "private-key" instead of "key"
+    juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     return juju_secret_mock
 
@@ -127,10 +128,20 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
         "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
         "-----END CERTIFICATE-----"
     )
+    # Create a mock Certificate object with a raw attribute
+    cert_mock = MagicMock()
+    cert_mock.raw = cert
+    cert_mock.__str__ = MagicMock(return_value=cert)
+    
+    # Create CSR mock with common_name
+    csr_mock = MagicMock()
+    csr_mock.common_name = TEST_EXTERNAL_HOSTNAME_CONFIG
+    
     provider_cert_mock = MagicMock()
-    provider_cert_mock.certificate = cert
-    provider_cert_mock.chain = [cert]
-    provider_cert_mock.chain_as_pem_string = MagicMock(return_value=cert)
+    provider_cert_mock.certificate = cert_mock
+    provider_cert_mock.certificate_signing_request = csr_mock
+    provider_cert_mock.ca = cert_mock
+    provider_cert_mock.chain = [cert_mock]  # Chain should be list of Certificate objects with .raw attribute
     monkeypatch.setattr(
         (
             "charms.tls_certificates_interface.v4.tls_certificates"
@@ -165,7 +176,8 @@ def client_with_mock_external_fixture(
     monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
     password, private_key = private_key_and_password
     juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"key": private_key, "password": password}
+    # In v4, the secret key name is "private-key" instead of "key"
+    juju_secret_mock.get_content.return_value = {"private-key": private_key}
     monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     monkeypatch.setattr(
         "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",

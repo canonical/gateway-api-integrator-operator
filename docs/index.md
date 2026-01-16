@@ -34,6 +34,6 @@ If there’s a particular area of documentation that you’d like to see that’
   1. [Charm architecture](reference/charm-architecture.md)
 1. [Tutorial](tutorial)
   1. [Tutorial: Deploy the Gateway API integrator charm](tutorial/getting-started.md)
-  2. [Tutorial: Deploy the Gateway Route Configurator charm](tutorial/using-gateway-route.md)
+  2. [Tutorial: Deploy the Gateway Route configurator charm](tutorial/using-gateway-route.md)
 1. [How-to](how-to)
   1. [Upgrade](how-to/upgrade.md)

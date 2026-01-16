@@ -7,7 +7,6 @@
 
 from unittest.mock import MagicMock
 
-import pytest
 from ops.testing import Harness
 from resource_manager.secret import (
     SecretResourceDefinition,
@@ -16,28 +15,6 @@ from resource_manager.secret import (
 from state.tls import TLSInformation
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-
-
-@pytest.mark.skip(reason="_get_decrypted_key no longer exists in v4 - handled internally by library")
-def test_secret_get_decrypted_key(harness: Harness, private_key_and_password: tuple[str, str]):
-    """
-    arrange: given a GatewayApiIntegrator charm.
-    act: generate a private key and decrypt it.
-    assert: _get_decrypted_key no longer exists in v4.
-    """
-    # In v4, private key decryption is handled internally by the tls_certificates library
-    pass
-
-
-@pytest.mark.skip(reason="get_hostname_from_cert no longer exists in v4 - was in tls_relation module")
-def test_get_hostname_from_cert(harness: Harness, mock_certificate: str):
-    """
-    arrange: Given a GatewayApiIntegrator charm.
-    act: Get the hostname from an already generated cert.
-    assert: get_hostname_from_cert no longer exists in v4.
-    """
-    # The get_hostname_from_cert function was in the tls_relation module which no longer exists
-    pass
 
 
 def test_secret_gen_resource(

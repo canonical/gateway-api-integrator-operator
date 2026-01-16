@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from ops import testing
-from state.config import CharmConfig
+from src.state.config import CharmConfig  # pylint: disable=import-error
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -37,12 +37,30 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         interface="dns_record",
     )
 
-    certificates_relation = testing.Relation(
+    yield {
+        "leader": True,
+        "relations": [
+            dns_relation,
+        ],
+        "model": testing.Model(
+            name="testmodel",
+        ),
+    }
+
+
+@pytest.fixture(scope="function", name="certificates_relation")
+def certificates_relation_fixture():
+    """Return a mock certificates relation data."""
+    return testing.Relation(
         endpoint="certificates",
         interface="certificates",
     )
 
-    ingress_relation = testing.Relation(
+
+@pytest.fixture(scope="function", name="gateway_relation")
+def gateway_relation_fixture():
+    """Return a mock gateway relation data."""
+    return testing.Relation(
         endpoint="gateway",
         interface="ingress",
         remote_app_data={
@@ -55,7 +73,11 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         },
     )
 
-    gateway_route_relation = testing.Relation(
+
+@pytest.fixture(scope="function", name="gateway_route_relation")
+def gateway_route_relation_fixture():
+    """Return a mock gateway-route relation data."""
+    return testing.Relation(
         endpoint="gateway-route",
         interface="gateway_route",
         remote_app_data={
@@ -66,16 +88,3 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
             "paths": "[]",
         },
     )
-
-    yield {
-        "leader": True,
-        "relations": [
-            dns_relation,
-            certificates_relation,
-            ingress_relation,
-            gateway_route_relation,
-        ],
-        "model": testing.Model(
-            name="testmodel",
-        ),
-    }

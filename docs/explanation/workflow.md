@@ -1,5 +1,5 @@
 # The charm's workflow
-1. When the charm starts, it goes into a blocked state until TLS is configured, either via a config option or via an integration with a TLS provider charm.
+1. When the charm starts, it goes into a blocked state until TLS is configured, either with a config option or using an integration with a TLS provider charm.
 
 2. Once TLS is configure a minimal gateway object containing a http and a https listener is created. The charm will remain in a block state until integration with an ingress requirer charm is established.
 

@@ -9,9 +9,9 @@
 
 A Juju charm that deploys and manages a [Gateway API integator](https://gateway-api.sigs.k8s.io/) on Kubernetes. Gateway API is an official Kubernetes project focused on L4 and L7 routing in Kubernetes. This project represents the next generation of Kubernetes Ingress, Load Balancing, and Service Mesh APIs. From the outset, it has been designed to be generic, expressive, and role-oriented. This charm simplifies deployment and operations of Gateway API Integrator. It allows for deployment on many different Kubernetes platforms, including [Canonical K8s](https://ubuntu.com/kubernetes).
 
-As such, the charm makes it easy for those looking to take control of their own Gateway API deployment while keeping operations simple, and gives them the freedom to deploy on the Kubernetes platform of their choice.
+As such, the charm provides smooth operations for those looking to take control of their own Gateway API deployment, and it gives them the freedom to deploy on the Kubernetes platform of their choice.
 
-For DevOps or SRE teams this charm will make operating a Gateway API simple and straightforward through Juju's clean interface. It will allow easy deployment into multiple environments for testing of changes.
+For DevOps or SRE teams this charm will make operating a Gateway API straightforward through Juju's clean interface. It will allow deployment into multiple environments for testing of changes.
 
 For information about how to deploy, integrate, and manage this charm, see the Official [gateway-api-integrator charm Documentation](https://charmhub.io/gateway-api-integrator/docs).
 
@@ -32,7 +32,7 @@ command:
 juju config gateway-api-integrator gateway-class=cilium
 ```
 
-#### Relate to a certificate provider charm
+#### Integrate with a certificate provider charm
 
 The `certificates` relation provides the gateway-api-integrator charm with TLS termination.
 
@@ -49,7 +49,7 @@ juju integrate gateway-api-integrator self-signed-certificates
 ## Learn more
 
 - [Read more](https://charmhub.io/gateway-api-integrator/docs)
-- [Official webpage] (https://gateway-api.sigs.k8s.io/)
+- [Official webpage](https://gateway-api.sigs.k8s.io/)
 
 ## Project and community
 

@@ -4,53 +4,54 @@
 
 ## What you'll do
 This tutorial will walk you through deploying the gateway-api-integrator and gateway-route-configurator charms; you will:
-1. Deploy and configure the gateway-api-integrator charm
-2. Establish an integration with a TLS provider charm
-3. Deploy and configure the gateway-route-configurator charm
+- Deploy and configure the gateway-api-integrator charm
+- Establish an integration with a TLS provider charm
+- Deploy and configure the gateway-route-configurator charm
 4- Deploy a ingress requirer charm and provide gateway
 
 ## Prerequisites
-* A Kubernetes cluster with a gateway controller installed.
-* A host machine with Juju version 3.3 or above.
+- A Kubernetes cluster with a gateway controller installed.
+- A host machine with Juju version 3.3 or above.
 
 ## Deploy and configure the gateway-api-integrator charm
-1. Deploy and configure the charm
+- Deploy and configure the charm
 ```
 juju deploy gateway-api-integrator
 juju config gateway-api-integrator gateway-class=cilium
 ```
 
 ## Establish an integration with a TLS provider charm
-1. Deploy a TLS provider
+- Deploy a TLS provider
 ```
 juju deploy self-signed-certificates
 ```
-2. Integrate the gateway-api-integrator charm with the TLS provider 
+
+- Integrate the gateway-api-integrator charm with the TLS provider 
 ```
 juju integrate gateway-api-integrator self-signed-certificates
 ```
 
 ## Deploy and configure the gateway-route-configurator charm
-1. Deploy and configure the charm
+- Deploy and configure the charm
 ```
 juju deploy gateway-route-configurator
 juju config gateway-route-configurator hostname=testing.com paths=/app1,/app2
 ```
-2. Integrate with the gateway-api-integrator charm
+
+- Integrate with the gateway-api-integrator charm
 ```
 juju integrate gateway-api-integrator:gateway-route gateway-route-configurator:gateway-route
 ```
 
 ## Deploy and integrate the flask-k8s charn
-1. Deploy and integrate the charm
+- Deploy and integrate the charm
 ```
 juju deploy flask-k8s
 juju integrate flask-k8s:ingress gateway-route-configurator:ingress
 ```
-2. Check the `juju status` and curl the endpoint
+
+Check `juju status` to verify that the deployment was successful. The terminal output should look similar to the following:
 ```
-$ juju status
-                                                                                                                                   
 App                         Version  Status  Scale  Charm                       Channel      Rev  Address         Exposed  Message
 flask-k8s                            active      1  flask-k8s                   latest/edge   19  10.152.183.114  no                                                                          
 gateway-api-integrator               active      1  gateway-api-integrator                     0  10.152.183.106  no       Gateway addresses: 10.43.45.1                                      
@@ -69,6 +70,9 @@ gateway-api-integrator:gateway-route   gateway-route-configurator:gateway-route 
 gateway-route-configurator:ingress     flask-k8s:ingress                         ingress           regular
 self-signed-certificates:certificates  gateway-api-integrator:certificates       tls-certificates  regular
 
+```
 
+Now curl the endpoint:
+```
 $ curl -k --resolve testing.com:443:10.43.45.1 https://testing.com/app1      
-``` 
+```

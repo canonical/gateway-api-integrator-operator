@@ -1,0 +1,19 @@
+"DESCRIPTION","DURATION IN MS","NAME","PARENT SUITE","START TIME","STATUS","STOP TIME","SUB SUITE","SUITE","TEST CLASS","TEST METHOD"
+"Deploy the charm with valid config and tls integration.
+
+    Assert on valid output of get-certificate.
+    ","1019","test_get_certificate_action","gateway-api-integrator.tests.integration","2026-01-17","passed","2026-01-17","","test_actions","",""
+"Deploy the charm together with related charms.
+
+    Assert on the unit status before any relations/configurations take place.
+    ","63771","test_deploy","gateway-api-integrator.tests.integration","2026-01-17","passed","2026-01-17","","test_charm","",""
+"
+    Test that the charm correctly sets up the DNS record relation.
+    Deploy any-charm and integrate it on dns-record relation.
+    Assert that the relation data contains the expected DNS entries.
+    ","38144","test_deploy_charm","gateway-api-integrator.tests.integration_jubilant","2026-01-17","passed","2026-01-17","","test_charm_jubilant","",""
+"
+    Test that the charms correctly set up the gateway route relation.
+    Deploy gateway-route-configurator and integrate it on gateway-route relation.
+    Assert that a request to the external hostname is correctly routed to the flask-k8s app
+    ","53302","test_configurator","tests.e2e","2026-01-17","passed","2026-01-17","","test_configurator","",""

@@ -3,7 +3,6 @@
 
 """Unit tests for certificates integration."""
 
-
 import pytest
 from ops.testing import Harness
 from state.tls import TLSInformation, TlsIntegrationMissingError

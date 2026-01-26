@@ -7,11 +7,9 @@ from unittest.mock import MagicMock, PropertyMock
 
 import pytest
 from charm import GatewayAPICharm
-from charms.tls_certificates_interface.v4.tls_certificates import generate_private_key
 from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta
-from ops.model import Secret
 from ops.testing import Harness
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
@@ -73,26 +71,6 @@ def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
 def gateway_class_resource_fixture():
     """Mock gateway class global resource."""
     return GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))
-
-
-@pytest.fixture(scope="function", name="private_key")
-def private_key_fixture() -> str:
-    """Mock private key juju secret."""
-    # In v4, password is not used for private key generation
-    # Generate a simple private key for testing
-    return str(generate_private_key())
-
-
-@pytest.fixture(scope="function", name="juju_secret_mock")
-def juju_secret_mock_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-    private_key: str,
-) -> tuple[str, str]:
-    """Mock certificates integration."""
-    juju_secret_mock = MagicMock(spec=Secret)
-    juju_secret_mock.get_content.return_value = {"private-key": private_key}
-    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
-    return juju_secret_mock
 
 
 @pytest.fixture(scope="function", name="mock_certificate")
@@ -160,7 +138,6 @@ def config_fixture() -> dict[str, str]:
 def client_with_mock_external_fixture(
     mock_lightkube_client: MagicMock,
     gateway_class_resource: GenericGlobalResource,
-    private_key: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> MagicMock:
     """Mock necessary external methods for the charm to work properly with harness."""
@@ -169,10 +146,6 @@ def client_with_mock_external_fixture(
         return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),
     )
     monkeypatch.setattr("ops.jujuversion.JujuVersion.has_secrets", PropertyMock(return_value=True))
-    juju_secret_mock = MagicMock(spec=Secret)
-    # In v4, the secret key name is "private-key" instead of "key"
-    juju_secret_mock.get_content.return_value = {"private-key": private_key}
-    monkeypatch.setattr("ops.model.Model.get_secret", MagicMock(return_value=juju_secret_mock))
     monkeypatch.setattr(
         "charms.traefik_k8s.v2.ingress.IngressPerAppProvider.publish_url",
         MagicMock(),

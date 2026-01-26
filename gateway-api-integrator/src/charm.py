@@ -98,29 +98,17 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.start, self._on_start)
 
-        # self.framework.observe(
-        #     self.on.certificates_relation_created, self._on_certificates_relation_created
-        # )
-        # self.framework.observe(
-        #     self.on.certificates_relation_joined, self._on_certificates_relation_joined
-        # )
-        # self.framework.observe(
-        #     self.on.certificates_relation_broken, self._on_certificates_relation_broken
-        # )
+        self.framework.observe(
+            self.on.certificates_relation_joined, self._on_certificates_relation_joined
+        )
+        self.framework.observe(
+            self.on.certificates_relation_broken, self._on_certificates_relation_broken
+        )
         self.framework.observe(
             self.certificates.on.certificate_available, self._on_certificate_available
         )
-        # self.framework.observe(
-        #     self.certificates.on.certificate_expiring, self._on_certificate_expiring
-        # )
-        # self.framework.observe(
-        #     self.certificates.on.certificate_invalidated, self._on_certificate_invalidated
-        # )
+
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
-        # self.framework.observe(
-        #     self.certificates.on.all_certificates_invalidated,
-        #     self._on_all_certificates_invalidated,
-        # )
 
         self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
@@ -155,6 +143,16 @@ class GatewayAPICharm(CharmBase):
     @validate_config_and_integration(defer=False)
     def _on_config_changed(self, _: typing.Any) -> None:
         """Handle the config-changed event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_certificates_relation_joined(self, _: typing.Any) -> None:
+        """Handle the certificates-relation-joined event."""
+        self._reconcile()
+
+    @validate_config_and_integration(defer=False)
+    def _on_certificates_relation_broken(self, _: typing.Any) -> None:
+        """Handle the certificates-relation-broken event."""
         self._reconcile()
 
     @validate_config_and_integration(defer=False)

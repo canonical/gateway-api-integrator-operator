@@ -7,7 +7,7 @@ from datetime import timedelta
 
 import pytest
 from charm import GatewayAPICharm
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
     CertificateSigningRequest,

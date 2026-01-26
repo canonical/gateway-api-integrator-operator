@@ -6,7 +6,7 @@
 import dataclasses
 
 import ops
-from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
+from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
 
 from .exception import CharmStateValidationBaseError
 

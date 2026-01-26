@@ -21,7 +21,7 @@ from charms.gateway_api.v0.gateway_route import (
     GatewayRouteDataRemovedEvent,
     GatewayRouteProvider,
 )
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     CertificateAvailableEvent,
     CertificateRequestAttributes,
     Mode,

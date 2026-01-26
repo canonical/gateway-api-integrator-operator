@@ -150,6 +150,20 @@ wheels = [
 ]
 
 [[package]]
+name = "charmlibs-interfaces-tls-certificates"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "cryptography" },
+    { name = "ops" },
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5c/25/56ce98f08b55ac431e44a9d125c8e3f59367dfb53d07525b8a0e201eb39b/charmlibs_interfaces_tls_certificates-1.4.0.tar.gz", hash = "sha256:cfcc471552e5506f6b6978bdffd26b93f1911964a1fd3290f5d21df5342ce2d0", size = 127158, upload-time = "2026-01-20T13:48:52.399Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1c/5e/92ce886f0072bb6a8fd688edbfccaf8bee5700ea7e38cc1d072c690dd877/charmlibs_interfaces_tls_certificates-1.4.0-py3-none-any.whl", hash = "sha256:ddfe5dbd27728ea1c76a2952d701d4dafa11b15edf96fe7d6e82a38748e592fe", size = 22705, upload-time = "2026-01-20T13:48:51.299Z" },
+]
+
+[[package]]
 name = "charset-normalizer"
 version = "3.4.4"
 source = { registry = "https://pypi.org/simple" }
@@ -373,6 +387,7 @@ name = "gateway-api-integrator"
 version = "0.0.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "charmlibs-interfaces-tls-certificates" },
     { name = "cryptography" },
     { name = "jsonschema" },
     { name = "lightkube" },
@@ -417,6 +432,7 @@ unit = [
 
 [package.metadata]
 requires-dist = [
+    { name = "charmlibs-interfaces-tls-certificates", specifier = "~=1.4" },
     { name = "cryptography", specifier = "==46.0.3" },
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "lightkube", specifier = "==0.19.1" },

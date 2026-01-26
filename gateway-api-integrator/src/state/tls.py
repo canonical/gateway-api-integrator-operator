@@ -6,8 +6,7 @@
 import dataclasses
 
 import ops
-from charms.tls_certificates_interface.v3.tls_certificates import TLSCertificatesRequiresV3
-from tls_relation import get_hostname_from_cert
+from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 
 from .exception import CharmStateValidationBaseError
 
@@ -30,11 +29,11 @@ class TLSInformation:
 
     secret_resource_name_prefix: str
     tls_certs: dict[str, str]
-    tls_keys: dict[str, dict[str, str]]
+    tls_keys: dict[str, str]
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV3
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
     ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
@@ -52,16 +51,12 @@ class TLSInformation:
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         for cert in certificates.get_provider_certificates():
-            hostname = get_hostname_from_cert(cert.certificate)
+            hostname = cert.certificate.common_name
             chain = cert.chain
             if chain[0] != cert.certificate:
                 chain.reverse()
-            tls_certs[hostname] = "\n\n".join(chain)
-            secret = charm.model.get_secret(label=f"private-key-{hostname}")
-            tls_keys[hostname] = {
-                "key": secret.get_content()["key"],
-                "password": secret.get_content()["password"],
-            }
+            tls_certs[hostname] = "\n\n".join([str(cert) for cert in chain])
+            tls_keys[hostname] = str(certificates.private_key)
 
         return cls(
             secret_resource_name_prefix=secret_resource_name_prefix,

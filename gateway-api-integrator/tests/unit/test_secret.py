@@ -11,36 +11,10 @@ from ops.testing import Harness
 from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,
-    _get_decrypted_key,
 )
 from state.tls import TLSInformation
-from tls_relation import get_hostname_from_cert
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-
-
-def test_secret_get_decrypted_key(harness: Harness, private_key_and_password: tuple[str, str]):
-    """
-    arrange: given a GatewayApiIntegrator charm.
-    act: generate a private key and decrypt it.
-    assert: the decrypt operation pass without any error.
-    """
-    password, private_key = private_key_and_password
-    harness.begin()
-
-    decrypted_key = _get_decrypted_key(private_key, password)
-
-    assert decrypted_key
-
-
-def test_get_hostname_from_cert(harness: Harness, mock_certificate: str):
-    """
-    arrange: Given a GatewayApiIntegrator charm.
-    act: Get the hostname from an already generated cert.
-    assert: The hostname is correct.
-    """
-    harness.begin()
-    assert get_hostname_from_cert(mock_certificate) == TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_secret_gen_resource(

@@ -103,6 +103,7 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     cert_mock = MagicMock()
     cert_mock.raw = cert
     cert_mock.__str__ = MagicMock(return_value=cert)  # type: ignore[method-assign]
+    cert_mock.common_name = TEST_EXTERNAL_HOSTNAME_CONFIG
 
     # Create CSR mock with common_name
     csr_mock = MagicMock()

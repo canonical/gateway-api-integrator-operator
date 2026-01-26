@@ -7,7 +7,7 @@ This tutorial will walk you through deploying the gateway-api-integrator and gat
 - Deploy and configure the gateway-api-integrator charm
 - Establish an integration with a TLS provider charm
 - Deploy and configure the gateway-route-configurator charm
-4- Deploy a ingress requirer charm and provide gateway
+- Deploy a ingress requirer charm and provide gateway
 
 ## Prerequisites
 - A Kubernetes cluster with a gateway controller installed.

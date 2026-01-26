@@ -17,7 +17,7 @@ To begin, refer to the [Getting Started](https://charmhub.io/gateway-route-confi
 
 ## Usage
 
-Deploy the charm:
+Deploy the charm, including the required `hostname` configuration:
 
 ```bash
 juju deploy gateway-route-configurator --channel=latest/edge --config hostname=example.com paths=/app1,/app2
@@ -41,7 +41,7 @@ juju relate gateway-route-configurator:ingress flask-k8s
 
 ## Project and community
 
-The Gateway API Integrator Operator is a member of the Ubuntu family. It's an
+The Gateway API Configurator Operator is a member of the Ubuntu family. It's an
 open source project that warmly welcomes community projects, contributions,
 suggestions, fixes and constructive feedback.
 

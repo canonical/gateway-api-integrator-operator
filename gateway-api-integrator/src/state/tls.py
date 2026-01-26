@@ -51,11 +51,11 @@ class TLSInformation:
         secret_resource_name_prefix = f"{charm.app.name}-secret"
 
         for cert in certificates.get_provider_certificates():
-            hostname = cert.certificate_signing_request.common_name
+            hostname = cert.certificate.common_name
             chain = cert.chain
             if chain[0] != cert.certificate:
                 chain.reverse()
-            tls_certs[hostname] = "\n\n".join([c.raw for c in chain])
+            tls_certs[hostname] = "\n\n".join([str(cert) for cert in chain])
             tls_keys[hostname] = str(certificates.private_key)
 
         return cls(

@@ -166,12 +166,11 @@ def test_gateway_gen_resource_enforce_https_true(
     act: Call _gen_resource from the required state components.
     assert: The Gateway resource has both HTTP and HTTPS listeners.
     """
-    config_with_enforce_https = config.copy()
-    config_with_enforce_https["enforce-https"] = True
-    
+    config_with_enforce_https: dict[str, str | bool] = {**config, "enforce-https": True}
+
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.update_config(config_with_enforce_https)
+    harness.update_config(config_with_enforce_https)  # type: ignore[arg-type]
     harness.begin()
 
     gateway_resource_information = GatewayResourceInformation.from_charm(harness.charm)
@@ -188,14 +187,14 @@ def test_gateway_gen_resource_enforce_https_true(
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
     listeners = gateway_resource.spec["listeners"]
     assert len(listeners) == 2
-    
+
     # Check HTTP listener
-    http_listener = next(l for l in listeners if l["protocol"] == "HTTP")
+    http_listener = next(listener for listener in listeners if listener["protocol"] == "HTTP")
     assert http_listener["port"] == 80
     assert "hostname" in http_listener
-    
+
     # Check HTTPS listener
-    https_listener = next(l for l in listeners if l["protocol"] == "HTTPS")
+    https_listener = next(listener for listener in listeners if listener["protocol"] == "HTTPS")
     assert https_listener["port"] == 443
     assert "tls" in https_listener
     assert "hostname" in https_listener
@@ -210,13 +209,13 @@ def test_gateway_gen_resource_enforce_https_false(
     act: Call _gen_resource from the required state components.
     assert: The Gateway resource has only HTTP listener, no HTTPS listener.
     """
-    config_no_https = {
+    config_no_https: dict[str, str | bool] = {
         "gateway-class": GATEWAY_CLASS_CONFIG,
         "external-hostname": "",
         "enforce-https": False,
     }
-    
-    harness.update_config(config_no_https)
+
+    harness.update_config(config_no_https)  # type: ignore[arg-type]
     harness.begin()
 
     gateway_resource_information = GatewayResourceInformation.from_charm(harness.charm)
@@ -236,16 +235,16 @@ def test_gateway_gen_resource_enforce_https_false(
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
     listeners = gateway_resource.spec["listeners"]
     assert len(listeners) == 1
-    
+
     # Check only HTTP listener is present
     http_listener = listeners[0]
     assert http_listener["protocol"] == "HTTP"
     assert http_listener["port"] == 80
     # No hostname should be set when it's not provided
     assert "hostname" not in http_listener
-    
+
     # Verify no HTTPS listener
-    https_listeners = [l for l in listeners if l["protocol"] == "HTTPS"]
+    https_listeners = [listener for listener in listeners if listener["protocol"] == "HTTPS"]
     assert len(https_listeners) == 0
 
 
@@ -258,13 +257,13 @@ def test_gateway_gen_resource_enforce_https_false_with_hostname(
     act: Call _gen_resource from the required state components.
     assert: The Gateway resource has only HTTP listener with hostname set.
     """
-    config_http_with_hostname = {
+    config_http_with_hostname: dict[str, str | bool] = {
         "gateway-class": GATEWAY_CLASS_CONFIG,
         "external-hostname": "example.com",
         "enforce-https": False,
     }
-    
-    harness.update_config(config_http_with_hostname)
+
+    harness.update_config(config_http_with_hostname)  # type: ignore[arg-type]
     harness.begin()
 
     gateway_resource_information = GatewayResourceInformation.from_charm(harness.charm)
@@ -284,17 +283,16 @@ def test_gateway_gen_resource_enforce_https_false_with_hostname(
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
     listeners = gateway_resource.spec["listeners"]
     assert len(listeners) == 1
-    
+
     # Check only HTTP listener is present with hostname
     http_listener = listeners[0]
     assert http_listener["protocol"] == "HTTP"
     assert http_listener["port"] == 80
     assert http_listener["hostname"] == "example.com"
-    
-    # Verify no HTTPS listener
-    https_listeners = [l for l in listeners if l["protocol"] == "HTTPS"]
-    assert len(https_listeners) == 0
 
+    # Verify no HTTPS listener
+    https_listeners = [listener for listener in listeners if listener["protocol"] == "HTTPS"]
+    assert len(https_listeners) == 0
 
 
 def test_get_current_gateway_no_resource(mock_lightkube_client: MagicMock):

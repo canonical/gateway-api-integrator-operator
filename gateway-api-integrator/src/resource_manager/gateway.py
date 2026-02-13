@@ -105,7 +105,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         gateway_resource_definition = typing.cast(GatewayResourceDefinition, resource_definition)
         prefix = gateway_resource_definition.secret_resource_name_prefix
         tls_secret_name = f"{prefix}-{gateway_resource_definition.external_hostname}"
-        
+
         listeners = [
             {
                 "protocol": "HTTP",
@@ -114,11 +114,11 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                 "allowedRoutes": {"namespaces": {"from": "All"}},
             }
         ]
-        
+
         # Only add hostname to HTTP listener if one is configured
         if gateway_resource_definition.external_hostname:
             listeners[0]["hostname"] = gateway_resource_definition.external_hostname
-        
+
         # Only add HTTPS listener if enforce_https is true
         if gateway_resource_definition.enforce_https:
             https_listener = {
@@ -132,7 +132,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             if gateway_resource_definition.external_hostname:
                 https_listener["hostname"] = gateway_resource_definition.external_hostname
             listeners.append(https_listener)
-        
+
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",

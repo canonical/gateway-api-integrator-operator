@@ -246,12 +246,12 @@ class GatewayAPICharm(CharmBase):
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
-        
+
         # Only validate TLS information if HTTPS is enforced
         tls_information = TLSInformation.from_charm(
             self, self.certificates, validate=config.enforce_https
         )
-        
+
         self.unit.status = MaintenanceStatus("Creating resources.")
         resource_manager = GatewayResourceManager(
             labels=self._labels,
@@ -357,7 +357,7 @@ class GatewayAPICharm(CharmBase):
             )
             resource_manager.cleanup_resources(exclude=[])
             return
-            
+
         resource_definition = SecretResourceDefinition.from_tls_information(
             tls_information, config.external_hostname
         )
@@ -390,7 +390,7 @@ class GatewayAPICharm(CharmBase):
         ):
             return typing.cast(str, self.model.config.get("external-hostname"))
 
-    def _define_ingress_resources_and_publish_url(
+    def _define_ingress_resources_and_publish_url(  # pylint: disable=too-many-locals
         self,
         client: Client,
         config: CharmConfig,
@@ -411,7 +411,7 @@ class GatewayAPICharm(CharmBase):
             ServiceResourceDefinition(http_route_resource_information)
         )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
-        
+
         if config.enforce_https:
             # When HTTPS is enforced, create both redirect and HTTPS routes
             redirect_resource_manager = HTTPRouteRedirectResourceManager(self._labels, client)
@@ -440,7 +440,7 @@ class GatewayAPICharm(CharmBase):
                 )
             )
             http_route_resource_manager.cleanup_resources(exclude=[http_route])
-        
+
         service_resource_manager.cleanup_resources(exclude=[service])
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:

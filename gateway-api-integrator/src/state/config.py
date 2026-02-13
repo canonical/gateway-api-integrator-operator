@@ -43,8 +43,8 @@ class CharmConfig:
     """
 
     gateway_class_name: str = Field(min_length=1)
-    external_hostname: str
-    enforce_https: bool
+    enforce_https: bool = True
+    external_hostname: str = ""
 
     @classmethod
     @map_k8s_auth_exception
@@ -100,7 +100,7 @@ class CharmConfig:
         if external_hostname:
             import re
 
-            hostname_pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+            hostname_pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
             if not re.match(hostname_pattern, external_hostname):
                 raise InvalidCharmConfigError(
                     "external-hostname must match pattern: "

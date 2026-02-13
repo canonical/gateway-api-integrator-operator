@@ -21,7 +21,13 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("client.Client", MagicMock())
     monkeypatch.setattr(
         "charm.CharmConfig.from_charm",
-        MagicMock(return_value=CharmConfig(GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG)),
+        MagicMock(
+            return_value=CharmConfig(
+                gateway_class_name=GATEWAY_CLASS_CONFIG,
+                external_hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+                enforce_https=True,
+            )
+        ),
     )
     monkeypatch.setattr("charm.GatewayAPICharm._define_secret_resources", MagicMock())
     monkeypatch.setattr(

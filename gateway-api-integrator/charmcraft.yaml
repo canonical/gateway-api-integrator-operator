@@ -59,6 +59,13 @@ config:
       default: ""
       description: The gateway class.
       type: string
+    enforce-https:
+      default: true
+      description: |
+        Whether to enforce HTTPS by redirecting HTTP traffic to HTTPS.
+        When set to false, plain HTTP traffic on port 80 is allowed and the HTTPS listener is not created.
+        Setting this to false also makes the external-hostname configuration optional.
+      type: boolean
 
 
 actions:

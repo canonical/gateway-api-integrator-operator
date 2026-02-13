@@ -33,18 +33,20 @@ class TLSInformation:
 
     @classmethod
     def from_charm(
-        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4
+        cls, charm: ops.CharmBase, certificates: TLSCertificatesRequiresV4, validate: bool = True
     ) -> "TLSInformation":
         """Get TLS information from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
             certificates: TLS certificates requirer library.
+            validate: Whether to validate that certificates relation is ready. Default is True.
 
         Returns:
             TLSInformation: Information about configured TLS certs.
         """
-        cls.validate(charm)
+        if validate:
+            cls.validate(charm)
 
         tls_certs = {}
         tls_keys = {}

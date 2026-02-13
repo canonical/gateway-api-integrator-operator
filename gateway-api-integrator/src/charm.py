@@ -237,8 +237,8 @@ class GatewayAPICharm(CharmBase):
             2. Create the gateway and secret resources.
             3. Create ingress-related resources:
                 - service
-                - http_route (HTTPS)
-                - http_route (HTTPtoHTTPS redirect)
+                - http_route (HTTPS) or http_route (HTTP) depending on enforce_https
+                - http_route (HTTPtoHTTPS redirect) if enforce_https is true
             4. Publish the ingress URL to the requirer charm.
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
@@ -246,7 +246,12 @@ class GatewayAPICharm(CharmBase):
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm(self, client)
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
-        tls_information = TLSInformation.from_charm(self, self.certificates)
+        
+        # Only validate TLS information if HTTPS is enforced
+        tls_information = TLSInformation.from_charm(
+            self, self.certificates, validate=config.enforce_https
+        )
+        
         self.unit.status = MaintenanceStatus("Creating resources.")
         resource_manager = GatewayResourceManager(
             labels=self._labels,
@@ -343,6 +348,16 @@ class GatewayAPICharm(CharmBase):
             config: Charm config.
             tls_information: TLS-related information needed to create secret resources.
         """
+        # Only create TLS secrets when HTTPS is enforced
+        if not config.enforce_https:
+            # Clean up any existing secrets if HTTPS is not enforced
+            resource_manager = TLSSecretResourceManager(
+                labels=self._labels,
+                client=client,
+            )
+            resource_manager.cleanup_resources(exclude=[])
+            return
+            
         resource_definition = SecretResourceDefinition.from_tls_information(
             tls_information, config.external_hostname
         )
@@ -396,27 +411,43 @@ class GatewayAPICharm(CharmBase):
             ServiceResourceDefinition(http_route_resource_information)
         )
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
-        redirect_resource_manager = HTTPRouteRedirectResourceManager(self._labels, client)
-        redirect_route = redirect_resource_manager.define_resource(
-            HTTPRouteResourceDefinition(
-                http_route_resource_information,
-                gateway_resource_information,
-                HTTPRouteType.HTTP,
+        
+        if config.enforce_https:
+            # When HTTPS is enforced, create both redirect and HTTPS routes
+            redirect_resource_manager = HTTPRouteRedirectResourceManager(self._labels, client)
+            redirect_route = redirect_resource_manager.define_resource(
+                HTTPRouteResourceDefinition(
+                    http_route_resource_information,
+                    gateway_resource_information,
+                    HTTPRouteType.HTTP,
+                )
             )
-        )
-        https_route = http_route_resource_manager.define_resource(
-            HTTPRouteResourceDefinition(
-                http_route_resource_information,
-                gateway_resource_information,
-                HTTPRouteType.HTTPS,
+            https_route = http_route_resource_manager.define_resource(
+                HTTPRouteResourceDefinition(
+                    http_route_resource_information,
+                    gateway_resource_information,
+                    HTTPRouteType.HTTPS,
+                )
             )
-        )
+            http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
+        else:
+            # When HTTPS is not enforced, create only HTTP route
+            http_route = http_route_resource_manager.define_resource(
+                HTTPRouteResourceDefinition(
+                    http_route_resource_information,
+                    gateway_resource_information,
+                    HTTPRouteType.HTTP,
+                )
+            )
+            http_route_resource_manager.cleanup_resources(exclude=[http_route])
+        
         service_resource_manager.cleanup_resources(exclude=[service])
-        http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:
+            protocol = "https" if config.enforce_https else "http"
+            hostname = config.external_hostname if config.external_hostname else "localhost"
             ingress_url = (
-                f"https://{config.external_hostname}"
+                f"{protocol}://{hostname}"
                 f"/{http_route_resource_information.requirer_model_name}"
                 f"-{http_route_resource_information.application_name}"
             )
@@ -427,9 +458,11 @@ class GatewayAPICharm(CharmBase):
             )
 
         if gateway_route_relation := self.model.get_relation(GATEWAY_ROUTE_RELATION):
+            protocol = "https" if config.enforce_https else "http"
+            hostname = self.get_hostname() if self.get_hostname() else "localhost"
             endpoints = []
             for path in http_route_resource_information.paths:
-                endpoints.append(f"https://{self.get_hostname()}/{path.lstrip('/')}")
+                endpoints.append(f"{protocol}://{hostname}/{path.lstrip('/')}")
 
             self._gateway_route_provider.publish_endpoints(
                 endpoints,

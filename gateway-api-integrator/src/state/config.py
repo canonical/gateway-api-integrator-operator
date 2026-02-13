@@ -39,12 +39,12 @@ class CharmConfig:
     Attributes:
         gateway_class_name: The configured gateway class.
         external_hostname: The configured gateway hostname.
+        enforce_https: Whether to enforce HTTPS by redirecting HTTP to HTTPS.
     """
 
     gateway_class_name: str = Field(min_length=1)
-    external_hostname: str = Field(
-        min_length=1, pattern=r"[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
-    )
+    external_hostname: str
+    enforce_https: bool
 
     @classmethod
     @map_k8s_auth_exception
@@ -87,10 +87,31 @@ class CharmConfig:
                 f"Gateway class must be one of: [{available_gateway_classes}]"
             )
 
+        enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
+        external_hostname = charm.get_hostname()  # type: ignore[attr-defined]
+
+        # Validate that hostname is provided when HTTPS is enforced
+        if enforce_https and not external_hostname:
+            raise InvalidCharmConfigError(
+                "external-hostname is required when enforce-https is true"
+            )
+
+        # Validate hostname format if provided
+        if external_hostname:
+            import re
+
+            hostname_pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
+            if not re.match(hostname_pattern, external_hostname):
+                raise InvalidCharmConfigError(
+                    "external-hostname must match pattern: "
+                    "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
+                )
+
         try:
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=charm.get_hostname(),  # type: ignore[attr-defined]
+                external_hostname=external_hostname,
+                enforce_https=enforce_https,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))

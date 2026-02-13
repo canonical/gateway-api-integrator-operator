@@ -459,7 +459,8 @@ class GatewayAPICharm(CharmBase):
 
         if gateway_route_relation := self.model.get_relation(GATEWAY_ROUTE_RELATION):
             protocol = "https" if config.enforce_https else "http"
-            hostname = self.get_hostname() if self.get_hostname() else "localhost"
+            hostname_value = self.get_hostname()
+            hostname = hostname_value if hostname_value else "localhost"
             endpoints = []
             for path in http_route_resource_information.paths:
                 endpoints.append(f"{protocol}://{hostname}/{path.lstrip('/')}")

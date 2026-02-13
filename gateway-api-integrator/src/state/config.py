@@ -5,6 +5,7 @@
 
 import itertools
 import logging
+import re
 import typing
 
 import ops
@@ -98,8 +99,6 @@ class CharmConfig:
 
         # Validate hostname format if provided
         if external_hostname:
-            import re
-
             hostname_pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
             if not re.match(hostname_pattern, external_hostname):
                 raise InvalidCharmConfigError(

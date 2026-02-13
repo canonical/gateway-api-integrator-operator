@@ -60,9 +60,9 @@ def test_config_enforce_https_with_hostname(harness: Harness):
         return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
     )
     harness.begin()
-    
+
     config = CharmConfig.from_charm(harness.charm, client_mock)
-    
+
     assert config.gateway_class_name == GATEWAY_CLASS_CONFIG
     assert config.external_hostname == "example.com"
     assert config.enforce_https is True
@@ -86,9 +86,9 @@ def test_config_enforce_https_false_without_hostname(harness: Harness):
         return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
     )
     harness.begin()
-    
+
     config = CharmConfig.from_charm(harness.charm, client_mock)
-    
+
     assert config.gateway_class_name == GATEWAY_CLASS_CONFIG
     assert config.external_hostname == ""
     assert config.enforce_https is False
@@ -112,7 +112,7 @@ def test_config_enforce_https_true_without_hostname(harness: Harness):
         return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
     )
     harness.begin()
-    
+
     with pytest.raises(InvalidCharmConfigError, match="external-hostname is required"):
         _ = CharmConfig.from_charm(harness.charm, client_mock)
 
@@ -135,9 +135,9 @@ def test_config_enforce_https_false_with_hostname(harness: Harness):
         return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
     )
     harness.begin()
-    
+
     config = CharmConfig.from_charm(harness.charm, client_mock)
-    
+
     assert config.gateway_class_name == GATEWAY_CLASS_CONFIG
     assert config.external_hostname == "example.com"
     assert config.enforce_https is False
@@ -161,6 +161,6 @@ def test_config_invalid_hostname_format(harness: Harness):
         return_value=[GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))]
     )
     harness.begin()
-    
+
     with pytest.raises(InvalidCharmConfigError, match="external-hostname must match pattern"):
         _ = CharmConfig.from_charm(harness.charm, client_mock)

@@ -393,7 +393,7 @@ class GatewayRouteProvider(Object):
         """Publish to the app databag the proxied endpoints.
 
         Args:
-            endpoint: The list of proxied endpoints to publish.
+            endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
         GatewayRouteProviderAppData(endpoints=cast(list[AnyHttpUrl], endpoints)).dump(

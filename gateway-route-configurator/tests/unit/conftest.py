@@ -3,7 +3,6 @@
 
 """Fixtures for gateway-route-configurator charm unit tests."""
 
-
 import pytest
 from ops import testing
 

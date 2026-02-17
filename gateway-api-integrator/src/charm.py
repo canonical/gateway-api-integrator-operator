@@ -7,6 +7,7 @@
 import logging
 import typing
 import uuid
+from ipaddress import ip_address
 
 from charms.bind.v0.dns_record import (
     DNSRecordRequirerData,
@@ -32,11 +33,13 @@ from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataRemovedEvent,
     IngressPerAppProvider,
 )
-from client import get_client
 from lightkube import Client
+from lightkube.core.client import LabelSelector
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
+
+from client import get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteRedirectResourceManager,
@@ -136,7 +139,7 @@ class GatewayAPICharm(CharmBase):
         return [CertificateRequestAttributes(common_name=name) for name in hostnames]
 
     @property
-    def _labels(self) -> dict[str, str]:
+    def _labels(self) -> LabelSelector:
         """Get labels assigned to resources created by this app."""
         return {CREATED_BY_LABEL: self.app.name}
 
@@ -179,9 +182,7 @@ class GatewayAPICharm(CharmBase):
                         "BIP Certificate or private key not found for %s", request.common_name
                     )
                     event.fail(f"Missing or incomplete certificate data for {hostname}")
-                    # raise TLSCertificateNotAvailableError(
-                    #     f"Certificate not available for {request.common_name}"
-                    # )
+                    return
                 event.set_results(
                     {
                         "certificate": provider_certificate.certificate,
@@ -302,7 +303,7 @@ class GatewayAPICharm(CharmBase):
             ttl=600,
             record_class=RecordClass.IN,
             record_type=RecordType.A,
-            record_data=gateway_address,
+            record_data=ip_address(gateway_address),
             uuid=uuid.uuid5(UUID_NAMESPACE, str(external_hostname) + " " + str(gateway_address)),
         )
         dns_record_requirer_data = DNSRecordRequirerData(dns_entries=[entry])
@@ -424,14 +425,15 @@ class GatewayAPICharm(CharmBase):
                 ingress_relation,
                 ingress_url,
             )
-        else:
+
+        if gateway_route_relation := self.model.get_relation(GATEWAY_ROUTE_RELATION):
             endpoints = []
             for path in http_route_resource_information.paths:
                 endpoints.append(f"https://{self.get_hostname()}/{path.lstrip('/')}")
 
             self._gateway_route_provider.publish_endpoints(
                 endpoints,
-                self.model.get_relation(GATEWAY_ROUTE_RELATION),
+                gateway_route_relation,
             )
 
     def _set_status_gateway_address(
@@ -471,12 +473,11 @@ class GatewayAPICharm(CharmBase):
         if not gateway:
             return False
 
-        gateway_listeners = gateway.spec["listeners"]
+        gateway_listeners = gateway.spec["listeners"]  # pyright: ignore[reportOptionalSubscript]
         listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
-        if len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]:
-            return False
-
-        return True
+        return not (
+            len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

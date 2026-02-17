@@ -24,6 +24,7 @@ jobs:
       modules: '["test_actions.py", "test_charm.py", "test_charm_jubilant.py", "test_configurator.py"]'
       tmate-debug: false
       working-directory: ./gateway-api-integrator
+      with-uv: true
   allure-report:
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     needs:

@@ -10,7 +10,7 @@ import re
 import typing
 
 import ops
-from charms.gateway_api.v0.gateway_route import GatewayRouteRequirer
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)

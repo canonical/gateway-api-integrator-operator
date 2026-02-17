@@ -9,7 +9,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.gateway_api.v0.gateway_route
+charmcraft fetch-lib charms.gateway_api_integrator.v0.gateway_route
 ```
 
 In the `metadata.yaml` of the charm, add the following:
@@ -24,7 +24,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.gateway_api.v0.gateway_route import GatewayRouteRequirer
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
 
 class SomeCharm(CharmBase):
 def __init__(self, *args):
@@ -84,14 +84,14 @@ from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError
 from pydantic.dataclasses import dataclass
 
 # The unique Charmhub library identifier, never change it
-LIBID = "e9aa842e-9df3-4ae9-affc-2ed3dcf12788"
+LIBID = "53fdf90019a7406695064ed1e3d2708f"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"

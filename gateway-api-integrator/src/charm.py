@@ -16,7 +16,7 @@ from charms.bind.v0.dns_record import (
     RecordType,
     RequirerEntry,
 )
-from charms.gateway_api.v0.gateway_route import (
+from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError,
     GatewayRouteDataAvailableEvent,
     GatewayRouteDataRemovedEvent,

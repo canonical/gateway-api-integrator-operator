@@ -91,7 +91,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -321,7 +321,7 @@ class GatewayRouteProvider(Object):
         )
 
     @property
-    def relation(self) -> Relation:
+    def relation(self) -> Relation | None:
         """The list of Relation instances associated with this endpoint."""
         return self.charm.model.get_relation(self._relation_name)
 

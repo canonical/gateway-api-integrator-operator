@@ -32,7 +32,7 @@ def test_dns_record(
         '"uuid": "5e7b1cba-450c-5238-b811-4ace6d6fdbbf"}]'
     )
     # Find the dns-record relation and check its dns_entries
-    dns_relation = [rel for rel in state.relations if rel.endpoint == "dns-record"][0]
+    dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
     assert dns_relation.local_app_data["dns_entries"] == mock_dns_entry_str
 
 
@@ -56,7 +56,7 @@ def test_dns_record_no_gateway_resource(
     base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
-    assert "dns_entries" not in list(state.relations)[0].local_app_data
+    assert "dns_entries" not in next(iter(state.relations)).local_app_data
 
 
 def test_dns_record_no_gateway_address(
@@ -76,7 +76,7 @@ def test_dns_record_no_gateway_address(
     base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
-    assert "dns_entries" not in list(state.relations)[0].local_app_data
+    assert "dns_entries" not in next(iter(state.relations)).local_app_data
 
 
 def test_gateway_route(
@@ -93,7 +93,7 @@ def test_gateway_route(
     base_state["relations"].append(gateway_route_relation)
     base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
-    gateway_route_relation = [rel for rel in state.relations if rel.endpoint == "gateway-route"][0]
+    gateway_route_relation = next(rel for rel in state.relations if rel.endpoint == "gateway-route")
     state = ctx.run(ctx.on.relation_changed(gateway_route_relation), state)
     mock_dns_entry_str = (
         '[{"domain": "www.gateway.internal", '
@@ -105,5 +105,5 @@ def test_gateway_route(
         '"uuid": "5e7b1cba-450c-5238-b811-4ace6d6fdbbf"}]'
     )
     # Find the dns-record relation and check its dns_entries
-    dns_relation = [rel for rel in state.relations if rel.endpoint == "dns-record"][0]
+    dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
     assert dns_relation.local_app_data["dns_entries"] == mock_dns_entry_str

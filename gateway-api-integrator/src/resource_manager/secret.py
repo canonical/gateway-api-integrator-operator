@@ -11,6 +11,7 @@ from lightkube.core.client import LabelSelector
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Secret
 from lightkube.types import PatchType
+
 from state.base import ResourceDefinition
 from state.exception import CharmStateValidationBaseError
 from state.tls import TLSInformation

@@ -8,8 +8,9 @@ from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
-from client import LightKubeInitializationError, cleanup_all_resources, get_client
 from lightkube.core.exceptions import ConfigError
+
+from client import LightKubeInitializationError, cleanup_all_resources, get_client
 
 
 def test_get_client_config_error(monkeypatch: pytest.MonkeyPatch):

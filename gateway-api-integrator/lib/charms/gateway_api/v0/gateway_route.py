@@ -223,12 +223,12 @@ class RequirerApplicationData(_DatabagModel):
     """
 
     hostname: str | None = Field(description="Hostname of this service.")
-    paths: list[str] = Field(
-        description="The list of paths to route to this service.", default=[]
-    )
+    paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
     model: str = Field(description="The model the application is in.")
     name: str = Field(description="The name of the app requesting gateway route.")
-    port: int = Field(description="The port number on which the service is listening.", ge=1, le=65535)
+    port: int = Field(
+        description="The port number on which the service is listening.", ge=1, le=65535
+    )
 
 
 class GatewayRouteProviderAppData(_DatabagModel):
@@ -382,7 +382,8 @@ class GatewayRouteProvider(Object):
         """
         try:
             return cast(
-                RequirerApplicationData, RequirerApplicationData.load(relation.data.get(relation.app, {}))
+                RequirerApplicationData,
+                RequirerApplicationData.load(relation.data.get(relation.app, {})),
             )
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
@@ -469,7 +470,7 @@ class GatewayRouteRequirer(Object):
             )
         else:
             self._application_data = self._generate_application_data()
-            
+
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -497,7 +498,6 @@ class GatewayRouteRequirer(Object):
         port: int,
         hostname: str,
         paths: Optional[list[str]] = None,
-
     ) -> None:
         """Update gateway-route requirements data in the relation.
 
@@ -518,7 +518,7 @@ class GatewayRouteRequirer(Object):
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-    def _generate_application_data(  # noqa: C901
+    def _generate_application_data(
         self,
         name: Optional[str] = None,
         model: Optional[str] = None,
@@ -606,7 +606,7 @@ class GatewayRouteRequirer(Object):
         except ModelError:
             logger.exception("Error reading remote app data.")
             return []
-    
+
         if not databag:  # not ready yet
             return []
 

@@ -4,8 +4,9 @@
 """Unit tests for the charm."""
 
 import pytest
-from charm import GatewayAPICharm
 from ops import testing
+
+from charm import GatewayAPICharm
 
 
 def test_dns_record(

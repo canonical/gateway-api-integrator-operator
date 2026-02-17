@@ -15,6 +15,7 @@ from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
+
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation

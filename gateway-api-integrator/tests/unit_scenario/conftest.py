@@ -7,6 +7,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from ops import testing
+
 from src.state.config import CharmConfig  # pylint: disable=import-error
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"

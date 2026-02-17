@@ -93,7 +93,9 @@ def test_gateway_route(
     base_state["relations"].append(gateway_route_relation)
     base_state["relations"].append(certificates_relation)
     state = testing.State(**base_state)
-    gateway_route_relation = next(rel for rel in state.relations if rel.endpoint == "gateway-route")
+    gateway_route_relation = next(
+        rel for rel in state.relations if rel.endpoint == "gateway-route"
+    )
     state = ctx.run(ctx.on.relation_changed(gateway_route_relation), state)
     mock_dns_entry_str = (
         '[{"domain": "www.gateway.internal", '

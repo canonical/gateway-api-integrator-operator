@@ -10,7 +10,7 @@ jobs:
     uses: 
       canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
-    with: &integration-test-args
+    with:
       provider: k8s
       extra-arguments: |
         --kube-config=~/.kube/config
@@ -35,6 +35,16 @@ jobs:
       canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
     with:
-      <<: *integration-test-args
+      provider: k8s
+      extra-arguments: |
+        --kube-config=~/.kube/config
+      use-canonical-k8s: true
+      self-hosted-runner: true
+      self-hosted-runner-label: large
+      self-hosted-runner-image: noble
+      juju-channel: 3.6/stable
+      channel: edge
+      charmcraft-channel: latest/edge
+      tmate-debug: false
+      with-uv: true
       modules: '["test_configurator.py"]'
-      working-directory: .

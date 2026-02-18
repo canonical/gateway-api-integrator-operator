@@ -21,10 +21,30 @@ jobs:
       juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
-      modules: '["test_actions.py", "test_charm.py", "test_charm_jubilant.py", "test_configurator.py"]'
+      modules: '["test_actions.py", "test_charm.py", "test_charm_jubilant.py"]'
       tmate-debug: false
+      working-directory: ./gateway-api-integrator
+      with-uv: true
   allure-report:
     if: ${{ !cancelled() && github.event_name == 'schedule' }}
     needs:
     - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
+  integration-tests-global:
+    uses: 
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      provider: k8s
+      extra-arguments: |
+        --kube-config=~/.kube/config
+      use-canonical-k8s: true
+      self-hosted-runner: true
+      self-hosted-runner-label: large
+      self-hosted-runner-image: noble
+      juju-channel: 3.6/stable
+      channel: edge
+      charmcraft-channel: latest/edge
+      tmate-debug: false
+      with-uv: true
+      modules: '["test_configurator.py"]'

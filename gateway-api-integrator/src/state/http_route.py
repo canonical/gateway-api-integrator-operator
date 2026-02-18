@@ -6,7 +6,7 @@
 import dataclasses
 
 import ops
-from charms.gateway_api.v0.gateway_route import GatewayRouteProvider
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 from .exception import CharmStateValidationBaseError

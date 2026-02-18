@@ -6,7 +6,6 @@
 from datetime import timedelta
 
 import pytest
-from charm import GatewayAPICharm
 from charms.tls_certificates_interface.v4.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
@@ -15,6 +14,8 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
     ProviderCertificate,
 )
 from ops import testing
+
+from charm import GatewayAPICharm
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
 

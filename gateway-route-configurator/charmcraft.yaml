@@ -51,3 +51,9 @@ parts:
 assumes:
   - k8s-api
   - juju >= 3.3
+
+charm-libs:
+- lib: traefik_k8s.ingress
+  version: "2"
+- lib: gateway_api_integrator.gateway_route
+  version: "0"

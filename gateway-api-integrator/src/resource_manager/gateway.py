@@ -12,6 +12,7 @@ from lightkube.core.client import LabelSelector
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
+
 from state.base import ResourceDefinition
 from state.config import CharmConfig
 from state.gateway import GatewayResourceInformation
@@ -201,7 +202,8 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     name=name,
                 )
                 gateway_addresses = [
-                    addr["value"] for addr in gateway.status["addresses"]  # type: ignore
+                    addr["value"]  # type: ignore
+                    for addr in gateway.status["addresses"]  # type: ignore
                 ]
                 if gateway_addresses:
                     gateway_address = ",".join(gateway_addresses)

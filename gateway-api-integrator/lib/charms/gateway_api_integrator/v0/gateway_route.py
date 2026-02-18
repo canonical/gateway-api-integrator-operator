@@ -9,7 +9,7 @@ To get started using the library, you just need to fetch the library using `char
 
 ```shell
 cd some-charm
-charmcraft fetch-lib charms.gateway_api.v0.gateway_route
+charmcraft fetch-lib charms.gateway_api_integrator.v0.gateway_route
 ```
 
 In the `metadata.yaml` of the charm, add the following:
@@ -24,7 +24,7 @@ requires:
 Then, to initialise the library:
 
 ```python
-from charms.gateway_api.v0.gateway_route import GatewayRouteRequirer
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
 
 class SomeCharm(CharmBase):
 def __init__(self, *args):
@@ -84,7 +84,7 @@ from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError
 from pydantic.dataclasses import dataclass
 
 # The unique Charmhub library identifier, never change it
-LIBID = "e9aa842e-9df3-4ae9-affc-2ed3dcf12788"
+LIBID = "53fdf90019a7406695064ed1e3d2708f"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -222,13 +222,13 @@ class RequirerApplicationData(_DatabagModel):
         port: The port number on which the service is listening.
     """
 
-    hostname: str = Field(description="Hostname of this service.")
-    paths: list[str] = Field(
-        description="The list of paths to route to this service.", default=[]
-    )
+    hostname: str | None = Field(description="Hostname of this service.")
+    paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
     model: str = Field(description="The model the application is in.")
     name: str = Field(description="The name of the app requesting gateway route.")
-    port: int = Field(description="The port number on which the service is listening.", ge=1, le=65535)
+    port: int = Field(
+        description="The port number on which the service is listening.", ge=1, le=65535
+    )
 
 
 class GatewayRouteProviderAppData(_DatabagModel):
@@ -321,7 +321,7 @@ class GatewayRouteProvider(Object):
         )
 
     @property
-    def relation(self) -> Relation:
+    def relation(self) -> Relation | None:
         """The list of Relation instances associated with this endpoint."""
         return self.charm.model.get_relation(self._relation_name)
 
@@ -382,7 +382,8 @@ class GatewayRouteProvider(Object):
         """
         try:
             return cast(
-                RequirerApplicationData, RequirerApplicationData.load(relation.data.get(relation.app, {}))
+                RequirerApplicationData,
+                RequirerApplicationData.load(relation.data.get(relation.app, {})),
             )
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
@@ -392,7 +393,7 @@ class GatewayRouteProvider(Object):
         """Publish to the app databag the proxied endpoints.
 
         Args:
-            endpoint: The list of proxied endpoints to publish.
+            endpoints: The list of proxied endpoints to publish.
             relation: The relation with the requirer application.
         """
         GatewayRouteProviderAppData(endpoints=cast(list[AnyHttpUrl], endpoints)).dump(
@@ -469,7 +470,7 @@ class GatewayRouteRequirer(Object):
             )
         else:
             self._application_data = self._generate_application_data()
-            
+
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -497,7 +498,6 @@ class GatewayRouteRequirer(Object):
         port: int,
         hostname: str,
         paths: Optional[list[str]] = None,
-
     ) -> None:
         """Update gateway-route requirements data in the relation.
 
@@ -518,7 +518,7 @@ class GatewayRouteRequirer(Object):
         self.update_relation_data()
 
     # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
-    def _generate_application_data(  # noqa: C901
+    def _generate_application_data(
         self,
         name: Optional[str] = None,
         model: Optional[str] = None,
@@ -606,7 +606,7 @@ class GatewayRouteRequirer(Object):
         except ModelError:
             logger.exception("Error reading remote app data.")
             return []
-    
+
         if not databag:  # not ready yet
             return []
 

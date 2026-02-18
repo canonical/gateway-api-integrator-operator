@@ -3,6 +3,7 @@
 
 """Fixtures for gateway-route-configurator charm unit tests."""
 
+import json
 
 import pytest
 from ops import testing
@@ -31,6 +32,9 @@ def gateway_route_relation_fixture():
     return testing.Relation(
         endpoint="gateway-route",
         interface="gateway_route",
+        remote_app_data={
+            "endpoints": json.dumps(["https://testing-gateway.example.com/app1"]),
+        },
     )
 
 

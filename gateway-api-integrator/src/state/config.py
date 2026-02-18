@@ -12,6 +12,7 @@ from lightkube import Client
 from lightkube.generic_resource import create_global_resource
 from pydantic import Field, ValidationError
 from pydantic.dataclasses import dataclass
+
 from resource_manager.permission import map_k8s_auth_exception
 
 from .exception import CharmStateValidationBaseError
@@ -78,10 +79,7 @@ class CharmConfig:
         if gateway_class_name not in gateway_class_names:
             available_gateway_classes = ",".join(gateway_class_names)
             logger.error(
-                (
-                    "Configured gateway class %s not present on the cluster."
-                    "Available ones are: %r"
-                ),
+                ("Configured gateway class %s not present on the cluster.Available ones are: %r"),
                 gateway_class_name,
                 available_gateway_classes,
             )

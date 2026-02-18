@@ -37,7 +37,11 @@ select = ["E", "W", "F", "C", "N", "R", "D", "H"]
 # Ignore D107 Missing docstring in __init__
 ignore = ["W503", "E501", "D107"]
 # D100, D101, D102, D103: Ignore missing docstrings in tests
-per-file-ignores = ["tests/*:D100,D101,D102,D103,D104,D205,D212,D415","gateway-api-integrator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415","gateway-route-configurator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415"]
+per-file-ignores = [
+    "tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
+    "gateway-api-integrator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
+    "gateway-route-configurator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
+]
 docstring-convention = "google"
 
 [tool.isort]
@@ -53,7 +57,11 @@ ignore_missing_imports = true
 namespace_packages = true
 
 [[tool.mypy.overrides]]
-module =['gateway_api_integrator/tests.*', 'gateway_route_configurator/tests.*',"tests.*"]
+module = [
+    'gateway_api_integrator/tests.*',
+    'gateway_route_configurator/tests.*',
+    "tests.*",
+]
 disallow_untyped_defs = false
 
 [tool.pylint]
@@ -62,7 +70,12 @@ disable = "wrong-import-order,duplicate-code"
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
-pythonpath = [ "gateway-api-integrator/lib", "gateway-api-integrator/src", "gateway-route-configurator/lib", "gateway-route-configurator/src"]
+pythonpath = [
+    "gateway-api-integrator/lib",
+    "gateway-api-integrator/src",
+    "gateway-route-configurator/lib",
+    "gateway-route-configurator/src",
+]
 
 # Linting tools configuration
 [tool.ruff]
@@ -83,7 +96,13 @@ extend-ignore = [
 ]
 ignore = ["E501", "D107"]
 extend-exclude = ["__pycache__", "*.egg_info"]
-per-file-ignores = {"tests/*, gateway-api-integrator/tests/*, gateway-route-configurator/tests/*" = ["D100","D101","D102","D103","D104"]}
+per-file-ignores = { "tests/*, gateway-api-integrator/tests/*, gateway-route-configurator/tests/*" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+] }
 
 [tool.ruff.mccabe]
 max-complexity = 10
@@ -106,4 +125,12 @@ dev = [
     "requests>=2.32.5",
     "rpds-py==0.30.0",
     "tox>=4.32.0",
+]
+integration = [
+    "allure-pytest>=2.8.18",
+    "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
+    "jubilant==1.7.0",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-operator",
 ]

@@ -3,6 +3,41 @@ revision = 3
 requires-python = ">=3.12"
 
 [[package]]
+name = "allure-pytest"
+version = "2.15.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "allure-python-commons" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/bf/55/b73c5256d36c4c843a475762eebc90b104527766d4c7e4c4b4d9ed94f118/allure_pytest-2.15.3.tar.gz", hash = "sha256:b6576f8258de44f48ec59cfaee73cdbd1142c2ad6cfdc82d894fd1db8abf22e9", size = 17685, upload-time = "2025-12-30T05:21:55.909Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/67/1c/a50b21ce93ee95fa198683e09cb709d05079a5b2970cb304f2a5a1986afb/allure_pytest-2.15.3-py3-none-any.whl", hash = "sha256:66711efdc44c7c0d629f4eeab73ca20932f8786c251d61e242449f7b4ec18ca2", size = 12451, upload-time = "2025-12-30T05:21:54.776Z" },
+]
+
+[[package]]
+name = "allure-pytest-collection-report"
+version = "0.1.0"
+source = { git = "https://github.com/canonical/data-platform-workflows?subdirectory=python%2Fpytest_plugins%2Fallure_pytest_collection_report&rev=v24.0.0#8ec5cc7242d90d7ae1e125755297a97402e54584" }
+dependencies = [
+    { name = "allure-pytest" },
+    { name = "pytest" },
+]
+
+[[package]]
+name = "allure-python-commons"
+version = "2.15.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "attrs" },
+    { name = "pluggy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/93/609cf76e204567cb618b59208f34468bbd434f34fcdce3d193d8f927abcd/allure_python_commons-2.15.3.tar.gz", hash = "sha256:b42a96d6076fb323c9e43645dfb84c0574f6bad0a0e005d92564015cd172d564", size = 15208, upload-time = "2025-12-30T05:21:46.702Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/43/2e/a823ab87aa8ed064d7efc817d79eb5f013465514f8d74487f1519849049f/allure_python_commons-2.15.3-py3-none-any.whl", hash = "sha256:50e9b346d8a060c84af8d19f221bd9da6e1aa0002a4e7f770e151167365219d0", size = 16212, upload-time = "2025-12-30T05:21:45.861Z" },
+]
+
+[[package]]
 name = "annotated-types"
 version = "0.7.0"
 source = { registry = "https://pypi.org/simple" }
@@ -384,6 +419,14 @@ dev = [
     { name = "rpds-py" },
     { name = "tox" },
 ]
+integration = [
+    { name = "allure-pytest" },
+    { name = "allure-pytest-collection-report" },
+    { name = "jubilant" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-operator" },
+]
 
 [package.metadata]
 
@@ -402,6 +445,14 @@ dev = [
     { name = "requests", specifier = ">=2.32.5" },
     { name = "rpds-py", specifier = "==0.30.0" },
     { name = "tox", specifier = ">=4.32.0" },
+]
+integration = [
+    { name = "allure-pytest", specifier = ">=2.8.18" },
+    { name = "allure-pytest-collection-report", git = "https://github.com/canonical/data-platform-workflows?subdirectory=python%2Fpytest_plugins%2Fallure_pytest_collection_report&rev=v24.0.0" },
+    { name = "jubilant", specifier = "==1.7.0" },
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-operator" },
 ]
 
 [[package]]
@@ -641,14 +692,14 @@ wheels = [
 
 [[package]]
 name = "jubilant"
-version = "1.6.1"
+version = "1.7.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b3/13/c38036a0b2d44bae765216f5f85d4feed8f1a254110b0d1df7158b7a35f0/jubilant-1.6.1.tar.gz", hash = "sha256:bb57dc215b1960d31716ef071ba6be121331991bbbbe3449257471f5e7795d06", size = 31998, upload-time = "2025-11-26T20:58:40.867Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cc/0b/275edac8b57b0aac34f84073997660ebf536f97d2fa0d85a2cc3321047b6/jubilant-1.7.0.tar.gz", hash = "sha256:46b7c29a4f3336ab16d77d88418dbf8c9d0746e3f80ef42ee4c2d103eff79650", size = 32455, upload-time = "2026-01-29T02:40:10.335Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/38/c054fa0b9de01d0b108f91f892c288bf99e68abd6593b55c2a8964de40f2/jubilant-1.6.1-py3-none-any.whl", hash = "sha256:a74ea1184eea43b9e8921dcad22ffeb14a238e91c9024f5d41fe2e210fd05be2", size = 33005, upload-time = "2025-11-26T20:58:39.566Z" },
+    { url = "https://files.pythonhosted.org/packages/86/d5/5b95ae9ab5abf283e33c802d286045abda7d826396ba417d5d3a20201b24/jubilant-1.7.0-py3-none-any.whl", hash = "sha256:1dcd70eb10299a95ae9fab405a3ce5f01a15513776b7f8eb4cf7b02808c93cdf", size = 33396, upload-time = "2026-01-29T02:40:09.222Z" },
 ]
 
 [[package]]

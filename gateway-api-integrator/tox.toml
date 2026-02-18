@@ -122,6 +122,7 @@ commands = [
     "--tb",
     "native",
     "--ignore={[vars]tst_path}unit",
+    "--ignore={[vars]tst_path}unit_scenario",
     "--log-cli-level=INFO",
     "-s",
     { replace = "posargs", extend = "true" },

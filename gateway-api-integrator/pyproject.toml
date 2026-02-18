@@ -23,9 +23,7 @@ dependencies = [
 ]
 
 [dependency-groups]
-fmt = [
-  "ruff",
-]
+fmt = ["ruff"]
 lint = [
   "codespell",
   "jubilant==1.7.0",
@@ -37,23 +35,16 @@ lint = [
   "types-pyyaml",
   "types-requests",
 ]
-unit = [
-  "coverage[toml]",
-  "ops[testing]",
-  "pytest",
-]
-coverage-report = [
-  "coverage[toml]",
-  "pytest",
-]
-static = [
-  "bandit[toml]",
-]
+unit = ["coverage[toml]", "ops[testing]", "pytest"]
+coverage-report = ["coverage[toml]", "pytest"]
+static = ["bandit[toml]"]
 integration = [
   "allure-pytest>=2.8.18",
   "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
   "jubilant==1.7.0",
   "pytest",
+  "pytest-asyncio",
+  "pytest-operator",
 ]
 
 [tool.uv]
@@ -77,7 +68,23 @@ line-length = 99
 #  UP pyupgrade
 # RUF Ruff-specific rules
 # E/W pycodestyle
-lint.select = [ "A", "B", "C", "CPY", "D", "E", "F", "I", "N", "RUF", "S", "SIM", "TC", "UP", "W" ]
+lint.select = [
+  "A",
+  "B",
+  "C",
+  "CPY",
+  "D",
+  "E",
+  "F",
+  "I",
+  "N",
+  "RUF",
+  "S",
+  "SIM",
+  "TC",
+  "UP",
+  "W",
+]
 lint.ignore = [
   "B904",
   "D107",
@@ -103,7 +110,19 @@ lint.ignore = [
   "UP035",
   "UP045",
 ]
-lint.per-file-ignores."tests/*" = [ "B011", "D100", "D101", "D102", "D103", "D104", "D205", "D212", "D415", "D417", "S" ]
+lint.per-file-ignores."tests/*" = [
+  "B011",
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D205",
+  "D212",
+  "D415",
+  "D417",
+  "S",
+]
 lint.flake8-copyright.author = "Canonical Ltd."
 lint.flake8-copyright.min-file-size = 1
 lint.flake8-copyright.notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
@@ -116,7 +135,7 @@ skip = "build,lib,venv,icon.svg,.tox,.git,.mypy_cache,.ruff_cache,.coverage,html
 [tool.pytest.ini_options]
 minversion = "6.0"
 log_cli_level = "INFO"
-pythonpath = [ "lib", "src" ]
+pythonpath = ["lib", "src"]
 
 [tool.coverage.run]
 branch = true
@@ -136,7 +155,7 @@ module = "tests.*"
 disallow_untyped_defs = false
 
 [tool.bandit]
-exclude_dirs = [ "/venv/" ]
+exclude_dirs = ["/venv/"]
 
 [tool.bandit.assert_used]
-skips = [ "*/*test.py", "*/test_*.py", "*tests/*.py" ]
+skips = ["*/*test.py", "*/test_*.py", "*tests/*.py"]

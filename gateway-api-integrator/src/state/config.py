@@ -5,13 +5,13 @@
 
 import itertools
 import logging
-import re
 import typing
 
 import ops
+from charms.gateway_api_integrator.v0.gateway_route import valid_fqdn
 from lightkube import Client
 from lightkube.generic_resource import create_global_resource
-from pydantic import Field, ValidationError
+from pydantic import BeforeValidator, Field, ValidationError
 from pydantic.dataclasses import dataclass
 
 from resource_manager.permission import map_k8s_auth_exception
@@ -43,9 +43,9 @@ class CharmConfig:
         enforce_https: Whether to enforce HTTPS by redirecting HTTP to HTTPS.
     """
 
+    external_hostname: typing.Annotated[str, BeforeValidator(valid_fqdn)] | None
     gateway_class_name: str = Field(min_length=1)
-    enforce_https: bool = True
-    external_hostname: str = ""
+    enforce_https: bool = Field()
 
     @classmethod
     @map_k8s_auth_exception
@@ -57,7 +57,7 @@ class CharmConfig:
             client: The lightkube client
 
         Raises:
-            InvalidCharmConfigError: When the chamr's config is invalid.
+            InvalidCharmConfigError: When the charm's config is invalid.
             GatewayClassUnavailableError: When the cluster has no available gateway classes.
 
         Returns:
@@ -89,22 +89,13 @@ class CharmConfig:
             )
 
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
-        external_hostname = charm.get_hostname()  # type: ignore[attr-defined]
+        external_hostname = typing.cast(str | None, charm.config.get("external-hostname"))
 
         # Validate that hostname is provided when HTTPS is enforced
         if enforce_https and not external_hostname:
             raise InvalidCharmConfigError(
                 "external-hostname is required when enforce-https is true"
             )
-
-        # Validate hostname format if provided
-        if external_hostname:
-            hostname_pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$"
-            if not re.match(hostname_pattern, external_hostname):
-                raise InvalidCharmConfigError(
-                    "external-hostname must match pattern: "
-                    "[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*"
-                )
 
         try:
             return cls(

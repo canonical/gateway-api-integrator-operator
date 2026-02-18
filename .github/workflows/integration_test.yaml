@@ -10,7 +10,7 @@ jobs:
     uses: 
       canonical/operator-workflows/.github/workflows/integration_test.yaml@main
     secrets: inherit
-    with:
+    with: &integration-test-args
       provider: k8s
       extra-arguments: |
         --kube-config=~/.kube/config
@@ -21,7 +21,7 @@ jobs:
       juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
-      modules: '["test_actions.py", "test_charm.py", "test_charm_jubilant.py", "test_configurator.py"]'
+      modules: '["test_actions.py", "test_charm.py", "test_charm_jubilant.py"]'
       tmate-debug: false
       working-directory: ./gateway-api-integrator
       with-uv: true
@@ -30,3 +30,11 @@ jobs:
     needs:
     - integration-tests
     uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
+  integration-tests-global:
+    uses: 
+      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    secrets: inherit
+    with:
+      <<: *integration-test-args
+      modules: '["test_configurator.py"]'
+      working-directory: .

@@ -377,9 +377,10 @@ class GatewayAPICharm(CharmBase):
         try:
             if not self.model.get_relation(GATEWAY_ROUTE_RELATION):
                 return typing.cast(str, self.model.config.get("external-hostname"))
-
-            http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-                self, self._ingress_provider, self._gateway_route_provider
+            client = get_client(field_manager=self.app.name, namespace=self.model.name)
+            config = CharmConfig.from_charm(self, client)
+            http_route_resource_information = HTTPRouteResourceInformation.from_provider(
+                config.external_hostname, self._ingress_provider, self._gateway_route_provider
             )
             return http_route_resource_information.hostname
         except (
@@ -403,8 +404,8 @@ class GatewayAPICharm(CharmBase):
             config: Charm config.
             gateway_resource_information: Information needed to attach http_route resources.
         """
-        http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-            self, self._ingress_provider, self._gateway_route_provider
+        http_route_resource_information = HTTPRouteResourceInformation.from_provider(
+            config.external_hostname, self._ingress_provider, self._gateway_route_provider
         )
         service_resource_manager = ServiceResourceManager(self._labels, client)
         service = service_resource_manager.define_resource(

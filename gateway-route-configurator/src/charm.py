@@ -86,7 +86,7 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         if endpoints := self.gateway_route.get_routed_endpoints():
             self.ingress.publish_url(
                 ingress_relation,
-                endpoints[0],
+                url=str(endpoints[0]),
             )
             self.unit.status = ops.ActiveStatus("Ready")
         else:

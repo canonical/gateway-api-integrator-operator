@@ -514,7 +514,7 @@ class GatewayRouteRequirer(Object):
         name: str,
         model: str,
         port: int,
-        hostname: str,
+        hostname: str | None = None,
         paths: Optional[list[str]] = None,
     ) -> None:
         """Update gateway-route requirements data in the relation.

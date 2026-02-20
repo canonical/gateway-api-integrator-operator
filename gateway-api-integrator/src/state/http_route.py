@@ -32,13 +32,6 @@ class GatewayRouteRelationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when gateway route relation data validation fails."""
 
 
-class GatewayRouteHostnameMissingError(CharmStateValidationBaseError):
-    """Exception raised when hostname not configured in gateway-route mode.
-
-    Hostname is configured either via the gateway-route relation or by setting external-hostname.
-    """
-
-
 @dataclasses.dataclass(frozen=True)
 class HTTPRouteResourceInformation:
     """A component of charm state containing resource definition for kubernetes secret.
@@ -61,19 +54,20 @@ class HTTPRouteResourceInformation:
     service_port_name: str
     filters: list[dict]
     paths: list[str]
-    hostname: str
+    hostname: str | None
 
     @classmethod
     def _from_ingress(
         cls,
         ingress_provider: IngressPerAppProvider,
+        hostname: str | None,
     ) -> "HTTPRouteResourceInformation":
         """Populate fields from ingress integration.
 
         Args:
             charm (ops.CharmBase): The gateway-api-integrator charm.
             ingress_provider (IngressPerAppProvider): The ingress provider class.
-            ingress_integration (ops.Relation): The ingress integration.
+            hostname: The hostname to be used in the HTTPRoute resource.
         """
         try:
             integration_data = ingress_provider.get_data(ingress_provider.relations[0])
@@ -102,7 +96,7 @@ class HTTPRouteResourceInformation:
                     ]
                 ),
                 paths=[f"/{integration_data.app.model}-{application_name}"],
-                hostname="",
+                hostname=hostname,
             )
         except DataValidationError as exc:
             raise IngressIntegrationDataValidationError(
@@ -113,23 +107,18 @@ class HTTPRouteResourceInformation:
     def _from_gateway_route(
         cls,
         gateway_route_provider: GatewayRouteProvider,
-        tls_information: TLSInformation,
+        hostname: str | None,
     ) -> "HTTPRouteResourceInformation":
         """Populate fields from ingress integration.
 
         Args:
             gateway_route_provider: The gateway route provider library.
-            tls_information: TLS-related information.
+            hostname: The hostname to be used in the HTTPRoute resource.
 
         Raises:
             GatewayRouteRelationDataValidationError: When data validation failed.
             GatewayRouteHostnameMissingError: When hostname is not configured.
         """
-        if tls_information.hostname is None:
-            raise GatewayRouteHostnameMissingError(
-                "No hostname configured. Configure hostname either via"
-                " the gateway-route relation or by setting the external-hostname charm config."
-            )
         relation_data = gateway_route_provider.get_data()
         if relation_data is None:
             raise GatewayRouteRelationNotReadyError("gateway-route relation data not ready.")
@@ -144,7 +133,7 @@ class HTTPRouteResourceInformation:
                 service_port_name=f"tcp-{service_port}",
                 filters=[],
                 paths=relation_data.application_data.paths,
-                hostname=tls_information.hostname,
+                hostname=hostname,
             )
         except DataValidationError as exc:
             raise GatewayRouteRelationDataValidationError(

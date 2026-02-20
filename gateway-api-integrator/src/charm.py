@@ -58,14 +58,13 @@ from state.config import (
 )
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
-    GatewayRouteHostnameMissingError,
     GatewayRouteRelationDataValidationError,
     GatewayRouteRelationNotReadyError,
     HTTPRouteResourceInformation,
     IngressIntegrationDataValidationError,
     IngressIntegrationMissingError,
 )
-from state.tls import TLSInformation
+from state.tls import HostnameMissingError, TLSInformation
 from state.validation import validate_config_and_integration
 
 logger = logging.getLogger(__name__)
@@ -178,7 +177,7 @@ class GatewayAPICharm(CharmBase):
             event: Juju event
         """
         hostname = event.params["hostname"]
-        TLSInformation.validate(self)
+        TLSInformation.validate(self, bool(self.model.config.get("enforce-https", False)))
         for request in self._get_certificate_requests():
             if request.common_name == hostname:
                 provider_certificate, private_key = self.certificates.get_assigned_certificate(
@@ -404,7 +403,7 @@ class GatewayAPICharm(CharmBase):
             IngressIntegrationMissingError,
             IngressIntegrationDataValidationError,
             IngressGatewayRouteConflictError,
-            GatewayRouteHostnameMissingError,
+            HostnameMissingError,
             GatewayRouteRelationDataValidationError,
             GatewayRouteRelationNotReadyError,
             GatewayClassUnavailableError,
@@ -433,12 +432,12 @@ class GatewayAPICharm(CharmBase):
         http_route_resource_information = None
         if config.proxy_mode == ProxyMode.INGRESS:
             http_route_resource_information = HTTPRouteResourceInformation._from_ingress(
-                self._ingress_provider
+                self._ingress_provider, tls_information.hostname
             )
 
         if config.proxy_mode == ProxyMode.GATEWAY_ROUTE:
             http_route_resource_information = HTTPRouteResourceInformation._from_gateway_route(
-                self._gateway_route_provider, tls_information
+                self._gateway_route_provider, tls_information.hostname
             )
 
         if http_route_resource_information is None:

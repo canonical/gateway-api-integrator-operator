@@ -20,6 +20,13 @@ class TlsIntegrationMissingError(CharmStateValidationBaseError):
     """Exception raised when certificates relation is missing."""
 
 
+class HostnameMissingError(CharmStateValidationBaseError):
+    """Exception raised when hostname not configured in enforce_https mode.
+
+    Hostname is configured either via the gateway-route relation or by setting external-hostname.
+    """
+
+
 @dataclasses.dataclass(frozen=True)
 class TLSInformation:
     """A component of charm state containing information about TLS.
@@ -67,7 +74,7 @@ class TLSInformation:
             hostname = gateway_route_requirer_data.application_data.hostname
 
         if hostname is not None:
-            cls.validate(charm)
+            cls.validate(charm, config.enforce_https)
             for cert in certificates.get_provider_certificates():
                 common_name = cert.certificate.common_name
                 chain = cert.chain
@@ -84,15 +91,22 @@ class TLSInformation:
         )
 
     @classmethod
-    def validate(cls, charm: ops.CharmBase) -> None:
+    def validate(cls, charm: ops.CharmBase, enforce_https: bool) -> None:
         """Validate the precondition to initialize this state component.
 
         Args:
             charm: The gateway-api-integrator charm.
+            enforce_https: Whether to enforce HTTPS.
 
         Raises:
+            HostnameMissingError: When hostname is not configured.
             TlsIntegrationMissingError: When integration is not ready.
         """
+        if enforce_https:
+            raise HostnameMissingError(
+                "No hostname configured. Configure hostname either via"
+                " the gateway-route relation or by setting the external-hostname charm config."
+            )
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)
         if (
             tls_requirer_integration is None

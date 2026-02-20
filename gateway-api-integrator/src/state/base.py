@@ -6,22 +6,24 @@
 import dataclasses
 import typing
 
+from src.state.http_route import HTTPRouteResourceInformation
+
 from .config import CharmConfig
 from .gateway import GatewayResourceInformation
 from .tls import TLSInformation
 
-Components = typing.TypeVar(
-    "Components",
+Component = typing.Union[
     GatewayResourceInformation,
     CharmConfig,
     TLSInformation,
-)
+    HTTPRouteResourceInformation,
+]
 
 
 class ResourceDefinition:  # pylint: disable=too-few-public-methods
-    """Fragment of charmstate that consists of one or several state components."""
+    """Fragment of charm state that consists of one or several state components."""
 
-    def __init__(self, *components: Components):
+    def __init__(self, *components: Component):
         """Create the state object with state components.
 
         Args:

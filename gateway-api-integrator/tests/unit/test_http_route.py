@@ -13,7 +13,6 @@ from lightkube.core.client import Client
 from ops.testing import Harness
 
 from resource_manager.http_route import (
-    HTTPRouteRedirectResourceManager,
     HTTPRouteResourceDefinition,
     HTTPRouteResourceManager,
     HTTPRouteType,
@@ -86,27 +85,12 @@ def test_httproute_gen_resource(
         labels=harness.charm._labels,
         client=client_mock,
     )
-    redirect_route_resource_manager = HTTPRouteRedirectResourceManager(
-        labels=harness.charm._labels,
-        client=client_mock,
-    )
-    redirect_route_resource = redirect_route_resource_manager._gen_resource(
-        HTTPRouteResourceDefinition(
-            http_route_resource_information,
-            gateway_resource_information,
-            HTTPRouteType.HTTP,
-        )
-    )
     https_route_resource = http_route_resource_manager._gen_resource(
         HTTPRouteResourceDefinition(
             http_route_resource_information,
             gateway_resource_information,
             HTTPRouteType.HTTPS,
         )
-    )
-    assert (
-        redirect_route_resource.spec["parentRefs"][0]["sectionName"]
-        == f"{harness.model.app.name}-http-listener"
     )
     assert (
         https_route_resource.spec["parentRefs"][0]["sectionName"]

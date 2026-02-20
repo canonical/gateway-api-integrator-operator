@@ -65,6 +65,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     service_name: str
     service_port: int
     http_route_type: HTTPRouteType
+    redirect_https: bool
     paths: list[str]
     filters: list[dict]
 
@@ -73,6 +74,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         http_route_resource_information: HTTPRouteResourceInformation,
         gateway_resource_information: GatewayResourceInformation,
         http_route_type: HTTPRouteType,
+        redirect_https: bool = False,
     ):
         """Create the state object with state components.
 
@@ -80,9 +82,11 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
             http_route_resource_information: HTTPRouteResourceInformation state component.
             gateway_resource_information: GatewayResourceInformation state component.
             http_route_type: Type of the HTTP route, can be http or https.
+            redirect_https: Whether to redirect HTTP traffic to HTTPS.
         """
         super().__init__(http_route_resource_information, gateway_resource_information)
         self.http_route_type = http_route_type
+        self.redirect_https = redirect_https
 
     @property
     def matches(self) -> list[dict[str, dict[str, str]]]:
@@ -103,6 +107,78 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
                 }
             )
         return match_list
+
+    @property
+    def listener_id(self) -> str:
+        """Get the listener id for the HTTPRoute resource.
+
+        The listener id is used to reference the corresponding listener in the parent Gateway resource.
+
+        Returns:
+            The listener id.
+        """
+        return f"{self.gateway_name}-{self.http_route_type}-listener"
+
+    @property
+    def http_route_resource_name(self) -> str:
+        """Get the HTTPRoute resource name.
+
+        Returns:
+            The HTTPRoute resource name.
+        """
+        return f"{self.gateway_name}-{self.http_route_type}"
+
+    def http_route_resource_spec(self, namespace: str) -> dict[str, typing.Any]:
+        """Generate a Gateway resource from a gateway resource definition.
+
+        Args:
+            namespace: The namespace where the gateway resource is located.
+
+        Returns:
+            A dictionary representing the gateway custom resource.
+        """
+        if self.redirect_https:
+            return {
+                "parentRefs": [
+                    {
+                        "name": self.gateway_name,
+                        "namespace": namespace,
+                        "sectionName": self.listener_id,
+                    }
+                ],
+                "rules": [
+                    {
+                        "filters": [
+                            {
+                                "type": "RequestRedirect",
+                                "requestRedirect": {"scheme": "https", "statusCode": 301},
+                            }
+                        ]
+                    }
+                ],
+            }
+
+        return {
+            "parentRefs": [
+                {
+                    "name": self.gateway_name,
+                    "namespace": namespace,
+                    "sectionName": self.listener_id,
+                }
+            ],
+            "rules": [
+                {
+                    "matches": self.matches,
+                    "filters": self.filters,
+                    "backendRefs": [
+                        {
+                            "name": self.service_name,
+                            "port": self.service_port,
+                        }
+                    ],
+                }
+            ],
+        }
 
 
 class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -137,44 +213,14 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             HTTPRouteResourceDefinition, resource_definition
         )
 
-        listener_id = (
-            f"{http_route_resource_definition.gateway_name}"
-            f"-{http_route_resource_definition.http_route_type}"
-            "-listener"
-        )
-        spec = {
-            "parentRefs": [
-                {
-                    "name": http_route_resource_definition.gateway_name,
-                    "namespace": self._client.namespace,
-                    "sectionName": listener_id,
-                }
-            ],
-            "rules": [
-                {
-                    "matches": http_route_resource_definition.matches,
-                    "filters": http_route_resource_definition.filters,
-                    "backendRefs": [
-                        {
-                            "name": http_route_resource_definition.service_name,
-                            "port": http_route_resource_definition.service_port,
-                        }
-                    ],
-                }
-            ],
-        }
-
         http_route = self._http_route_generic_resource_class(
             apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
             kind=HTTP_ROUTE_RESOURCE_NAME,
             metadata=ObjectMeta(
-                name=(
-                    f"{http_route_resource_definition.gateway_name}"
-                    f"-{http_route_resource_definition.http_route_type}"
-                ),
+                name=http_route_resource_definition.http_route_resource_name,
                 labels=self._labels,
             ),
-            spec=spec,
+            spec=http_route_resource_definition.http_route_resource_spec(self._client.namespace),
         )
 
         return http_route
@@ -226,62 +272,3 @@ class HTTPRouteResourceManager(ResourceManager[GenericNamespacedResource]):
             name: The name of the secret resource to delete.
         """
         self._client.delete(res=self._http_route_generic_resource_class, name=name)
-
-
-class HTTPRouteRedirectResourceManager(HTTPRouteResourceManager):
-    """HTTP route resource manager that handles rediection."""
-
-    @map_k8s_auth_exception
-    def _gen_resource(self, resource_definition: ResourceDefinition) -> GenericNamespacedResource:
-        """Generate a Gateway resource from a gateway resource definition.
-
-        Args:
-            resource_definition: Part of charm state consisting of 2 components:
-                - HTTPRouteResourceInformation
-                - GatewayResourceDefinition
-
-        Returns:
-            A dictionary representing the gateway custom resource.
-        """
-        http_route_resource_definition = typing.cast(
-            HTTPRouteResourceDefinition, resource_definition
-        )
-
-        listener_id = (
-            f"{http_route_resource_definition.gateway_name}"
-            f"-{http_route_resource_definition.http_route_type}"
-            "-listener"
-        )
-        spec = {
-            "parentRefs": [
-                {
-                    "name": http_route_resource_definition.gateway_name,
-                    "namespace": self._client.namespace,
-                    "sectionName": listener_id,
-                }
-            ],
-            "rules": [
-                {
-                    "filters": [
-                        {
-                            "type": "RequestRedirect",
-                            "requestRedirect": {"scheme": "https", "statusCode": 301},
-                        }
-                    ]
-                }
-            ],
-        }
-        http_route = self._http_route_generic_resource_class(
-            apiVersion=f"{CUSTOM_RESOURCE_GROUP_NAME}/v1",
-            kind=HTTP_ROUTE_RESOURCE_NAME,
-            metadata=ObjectMeta(
-                name=(
-                    f"{http_route_resource_definition.gateway_name}"
-                    f"-{http_route_resource_definition.http_route_type}"
-                ),
-                labels=self._labels,
-            ),
-            spec=spec,
-        )
-
-        return http_route

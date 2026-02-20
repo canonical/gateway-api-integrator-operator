@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from ops import testing
 
-from src.state.config import CharmConfig  # pylint: disable=import-error
+from src.state.config import CharmConfig, ProxyMode
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -20,12 +20,13 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("client.KubeConfig", MagicMock())
     monkeypatch.setattr("client.Client", MagicMock())
     monkeypatch.setattr(
-        "charm.CharmConfig.from_charm",
+        "charm.CharmConfig.from_charm_and_providers",
         MagicMock(
             return_value=CharmConfig(
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
                 external_hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
                 enforce_https=True,
+                proxy_mode=ProxyMode.DEFAULT,
             )
         ),
     )

@@ -146,7 +146,7 @@ def test_gateway_gen_resource(
         client=client_with_mock_external,
     )
     tls_information = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
-    config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
+    config = CharmConfig.from_charm_and_providers(harness.charm, client_with_mock_external)
     gateway_resource = gateway_resource_manager._gen_resource(
         GatewayResourceDefinition(gateway_resource_information, config, tls_information)
     )
@@ -179,7 +179,7 @@ def test_gateway_gen_resource_enforce_https_true(
         client=client_with_mock_external,
     )
     tls_information = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
-    charm_config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
+    charm_config = CharmConfig.from_charm_and_providers(harness.charm, client_with_mock_external)
     gateway_resource = gateway_resource_manager._gen_resource(
         GatewayResourceDefinition(gateway_resource_information, charm_config, tls_information)
     )
@@ -227,7 +227,7 @@ def test_gateway_gen_resource_enforce_https_false(
     tls_information = TLSInformation.from_charm(
         harness.charm, harness.charm.certificates, validate=False
     )
-    charm_config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
+    charm_config = CharmConfig.from_charm_and_providers(harness.charm, client_with_mock_external)
     gateway_resource = gateway_resource_manager._gen_resource(
         GatewayResourceDefinition(gateway_resource_information, charm_config, tls_information)
     )
@@ -275,7 +275,7 @@ def test_gateway_gen_resource_enforce_https_false_with_hostname(
     tls_information = TLSInformation.from_charm(
         harness.charm, harness.charm.certificates, validate=False
     )
-    charm_config = CharmConfig.from_charm(harness.charm, client_with_mock_external)
+    charm_config = CharmConfig.from_charm_and_providers(harness.charm, client_with_mock_external)
     gateway_resource = gateway_resource_manager._gen_resource(
         GatewayResourceDefinition(gateway_resource_information, charm_config, tls_information)
     )

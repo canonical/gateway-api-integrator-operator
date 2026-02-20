@@ -5,9 +5,10 @@
 
 import dataclasses
 
-import ops
 from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
+
+from src.state.tls import TLSInformation
 
 from .exception import CharmStateValidationBaseError
 
@@ -16,15 +17,19 @@ GATEWAY_ROUTE_RELATION = "gateway-route"
 
 
 class IngressIntegrationMissingError(CharmStateValidationBaseError):
-    """Exception raised when ingress integration is not established."""
+    """Exception raised when ingress relation is not established."""
 
 
 class IngressIntegrationDataValidationError(CharmStateValidationBaseError):
-    """Exception raised when ingress integration is not established."""
+    """Exception raised when ingress relation data validation fails."""
 
 
-class IngressGatewayRouteConflictError(CharmStateValidationBaseError):
-    """Exception raised when both ingress and gateway-route integrations are established."""
+class GatewayRouteRelationNotReadyError(CharmStateValidationBaseError):
+    """Exception raised when gateway route relation data is not ready."""
+
+
+class GatewayRouteRelationDataValidationError(CharmStateValidationBaseError):
+    """Exception raised when gateway route relation data validation fails."""
 
 
 class GatewayRouteHostnameMissingError(CharmStateValidationBaseError):
@@ -59,53 +64,6 @@ class HTTPRouteResourceInformation:
     hostname: str
 
     @classmethod
-    def from_provider(
-        cls,
-        external_hostname: str | None,
-        ingress_provider: IngressPerAppProvider,
-        gateway_route_provider: GatewayRouteProvider,
-    ) -> "HTTPRouteResourceInformation":
-        """Get TLS information from a charm instance.
-
-        Args:
-            external_hostname: The external-hostname charm configuration.
-            ingress_provider: The ingress provider library.
-            gateway_route_provider: The gateway route provider library.
-
-        Raises:
-            IngressIntegrationMissingError: When integration is not ready.
-            IngressIntegrationDataValidationError: When data validation failed.
-            IngressGatewayRouteConflictError: When both integrations are established.
-
-        Returns:
-            HTTPRouteResourceInformation: Information about configured TLS certs.
-        """
-        ingress_relations = ingress_provider.relations
-        gateway_route_relation = gateway_route_provider.relation
-        if ingress_relations and gateway_route_relation is not None:
-            raise IngressGatewayRouteConflictError(
-                "Both Ingress and Gateway Route integrations are established. Only one is allowed."
-            )
-        try:
-            if ingress_relations:
-                if len(ingress_relations) > 1:
-                    raise IngressIntegrationDataValidationError(
-                        "The charm does not support multiple ingress relations."
-                    )
-                return cls._from_ingress(ingress_provider)
-            if gateway_route_relation is not None:
-                return cls._from_gateway_route(
-                    external_hostname, gateway_route_provider, gateway_route_relation
-                )
-        except DataValidationError as exc:
-            raise IngressIntegrationDataValidationError(
-                "Validation of ingress relation data failed."
-            ) from exc
-        raise IngressIntegrationMissingError(
-            "Ingress and Gateway Route integration not ready. You must relate to either."
-        )
-
-    @classmethod
     def _from_ingress(
         cls,
         ingress_provider: IngressPerAppProvider,
@@ -122,63 +80,74 @@ class HTTPRouteResourceInformation:
         application_name = integration_data.app.name
         service_port = integration_data.app.port
         service_name = f"{ingress_provider.charm.app.name}-{application_name}-service"
-        return cls(
-            application_name=application_name,
-            requirer_model_name=integration_data.app.model,
-            service_name=service_name,
-            service_port=service_port,
-            service_port_name=f"tcp-{service_port}",
-            filters=(
-                []
-                if not integration_data.app.strip_prefix
-                else [
-                    {
-                        "type": "URLRewrite",
-                        "urlRewrite": {
-                            "path": {
-                                "type": "ReplacePrefixMatch",
-                                "replacePrefixMatch": "/",
-                            }
-                        },
-                    }
-                ]
-            ),
-            paths=[f"/{integration_data.app.model}-{application_name}"],
-            hostname="",
-        )
+        try:
+            return cls(
+                application_name=application_name,
+                requirer_model_name=integration_data.app.model,
+                service_name=service_name,
+                service_port=service_port,
+                service_port_name=f"tcp-{service_port}",
+                filters=(
+                    []
+                    if not integration_data.app.strip_prefix
+                    else [
+                        {
+                            "type": "URLRewrite",
+                            "urlRewrite": {
+                                "path": {
+                                    "type": "ReplacePrefixMatch",
+                                    "replacePrefixMatch": "/",
+                                }
+                            },
+                        }
+                    ]
+                ),
+                paths=[f"/{integration_data.app.model}-{application_name}"],
+                hostname="",
+            )
+        except DataValidationError as exc:
+            raise IngressIntegrationDataValidationError(
+                "Validation of ingress relation data failed."
+            ) from exc
 
     @classmethod
     def _from_gateway_route(
         cls,
-        external_hostname: str | None,
         gateway_route_provider: GatewayRouteProvider,
-        gateway_route_integration: ops.Relation,
+        tls_information: TLSInformation,
     ) -> "HTTPRouteResourceInformation":
         """Populate fields from ingress integration.
 
         Args:
-            external_hostname: The external-hostname charm configuration.
             gateway_route_provider: The gateway route provider library.
-            gateway_route_integration: The gateway-route integration.
+            tls_information: TLS-related information.
+
+        Raises:
+            GatewayRouteRelationDataValidationError: When data validation failed.
+            GatewayRouteHostnameMissingError: When hostname is not configured.
         """
-        integration_data = gateway_route_provider.get_data(gateway_route_integration)
-        if integration_data is None:
-            raise IngressIntegrationMissingError("Gateway Route integration data not ready.")
-        application_name = integration_data.application_data.name
-        service_port = integration_data.application_data.port
-        hostname = integration_data.application_data.hostname or external_hostname
-        if hostname is None:
-            raise IngressIntegrationDataValidationError(
+        if tls_information.hostname is None:
+            raise GatewayRouteHostnameMissingError(
                 "No hostname configured. Configure hostname either via"
                 " the gateway-route relation or by setting the external-hostname charm config."
             )
-        return cls(
-            application_name=application_name,
-            requirer_model_name=integration_data.application_data.model,
-            service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
-            service_port=service_port,
-            service_port_name=f"tcp-{service_port}",
-            filters=[],
-            paths=integration_data.application_data.paths,
-            hostname=hostname,
-        )
+        relation_data = gateway_route_provider.get_data()
+        if relation_data is None:
+            raise GatewayRouteRelationNotReadyError("gateway-route relation data not ready.")
+        application_name = relation_data.application_data.name
+        service_port = relation_data.application_data.port
+        try:
+            return cls(
+                application_name=application_name,
+                requirer_model_name=relation_data.application_data.model,
+                service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
+                service_port=service_port,
+                service_port_name=f"tcp-{service_port}",
+                filters=[],
+                paths=relation_data.application_data.paths,
+                hostname=tls_information.hostname,
+            )
+        except DataValidationError as exc:
+            raise GatewayRouteRelationDataValidationError(
+                "Validation of gateway-route relation data failed."
+            ) from exc

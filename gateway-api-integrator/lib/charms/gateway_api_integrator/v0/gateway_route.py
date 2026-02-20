@@ -354,7 +354,7 @@ class GatewayRouteProvider(Object):
         """Handle relation broken/departed events."""
         self.on.data_removed.emit()
 
-    def get_data(self, relation: Relation) -> Optional[GatewayRouteRequirerData]:
+    def get_data(self, relation: Relation | None = None) -> GatewayRouteRequirerData | None:
         """Fetch requirer data.
 
         Args:
@@ -366,12 +366,11 @@ class GatewayRouteProvider(Object):
         Returns:
             GatewayRouteRequirerData: Validated data from the gateway-route requirer.
         """
-        requirer_data: Optional[GatewayRouteRequirerData] = None
-        if relation:
+        if requirer_relation := relation or self.relation:
             try:
-                application_data = self._get_requirer_application_data(relation)
-                requirer_data = GatewayRouteRequirerData(
-                    relation_id=relation.id,
+                application_data = self._get_requirer_application_data(requirer_relation)
+                return GatewayRouteRequirerData(
+                    relation_id=requirer_relation.id,
                     application_data=application_data,
                 )
             except DataValidationError as exc:
@@ -384,7 +383,7 @@ class GatewayRouteProvider(Object):
                     raise GatewayRouteInvalidRelationDataError(
                         f"gateway-route data validation failed for relation: {relation}"
                     ) from exc
-        return requirer_data
+        return None
 
     def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
         """Fetch and validate the requirer's application databag.

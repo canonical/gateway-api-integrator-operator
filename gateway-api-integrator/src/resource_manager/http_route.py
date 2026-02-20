@@ -68,6 +68,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     redirect_https: bool
     paths: list[str]
     filters: list[dict]
+    hostname: str | None
 
     def __init__(
         self,
@@ -128,6 +129,15 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         """
         return f"{self.gateway_name}-{self.http_route_type}"
 
+    @property
+    def http_route_hostnames(self) -> list[str] | None:
+        """Get the hostnames for the HTTPRoute resource.
+
+        Returns:
+            The list of hostnames or None if hostname is not set.
+        """
+        return None if self.hostname is None else [self.hostname]
+
     def http_route_resource_spec(self, namespace: str) -> dict[str, typing.Any]:
         """Generate a Gateway resource from a gateway resource definition.
 
@@ -156,6 +166,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
                         ]
                     }
                 ],
+                "hostnames": self.http_route_hostnames,
             }
 
         return {
@@ -178,6 +189,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
                     ],
                 }
             ],
+            "hostnames": self.http_route_hostnames,
         }
 
 

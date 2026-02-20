@@ -116,7 +116,10 @@ def test_gateway_gen_resource(
         harness.charm._gateway_route_provider,
     )
     tls_information = TLSInformation.from_charm(
-        harness.charm, charm_config, harness.charm.certificates, harness.charm._gateway_route_provider
+        harness.charm,
+        charm_config,
+        harness.charm.certificates,
+        harness.charm._gateway_route_provider,
     )
     gateway_resource = gateway_resource_manager._gen_resource(
         GatewayResourceDefinition(gateway_resource_information, charm_config, tls_information)

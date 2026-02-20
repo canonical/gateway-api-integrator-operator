@@ -6,7 +6,7 @@
 import dataclasses
 import typing
 
-from src.state.http_route import HTTPRouteResourceInformation
+from state.http_route import HTTPRouteResourceInformation
 
 from .config import CharmConfig
 from .gateway import GatewayResourceInformation

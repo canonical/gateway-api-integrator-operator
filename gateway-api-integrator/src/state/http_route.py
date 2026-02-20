@@ -8,7 +8,7 @@ import dataclasses
 from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
-from src.state.tls import TLSInformation
+from state.tls import TLSInformation
 
 from .exception import CharmStateValidationBaseError
 
@@ -75,12 +75,11 @@ class HTTPRouteResourceInformation:
             ingress_provider (IngressPerAppProvider): The ingress provider class.
             ingress_integration (ops.Relation): The ingress integration.
         """
-        # Validation that len(ingress_provider.relations) == 1 is done in the caller method
-        integration_data = ingress_provider.get_data(ingress_provider.relations[0])
-        application_name = integration_data.app.name
-        service_port = integration_data.app.port
-        service_name = f"{ingress_provider.charm.app.name}-{application_name}-service"
         try:
+            integration_data = ingress_provider.get_data(ingress_provider.relations[0])
+            application_name = integration_data.app.name
+            service_port = integration_data.app.port
+            service_name = f"{ingress_provider.charm.app.name}-{application_name}-service"
             return cls(
                 application_name=application_name,
                 requirer_model_name=integration_data.app.model,

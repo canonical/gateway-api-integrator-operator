@@ -40,4 +40,9 @@ def test_config(harness: Harness, available_gateway_classes: str):
     )
     harness.begin()
     with pytest.raises(InvalidCharmConfigError):
-        _ = CharmConfig.from_charm_and_providers(harness.charm, client_mock)
+        _ = CharmConfig.from_charm_and_providers(
+            harness.charm,
+            client_mock,
+            harness.charm._ingress_provider,
+            harness.charm._gateway_route_provider,
+        )

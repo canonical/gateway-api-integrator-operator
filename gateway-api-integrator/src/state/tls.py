@@ -9,7 +9,7 @@ import ops
 from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
 from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 
-from src.state.config import CharmConfig
+from state.config import CharmConfig
 
 from .exception import CharmStateValidationBaseError
 

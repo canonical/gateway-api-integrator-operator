@@ -46,9 +46,16 @@ from resource_manager.http_route import (
     HTTPRouteResourceManager,
     HTTPRouteType,
 )
+from resource_manager.permission import InsufficientPermissionError
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
-from state.config import CharmConfig, IngressGatewayRouteConflictError, ProxyMode
+from state.config import (
+    CharmConfig,
+    GatewayClassUnavailableError,
+    IngressGatewayRouteConflictError,
+    InvalidCharmConfigError,
+    ProxyMode,
+)
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
     GatewayRouteHostnameMissingError,
@@ -134,10 +141,9 @@ class GatewayAPICharm(CharmBase):
         Returns:
             A list of CertificateRequestAttributes for the requested hostnames.
         """
-        hostnames = []
         if hostname := self.get_hostname():
-            hostnames = [hostname]
-        return [CertificateRequestAttributes(common_name=name) for name in hostnames]
+            return [CertificateRequestAttributes(common_name=hostname)]
+        return []
 
     @property
     def _labels(self) -> LabelSelector:
@@ -381,14 +387,18 @@ class GatewayAPICharm(CharmBase):
         """
         try:
             client = get_client(field_manager=self.app.name, namespace=self.model.name)
-
             config = CharmConfig.from_charm_and_providers(
                 self, client, self._ingress_provider, self._gateway_route_provider
             )
-            tls_information = TLSInformation.from_charm(
-                self, config, self.certificates, self._gateway_route_provider
-            )
-            return tls_information.hostname
+            gateway_route_requirer_data = self._gateway_route_provider.get_data()
+            hostname = config.external_hostname
+            if (
+                gateway_route_requirer_data is not None
+                and gateway_route_requirer_data.application_data.hostname is not None
+            ):
+                hostname = gateway_route_requirer_data.application_data.hostname
+
+            return hostname
         except (
             DataValidationError,
             IngressIntegrationMissingError,
@@ -397,8 +407,11 @@ class GatewayAPICharm(CharmBase):
             GatewayRouteHostnameMissingError,
             GatewayRouteRelationDataValidationError,
             GatewayRouteRelationNotReadyError,
+            GatewayClassUnavailableError,
+            InvalidCharmConfigError,
+            InsufficientPermissionError,
         ):
-            return typing.cast(str, self.model.config.get("external-hostname"))
+            return None
 
     def _define_ingress_resources_and_publish_url(  # pylint: disable=too-many-locals
         self,

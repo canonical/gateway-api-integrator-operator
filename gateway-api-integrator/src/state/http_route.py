@@ -8,8 +8,6 @@ import dataclasses
 from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
-from state.tls import TLSInformation
-
 from .exception import CharmStateValidationBaseError
 
 INGRESS_RELATION = "gateway"

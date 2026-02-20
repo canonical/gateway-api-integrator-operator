@@ -12,8 +12,9 @@ from ops.model import SecretNotFoundError
 
 import client
 from resource_manager.resource_manager import InvalidResourceError
+from state.config import IngressGatewayRouteConflictError
 from state.exception import CharmStateValidationBaseError
-from state.http_route import IngressGatewayRouteConflictError, IngressIntegrationMissingError
+from state.http_route import IngressIntegrationMissingError
 
 logger = logging.getLogger(__name__)
 

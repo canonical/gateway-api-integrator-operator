@@ -39,13 +39,14 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     Attributes:
         gateway_name: The gateway resource's name
-        external_hostname: The configured gateway hostname.
+        hostname: The configured gateway hostname.
         gateway_class_name: The configured gateway class.
         secret_resource_name_prefix: Prefix of the secret resource name.
+        require_https_listener: Whether the gateway resource should have an HTTPS listener.
     """
 
     gateway_name: str
-    external_hostname: str
+    hostname: str | None
     gateway_class_name: str
     secret_resource_name_prefix: str
 
@@ -102,7 +103,27 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         """
         gateway_resource_definition = typing.cast(GatewayResourceDefinition, resource_definition)
         prefix = gateway_resource_definition.secret_resource_name_prefix
-        tls_secret_name = f"{prefix}-{gateway_resource_definition.external_hostname}"
+        listeners = [
+            {
+                "protocol": "HTTP",
+                "port": 80,
+                "name": f"{gateway_resource_definition.gateway_name}-http-listener",
+                "allowedRoutes": {"namespaces": {"from": "All"}},
+            }
+        ]
+
+        if hostname := gateway_resource_definition.hostname:
+            tls_secret_name = f"{prefix}-{hostname}"
+            listeners.append(
+                {
+                    "protocol": "HTTPS",
+                    "port": 443,
+                    "name": f"{gateway_resource_definition.gateway_name}-https-listener",
+                    "allowedRoutes": {"namespaces": {"from": "All"}},
+                    "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
+                }
+            )
+
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
@@ -111,23 +132,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             ),
             spec={
                 "gatewayClassName": gateway_resource_definition.gateway_class_name,
-                "listeners": [
-                    {
-                        "protocol": "HTTP",
-                        "port": 80,
-                        "name": f"{gateway_resource_definition.gateway_name}-http-listener",
-                        "hostname": gateway_resource_definition.external_hostname,
-                        "allowedRoutes": {"namespaces": {"from": "All"}},
-                    },
-                    {
-                        "protocol": "HTTPS",
-                        "port": 443,
-                        "name": f"{gateway_resource_definition.gateway_name}-https-listener",
-                        "hostname": gateway_resource_definition.external_hostname,
-                        "allowedRoutes": {"namespaces": {"from": "All"}},
-                        "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
-                    },
-                ],
+                "listeners": listeners,
             },
         )
         return gateway

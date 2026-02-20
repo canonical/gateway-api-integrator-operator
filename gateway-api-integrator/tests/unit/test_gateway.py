@@ -159,6 +159,8 @@ def test_get_current_gateway(mock_lightkube_client: MagicMock):
         client=mock_lightkube_client,
     )
     gateway = gateway_resource_manager.current_gateway_resource()
+    assert gateway is not None, "Gateway resource should not be None"
+    assert gateway.metadata is not None, "Gateway metadata should not be None"
     assert gateway.metadata.name == "gateway"
 
 

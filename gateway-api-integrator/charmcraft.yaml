@@ -52,11 +52,9 @@ provides:
 config:
   options:
     external-hostname:
-      default: ""
       description: The hostname of the gateway.
       type: string
     gateway-class:
-      default: ""
       description: The gateway class.
       type: string
     enforce-https:

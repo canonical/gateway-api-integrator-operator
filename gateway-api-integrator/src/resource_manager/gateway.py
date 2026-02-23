@@ -9,7 +9,6 @@ import typing
 
 from lightkube import Client
 from lightkube.core.client import LabelSelector
-from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType

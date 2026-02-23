@@ -177,7 +177,7 @@ class GatewayAPICharm(CharmBase):
             event: Juju event
         """
         hostname = event.params["hostname"]
-        TLSInformation.validate(self, bool(self.model.config.get("enforce-https", False)))
+        TLSInformation.validate(self)
         for request in self._get_certificate_requests():
             if request.common_name == hostname:
                 provider_certificate, private_key = self.certificates.get_assigned_certificate(

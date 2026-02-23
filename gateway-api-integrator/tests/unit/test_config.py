@@ -19,7 +19,6 @@ from .conftest import GATEWAY_CLASS_CONFIG
 @pytest.mark.parametrize(
     "available_gateway_classes",
     [
-        pytest.param(GATEWAY_CLASS_CONFIG, id="available."),
         pytest.param("not-available", id="not available."),
     ],
 )

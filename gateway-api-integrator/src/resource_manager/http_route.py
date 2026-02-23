@@ -130,13 +130,13 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         return f"{self.gateway_name}-{self.http_route_type}"
 
     @property
-    def http_route_hostnames(self) -> list[str] | None:
+    def http_route_hostnames(self) -> list[str]:
         """Get the hostnames for the HTTPRoute resource.
 
         Returns:
-            The list of hostnames or None if hostname is not set.
+            The list of hostnames or an empty list if hostname is not set.
         """
-        return None if self.hostname is None else [self.hostname]
+        return [] if self.hostname is None else [self.hostname]
 
     def http_route_resource_spec(self, namespace: str) -> dict[str, typing.Any]:
         """Generate a Gateway resource from a gateway resource definition.

@@ -9,12 +9,12 @@ from unittest.mock import MagicMock
 
 from ops.testing import Harness
 
-from src.resource_manager.secret import (
+from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,
 )
-from src.state.config import CharmConfig
-from src.state.tls import TLSInformation
+from state.config import CharmConfig
+from state.tls import TLSInformation
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 

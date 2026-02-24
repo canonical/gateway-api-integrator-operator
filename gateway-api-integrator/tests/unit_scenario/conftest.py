@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import pytest
 from ops import testing
 
-from src.state.config import CharmConfig, ProxyMode
+from state.config import CharmConfig, ProxyMode
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
 GATEWAY_CLASS_CONFIG = "cilium"

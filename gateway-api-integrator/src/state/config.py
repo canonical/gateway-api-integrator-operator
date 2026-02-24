@@ -45,6 +45,7 @@ class ProxyMode(StrEnum):
     Attrs:
         GATEWAY_ROUTE: When gateway-route is related.
         INGRESS: when ingress is related.
+        DEFAULT: when gateway-api-integrator is not loadbalancing traffic.
     """
 
     GATEWAY_ROUTE = "gateway-route"

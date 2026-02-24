@@ -53,7 +53,7 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             port = data.app.port
 
         except DataValidationError:
-            self.unit.status = ops.BlockedStatus("Invalid requirer data")
+            self.unit.status = ops.BlockedStatus("Invalid ingress relation data")
             return
 
         # Check config values

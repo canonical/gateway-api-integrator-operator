@@ -92,7 +92,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -221,8 +221,7 @@ def valid_fqdn(value: str) -> str:
     Args:
         value: The value to validate.
     """
-    fqdn = value[2:] if value.startswith("*.") else value
-    if not bool(domain(fqdn)):
+    if not bool(domain(value)):
         raise ValueError(f"Invalid domain: {value}")
     return value
 
@@ -354,7 +353,7 @@ class GatewayRouteProvider(Object):
         """Handle relation broken/departed events."""
         self.on.data_removed.emit()
 
-    def get_data(self, relation: Relation) -> Optional[GatewayRouteRequirerData]:
+    def get_data(self, relation: Relation | None = None) -> GatewayRouteRequirerData | None:
         """Fetch requirer data.
 
         Args:
@@ -366,12 +365,11 @@ class GatewayRouteProvider(Object):
         Returns:
             GatewayRouteRequirerData: Validated data from the gateway-route requirer.
         """
-        requirer_data: Optional[GatewayRouteRequirerData] = None
-        if relation:
+        if requirer_relation := relation or self.relation:
             try:
-                application_data = self._get_requirer_application_data(relation)
-                requirer_data = GatewayRouteRequirerData(
-                    relation_id=relation.id,
+                application_data = self._get_requirer_application_data(requirer_relation)
+                return GatewayRouteRequirerData(
+                    relation_id=requirer_relation.id,
                     application_data=application_data,
                 )
             except DataValidationError as exc:
@@ -384,7 +382,7 @@ class GatewayRouteProvider(Object):
                     raise GatewayRouteInvalidRelationDataError(
                         f"gateway-route data validation failed for relation: {relation}"
                     ) from exc
-        return requirer_data
+        return None
 
     def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
         """Fetch and validate the requirer's application databag.
@@ -514,7 +512,7 @@ class GatewayRouteRequirer(Object):
         name: str,
         model: str,
         port: int,
-        hostname: str | None = None,
+        hostname: str,
         paths: Optional[list[str]] = None,
     ) -> None:
         """Update gateway-route requirements data in the relation.

@@ -92,7 +92,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -221,8 +221,7 @@ def valid_fqdn(value: str) -> str:
     Args:
         value: The value to validate.
     """
-    fqdn = value[2:] if value.startswith("*.") else value
-    if not bool(domain(fqdn)):
+    if not bool(domain(value)):
         raise ValueError(f"Invalid domain: {value}")
     return value
 

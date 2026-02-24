@@ -576,30 +576,6 @@ class GatewayAPICharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
 
-    def _certificates_revocation_needed(self, client: Client, config: CharmConfig) -> bool:
-        """Check if a new certificate is needed.
-
-        Args:
-            client: Lightkube client
-            config: Charm config.
-
-        Returns:
-            True if the current certificate needs to be revoked.
-        """
-        gateway_resource_manager = GatewayResourceManager(
-            labels=self._labels,
-            client=client,
-        )
-        gateway = gateway_resource_manager.current_gateway_resource()
-        if not gateway:
-            return False
-
-        gateway_listeners = gateway.spec["listeners"]  # pyright: ignore[reportOptionalSubscript]
-        listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
-        return not (
-            len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]
-        )
-
 
 if __name__ == "__main__":  # pragma: no cover
     main(GatewayAPICharm)

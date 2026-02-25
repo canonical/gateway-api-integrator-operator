@@ -26,10 +26,6 @@ class GatewayRouteRelationNotReadyError(CharmStateValidationBaseError):
     """Exception raised when gateway route relation data is not ready."""
 
 
-class GatewayRouteRelationDataValidationError(CharmStateValidationBaseError):
-    """Exception raised when gateway route relation data validation fails."""
-
-
 @dataclasses.dataclass(frozen=True)
 class HTTPRouteResourceInformation:
     """A component of charm state containing resource definition for kubernetes secret.
@@ -114,26 +110,23 @@ class HTTPRouteResourceInformation:
             hostname: The hostname to be used in the HTTPRoute resource.
 
         Raises:
-            GatewayRouteRelationDataValidationError: When data validation failed.
-            GatewayRouteHostnameMissingError: When hostname is not configured.
+            GatewayRouteRelationNotReadyError: When data validation failed.
         """
         relation_data = gateway_route_provider.get_data()
         if relation_data is None:
-            raise GatewayRouteRelationNotReadyError("gateway-route relation data not ready.")
+            raise GatewayRouteRelationNotReadyError(
+                "Validation of gateway-route relation data failed."
+            )
         application_name = relation_data.application_data.name
         service_port = relation_data.application_data.port
-        try:
-            return cls(
-                application_name=application_name,
-                requirer_model_name=relation_data.application_data.model,
-                service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
-                service_port=service_port,
-                service_port_name=f"tcp-{service_port}",
-                filters=[],
-                paths=relation_data.application_data.paths,
-                hostname=hostname,
-            )
-        except DataValidationError as exc:
-            raise GatewayRouteRelationDataValidationError(
-                "Validation of gateway-route relation data failed."
-            ) from exc
+
+        return cls(
+            application_name=application_name,
+            requirer_model_name=relation_data.application_data.model,
+            service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
+            service_port=service_port,
+            service_port_name=f"tcp-{service_port}",
+            filters=[],
+            paths=relation_data.application_data.paths,
+            hostname=hostname,
+        )

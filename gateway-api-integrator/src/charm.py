@@ -58,7 +58,6 @@ from state.config import (
 )
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
-    GatewayRouteRelationDataValidationError,
     GatewayRouteRelationNotReadyError,
     HTTPRouteResourceInformation,
     IngressIntegrationDataValidationError,
@@ -404,7 +403,6 @@ class GatewayAPICharm(CharmBase):
             IngressIntegrationDataValidationError,
             IngressGatewayRouteConflictError,
             HostnameMissingError,
-            GatewayRouteRelationDataValidationError,
             GatewayRouteRelationNotReadyError,
             GatewayClassUnavailableError,
             InvalidCharmConfigError,

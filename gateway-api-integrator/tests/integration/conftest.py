@@ -118,13 +118,8 @@ async def configured_application_with_tls_fixture(
     )
     await application.model.add_relation(application.name, certificate_provider_application.name)
     await application.model.wait_for_idle(
-        apps=[certificate_provider_application.name],
+        apps=[certificate_provider_application.name, application.name],
         idle_period=30,
         status="active",
-    )
-    await application.model.wait_for_idle(
-        apps=[application.name],
-        idle_period=30,
-        status="blocked",
     )
     return application

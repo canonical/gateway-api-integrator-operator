@@ -92,7 +92,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -512,7 +512,7 @@ class GatewayRouteRequirer(Object):
         name: str,
         model: str,
         port: int,
-        hostname: str,
+        hostname: str | None,
         paths: Optional[list[str]] = None,
     ) -> None:
         """Update gateway-route requirements data in the relation.

@@ -3,15 +3,57 @@
 
 """Fixtures for gateway-api-integrator charm unit tests."""
 
+import json
+from datetime import timedelta
 from unittest.mock import MagicMock
 
 import pytest
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    CertificateRequestAttributes,
+    CertificateSigningRequest,
+    PrivateKey,
+)
 from ops import testing
 
 from state.config import CharmConfig, ProxyMode
 
-TEST_EXTERNAL_HOSTNAME_CONFIG = "www.gateway.internal"
+TEST_EXTERNAL_HOSTNAME_CONFIG = "example.com"
 GATEWAY_CLASS_CONFIG = "cilium"
+
+
+@pytest.fixture(scope="module", name="mock_certificates_relation_data")
+def mock_certificates_relation_data_fixture() -> str:
+    """Generate valid certificate objects for testing."""
+    # Generate CA
+    ca_private_key = PrivateKey.generate()
+    ca_attributes = CertificateRequestAttributes(
+        common_name="Test CA",
+    )
+    ca_cert = Certificate.generate_self_signed_ca(
+        attributes=ca_attributes, private_key=ca_private_key, validity=timedelta(days=365)
+    )
+
+    # Generate CSR and certificate
+    csr_private_key = PrivateKey.generate()
+    csr_attributes = CertificateRequestAttributes(
+        common_name=TEST_EXTERNAL_HOSTNAME_CONFIG,
+    )
+    csr = CertificateSigningRequest.generate(csr_attributes, csr_private_key)
+    cert = Certificate.generate(
+        csr=csr, ca=ca_cert, ca_private_key=ca_private_key, validity=timedelta(days=365)
+    )
+
+    return json.dumps(
+        [
+            {
+                "certificate": str(cert),
+                "certificate_signing_request": str(csr),
+                "ca": str(ca_cert),
+                "chain": [str(ca_cert), str(cert)],
+            }
+        ]
+    )
 
 
 @pytest.fixture(scope="function", name="base_state")
@@ -24,7 +66,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         MagicMock(
             return_value=CharmConfig(
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
-                external_hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+                hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
                 enforce_https=True,
                 proxy_mode=ProxyMode.DEFAULT,
             )
@@ -57,11 +99,12 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
 
 
 @pytest.fixture(scope="function", name="certificates_relation")
-def certificates_relation_fixture():
+def certificates_relation_fixture(mock_certificates_relation_data: str):
     """Return a mock certificates relation data."""
     return testing.Relation(
         endpoint="certificates",
         interface="certificates",
+        remote_app_data={"certificates": mock_certificates_relation_data},
     )
 
 
@@ -92,7 +135,7 @@ def gateway_route_relation_fixture():
             "model": '"testing-model"',
             "name": '"testing-gateway-route-app"',
             "port": "8080",
-            "hostname": '"testing-gateway.example.com"',
+            "hostname": '"example.com"',
             "paths": "[]",
         },
     )

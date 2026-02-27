@@ -46,15 +46,14 @@ class GatewayResourceDefinition(ResourceDefinition):
     """
 
     gateway_name: str
-    hostname: str | None
     gateway_class_name: str
-    secret_resource_name_prefix: str
+    tls_secret_name: str | None
 
     def __init__(
         self,
         gateway_resource_information: GatewayResourceInformation,
         charm_config: CharmConfig,
-        tls_information: TLSInformation,
+        tls_information: TLSInformation | None,
     ):
         """Create the state object with state components.
 
@@ -63,7 +62,47 @@ class GatewayResourceDefinition(ResourceDefinition):
             charm_config: CharmConfig state component.
             tls_information: TLSInformation state component.
         """
-        super().__init__(gateway_resource_information, charm_config, tls_information)
+        tls_secret_name = None
+        if tls_information is not None:
+            tls_secret_name = (
+                f"{tls_information.secret_resource_name_prefix}-{tls_information.hostname}"
+            )
+        super().__init__(gateway_resource_information, charm_config)
+        self.tls_secret_name = tls_secret_name
+
+    @property
+    def https_listener_required(self) -> bool:
+        """Whether TLS is enabled based on the presence of TLS information."""
+        return self.tls_secret_name is not None
+
+    @property
+    def gateway_resource_http_listener_spec(self) -> dict:
+        """Return the HTTP listener configuration for the gateway resource."""
+        return {
+            "protocol": "HTTP",
+            "port": 80,
+            "name": f"{self.gateway_name}-http-listener",
+            "allowedRoutes": {"namespaces": {"from": "All"}},
+        }
+
+    @property
+    def gateway_resource_spec(self) -> dict:
+        """Return the TLS configuration for the HTTPS listener."""
+        listeners = [self.gateway_resource_http_listener_spec]
+        if self.tls_secret_name is not None:
+            listeners.append(
+                {
+                    "protocol": "HTTPS",
+                    "port": 443,
+                    "name": f"{self.gateway_name}-https-listener",
+                    "allowedRoutes": {"namespaces": {"from": "All"}},
+                    "tls": {"certificateRefs": [{"kind": "Secret", "name": self.tls_secret_name}]},
+                }
+            )
+        return {
+            "gatewayClassName": self.gateway_class_name,
+            "listeners": listeners,
+        }
 
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
@@ -102,38 +141,13 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             A dictionary representing the gateway custom resource.
         """
         gateway_resource_definition = typing.cast(GatewayResourceDefinition, resource_definition)
-        prefix = gateway_resource_definition.secret_resource_name_prefix
-        listeners = [
-            {
-                "protocol": "HTTP",
-                "port": 80,
-                "name": f"{gateway_resource_definition.gateway_name}-http-listener",
-                "allowedRoutes": {"namespaces": {"from": "All"}},
-            }
-        ]
-
-        if hostname := gateway_resource_definition.hostname:
-            tls_secret_name = f"{prefix}-{hostname}"
-            listeners.append(
-                {
-                    "protocol": "HTTPS",
-                    "port": 443,
-                    "name": f"{gateway_resource_definition.gateway_name}-https-listener",
-                    "allowedRoutes": {"namespaces": {"from": "All"}},
-                    "tls": {"certificateRefs": [{"kind": "Secret", "name": tls_secret_name}]},
-                }
-            )
-
         gateway = self._gateway_generic_resource(
             apiVersion="gateway.networking.k8s.io/v1",
             kind="Gateway",
             metadata=ObjectMeta(
                 name=gateway_resource_definition.gateway_name, labels=self._labels
             ),
-            spec={
-                "gatewayClassName": gateway_resource_definition.gateway_class_name,
-                "listeners": listeners,
-            },
+            spec=gateway_resource_definition.gateway_resource_spec,
         )
         return gateway
 

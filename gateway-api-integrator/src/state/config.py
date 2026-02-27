@@ -59,11 +59,11 @@ class CharmConfig:
 
     Attributes:
         gateway_class_name: The configured gateway class.
-        external_hostname: The configured gateway hostname.
+        hostname: The configured gateway hostname.
         enforce_https: Whether to enforce HTTPS by redirecting HTTP to HTTPS.
     """
 
-    external_hostname: typing.Annotated[str, BeforeValidator(valid_fqdn)] | None
+    hostname: typing.Annotated[str, BeforeValidator(valid_fqdn)] | None
     gateway_class_name: str = Field(min_length=1)
     enforce_https: bool = Field()
     proxy_mode: ProxyMode = Field()
@@ -120,12 +120,18 @@ class CharmConfig:
             )
 
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
-        external_hostname = typing.cast(str | None, charm.config.get("external-hostname"))
+        gateway_route_requirer_data = gateway_route_provider.get_data()
+        hostname = typing.cast(str | None, charm.config.get("external-hostname"))
+        if (
+            gateway_route_requirer_data is not None
+            and gateway_route_requirer_data.application_data.hostname is not None
+        ):
+            hostname = gateway_route_requirer_data.application_data.hostname
 
         try:
             return cls(
                 gateway_class_name=gateway_class_name,
-                external_hostname=external_hostname,
+                hostname=hostname,
                 enforce_https=enforce_https,
                 proxy_mode=proxy_mode,
             )
@@ -145,9 +151,7 @@ class CharmConfig:
         """
         is_ingress_related = bool(ingress_provider.relations)
         is_gateway_route_related = gateway_route_provider.relation is not None
-        ingress_relations = ingress_provider.relations
-        gateway_route_relation = gateway_route_provider.relation
-        if ingress_relations and gateway_route_relation is not None:
+        if is_ingress_related and is_gateway_route_related:
             raise IngressGatewayRouteConflictError(
                 "Both Ingress and Gateway Route integrations are established. Only one is allowed."
             )

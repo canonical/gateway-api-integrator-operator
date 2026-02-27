@@ -6,7 +6,6 @@
 import pytest
 from ops.testing import Harness
 
-from state.config import CharmConfig, ProxyMode
 from state.tls import TLSInformation, TlsIntegrationMissingError
 
 
@@ -21,7 +20,6 @@ def test_tls_information_integration_missing(harness: Harness):
     with pytest.raises(TlsIntegrationMissingError):
         TLSInformation.from_charm(
             harness.charm,
-            CharmConfig("example.com", "cilium", True, ProxyMode.DEFAULT),
+            "example.com",
             harness.charm.certificates,
-            harness.charm._gateway_route_provider,
         )

@@ -175,24 +175,19 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: Juju event
         """
+        if not self.model.get_relation(TLS_CERT_RELATION):
+            event.fail("Certificate relation not ready.")
+
         hostname = event.params["hostname"]
-        TLSInformation.validate(self)
-        for request in self._get_certificate_requests():
-            if request.common_name == hostname:
-                provider_certificate, private_key = self.certificates.get_assigned_certificate(
-                    request
-                )
-                if not provider_certificate or not private_key:
-                    logger.warning(
-                        "BIP Certificate or private key not found for %s", request.common_name
-                    )
-                    event.fail(f"Missing or incomplete certificate data for {hostname}")
-                    return
+        provider_certificates = self.certificates.get_provider_certificates()
+        logger.info(f"certs: {provider_certificates}")
+        for certificate in provider_certificates:
+            if certificate.certificate.common_name == hostname:
                 event.set_results(
                     {
-                        "certificate": provider_certificate.certificate,
-                        "ca": provider_certificate.ca,
-                        "chain": provider_certificate.chain,
+                        "certificate": str(certificate.certificate),
+                        "ca": str(certificate.ca),
+                        "chain": "\n\n".join(str(cert) for cert in certificate.chain),
                     }
                 )
                 return
@@ -255,9 +250,10 @@ class GatewayAPICharm(CharmBase):
         config = CharmConfig.from_charm_and_providers(
             self, client, self._ingress_provider, self._gateway_route_provider
         )
-        tls_information = TLSInformation.from_charm(
-            self, config, self.certificates, self._gateway_route_provider
-        )
+        tls_information = None
+        if self.model.get_relation(TLS_CERT_RELATION):
+            tls_information = TLSInformation.from_charm(self, config.hostname, self.certificates)
+
         self._define_secret_resources(client, tls_information)
 
         # Define gateway and HTTPRoute resources.
@@ -275,7 +271,7 @@ class GatewayAPICharm(CharmBase):
 
         # Update DNS record relation with the gateway address.
         self._update_dns_record_relation(
-            gateway_resource_manager, config.external_hostname, gateway_resource_information
+            gateway_resource_manager, config.hostname, gateway_resource_information
         )
         self._set_status_gateway_address(gateway_resource_manager, gateway_resource_information)
 
@@ -329,7 +325,7 @@ class GatewayAPICharm(CharmBase):
         resource_manager: GatewayResourceManager,
         gateway_resource_information: GatewayResourceInformation,
         config: CharmConfig,
-        tls_information: TLSInformation,
+        tls_information: TLSInformation | None,
     ) -> None:
         """Define the charm's gateway resource.
 
@@ -349,7 +345,7 @@ class GatewayAPICharm(CharmBase):
     def _define_secret_resources(
         self,
         client: Client,
-        tls_information: TLSInformation,
+        tls_information: TLSInformation | None,
     ) -> None:
         """Define TLS secret resources.
 
@@ -358,7 +354,7 @@ class GatewayAPICharm(CharmBase):
             tls_information: TLS-related information needed to create secret resources.
         """
         # Only create TLS secrets when HTTPS is enforced
-        if not tls_information.hostname:
+        if tls_information is None:
             # Clean up any existing secrets if we're not rendering the HTTPS listener.
             resource_manager = TLSSecretResourceManager(
                 labels=self._labels,
@@ -367,9 +363,7 @@ class GatewayAPICharm(CharmBase):
             resource_manager.cleanup_resources(exclude=[])
             return
 
-        resource_definition = SecretResourceDefinition.from_tls_information(
-            tls_information, tls_information.hostname
-        )
+        resource_definition = SecretResourceDefinition.from_tls_information(tls_information)
         resource_manager = TLSSecretResourceManager(
             labels=self._labels,
             client=client,
@@ -389,7 +383,7 @@ class GatewayAPICharm(CharmBase):
                 self, client, self._ingress_provider, self._gateway_route_provider
             )
             gateway_route_requirer_data = self._gateway_route_provider.get_data()
-            hostname = config.external_hostname
+            hostname = config.hostname
             if (
                 gateway_route_requirer_data is not None
                 and gateway_route_requirer_data.application_data.hostname is not None
@@ -410,11 +404,11 @@ class GatewayAPICharm(CharmBase):
         ):
             return None
 
-    def _define_ingress_resources_and_publish_url(  # pylint: disable=too-many-locals
+    def _define_ingress_resources_and_publish_url(
         self,
         client: Client,
         config: CharmConfig,
-        tls_information: TLSInformation,
+        tls_information: TLSInformation | None,
         gateway_resource_information: GatewayResourceInformation,
         gateway_resource_manager: GatewayResourceManager,
     ) -> None:
@@ -429,13 +423,13 @@ class GatewayAPICharm(CharmBase):
         """
         http_route_resource_information = None
         if config.proxy_mode == ProxyMode.INGRESS:
-            http_route_resource_information = HTTPRouteResourceInformation._from_ingress(
-                self._ingress_provider, tls_information.hostname
+            http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
+                self._ingress_provider, config.hostname
             )
 
         if config.proxy_mode == ProxyMode.GATEWAY_ROUTE:
-            http_route_resource_information = HTTPRouteResourceInformation._from_gateway_route(
-                self._gateway_route_provider, tls_information.hostname
+            http_route_resource_information = HTTPRouteResourceInformation.from_gateway_route(
+                self._gateway_route_provider, config.hostname
             )
 
         if http_route_resource_information is None:
@@ -471,7 +465,7 @@ class GatewayAPICharm(CharmBase):
                     redirect_https=False,
                 ),
             ]
-            if tls_information.hostname is not None:
+            if tls_information is not None:
                 http_route_resources.append(
                     HTTPRouteResourceDefinition(
                         http_route_resource_information,
@@ -494,7 +488,6 @@ class GatewayAPICharm(CharmBase):
         self.publish_url(
             gateway_resource_manager,
             config,
-            tls_information,
             gateway_resource_information,
             http_route_resource_information,
         )
@@ -503,7 +496,6 @@ class GatewayAPICharm(CharmBase):
         self,
         gateway_resource_manager: GatewayResourceManager,
         config: CharmConfig,
-        tls_information: TLSInformation,
         gateway_resource_information: GatewayResourceInformation,
         http_route_resource_information: HTTPRouteResourceInformation,
     ) -> None:
@@ -518,7 +510,7 @@ class GatewayAPICharm(CharmBase):
         """
         ingress_base_url = None
         if config.enforce_https:
-            if hostname := tls_information.hostname:
+            if hostname := config.hostname:
                 ingress_base_url = f"https://{hostname}"
             else:
                 logger.warning("Cannot publish URL, hostname is not defined for HTTPS route.")

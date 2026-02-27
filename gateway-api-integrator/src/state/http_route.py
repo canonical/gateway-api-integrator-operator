@@ -51,7 +51,7 @@ class HTTPRouteResourceInformation:
     hostname: str | None
 
     @classmethod
-    def _from_ingress(
+    def from_ingress(
         cls,
         ingress_provider: IngressPerAppProvider,
         hostname: str | None,
@@ -98,7 +98,7 @@ class HTTPRouteResourceInformation:
             ) from exc
 
     @classmethod
-    def _from_gateway_route(
+    def from_gateway_route(
         cls,
         gateway_route_provider: GatewayRouteProvider,
         hostname: str | None,

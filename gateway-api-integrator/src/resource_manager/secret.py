@@ -34,7 +34,7 @@ class SecretResourceDefinition(ResourceDefinition):
         hostname: The configured gateway hostname.
         secret_resource_name_prefix: Prefix of the secret resource name.
         certificate: TLS certificate.
-        private_key: Password-ecrypted private key.
+        private_key: Password-encrypted private key.
     """
 
     hostname: str
@@ -43,14 +43,11 @@ class SecretResourceDefinition(ResourceDefinition):
     private_key: str
 
     @classmethod
-    def from_tls_information(
-        cls, tls_information: TLSInformation, hostname: str
-    ) -> "SecretResourceDefinition":
+    def from_tls_information(cls, tls_information: TLSInformation) -> "SecretResourceDefinition":
         """Get certificate information for a given hostname.
 
         Args:
             tls_information: TLSInformation state component.
-            hostname: The requested hostname.
 
         Raises:
             CertificateDataNotReadyError: When the certificate data is not ready.
@@ -58,15 +55,34 @@ class SecretResourceDefinition(ResourceDefinition):
         Returns:
             SecretResourceDefinition: Information about the certificate.
         """
-        if hostname not in tls_information.tls_certs:
-            raise CertificateDataNotReadyError("Certificate data missing or incomplete.")
-
+        hostname = tls_information.hostname
         return SecretResourceDefinition(
             hostname=hostname,
             secret_resource_name_prefix=tls_information.secret_resource_name_prefix,
             certificate=tls_information.tls_certs[hostname],
             private_key=tls_information.tls_keys[hostname],
         )
+
+    @property
+    def secret_resource_name(self) -> str:
+        """Get the name of the secret resource.
+
+        Returns:
+            The name of the secret resource.
+        """
+        return f"{self.secret_resource_name_prefix}-{self.hostname}"
+
+    @property
+    def secret_resource_string_data(self) -> dict:
+        """Get the stringData field for the secret resource.
+
+        Returns:
+            The stringData field for the secret resource.
+        """
+        return {
+            "tls.crt": self.certificate,
+            "tls.key": self.private_key,
+        }
 
 
 class TLSSecretResourceManager(ResourceManager[Secret]):
@@ -93,17 +109,14 @@ class TLSSecretResourceManager(ResourceManager[Secret]):
             A Secret resource object.
         """
         secret_resource_definition = typing.cast(SecretResourceDefinition, resource_definition)
-        prefix = secret_resource_definition.secret_resource_name_prefix
-        tls_secret_name = f"{prefix}-{secret_resource_definition.hostname}"
 
         secret = Secret(
             apiVersion="v1",
             kind="Secret",
-            metadata=ObjectMeta(name=tls_secret_name, labels=self._labels),
-            stringData={
-                "tls.crt": secret_resource_definition.certificate,
-                "tls.key": secret_resource_definition.private_key,
-            },
+            metadata=ObjectMeta(
+                name=secret_resource_definition.secret_resource_name, labels=self._labels
+            ),
+            stringData=secret_resource_definition.secret_resource_string_data,
             type="kubernetes.io/tls",
         )
 

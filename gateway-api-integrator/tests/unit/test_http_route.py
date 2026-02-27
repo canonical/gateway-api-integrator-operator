@@ -37,7 +37,7 @@ def test_http_route_resource_information_validation_error(harness: Harness):
 
     harness.begin()
     with pytest.raises(IngressIntegrationDataValidationError):
-        HTTPRouteResourceInformation._from_ingress(harness.charm._ingress_provider, None)
+        HTTPRouteResourceInformation.from_ingress(harness.charm._ingress_provider, None)
 
 
 def test_http_route_gen_resource(
@@ -61,7 +61,7 @@ def test_http_route_gen_resource(
 
     harness.begin()
     charm = harness.charm
-    http_route_resource_information = HTTPRouteResourceInformation._from_ingress(
+    http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
         charm._ingress_provider, None
     )
     gateway_resource_information = GatewayResourceInformation.from_charm(charm)

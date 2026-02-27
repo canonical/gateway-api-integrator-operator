@@ -23,6 +23,7 @@ from .exception import CharmStateValidationBaseError
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
+TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 logger = logging.getLogger()
 
@@ -93,6 +94,12 @@ class CharmConfig:
         Returns:
             CharmConfig: Instance of the charm config state component.
         """
+        enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
+        if charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is None and enforce_https:
+            raise InvalidCharmConfigError(
+                "Certificates relation is needed if enforce-https is enabled."
+            )
+
         proxy_mode = cls._validate_state(ingress_provider, gateway_route_provider)
         gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
         gateway_class_generic_resource = create_global_resource(
@@ -119,7 +126,6 @@ class CharmConfig:
                 f"Gateway class must be one of: [{available_gateway_classes}]"
             )
 
-        enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
         gateway_route_requirer_data = gateway_route_provider.get_data()
         hostname = typing.cast(str | None, charm.config.get("external-hostname"))
         if (

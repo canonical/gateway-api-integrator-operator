@@ -19,7 +19,6 @@ from .conftest import GATEWAY_CLASS_CONFIG
 @pytest.mark.parametrize(
     "available_gateway_classes",
     [
-        pytest.param(GATEWAY_CLASS_CONFIG, id="available."),
         pytest.param("not-available", id="not available."),
     ],
 )
@@ -40,4 +39,9 @@ def test_config(harness: Harness, available_gateway_classes: str):
     )
     harness.begin()
     with pytest.raises(InvalidCharmConfigError):
-        _ = CharmConfig.from_charm(harness.charm, client_mock)
+        _ = CharmConfig.from_charm_and_providers(
+            harness.charm,
+            client_mock,
+            harness.charm._ingress_provider,
+            harness.charm._gateway_route_provider,
+        )

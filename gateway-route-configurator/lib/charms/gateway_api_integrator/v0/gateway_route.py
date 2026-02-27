@@ -74,14 +74,15 @@ def __init__(self, *args):
 
 import json
 import logging
-from typing import Any, MutableMapping, Optional, cast
+from typing import Annotated, Any, MutableMapping, Optional, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
 from ops.model import Relation
-from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, ValidationError
+from pydantic import AnyHttpUrl, BaseModel, BeforeValidator, ConfigDict, Field, ValidationError
 from pydantic.dataclasses import dataclass
+from validators import domain
 
 # The unique Charmhub library identifier, never change it
 LIBID = "53fdf90019a7406695064ed1e3d2708f"
@@ -91,7 +92,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -211,6 +212,20 @@ class _DatabagModel(BaseModel):
         return databag
 
 
+def valid_fqdn(value: str) -> str:
+    """Validate if value is a valid fqdn. TLDs are not allowed.
+
+    Raises:
+        ValueError: When value is not a valid domain.
+
+    Args:
+        value: The value to validate.
+    """
+    if not bool(domain(value)):
+        raise ValueError(f"Invalid domain: {value}")
+    return value
+
+
 class RequirerApplicationData(_DatabagModel):
     """Configuration model for Gateway route requirer application data.
 
@@ -222,7 +237,9 @@ class RequirerApplicationData(_DatabagModel):
         port: The port number on which the service is listening.
     """
 
-    hostname: str | None = Field(description="Hostname of this service.")
+    hostname: Annotated[str, BeforeValidator(valid_fqdn)] | None = Field(
+        description="Hostname of this service."
+    )
     paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
     model: str = Field(description="The model the application is in.")
     name: str = Field(description="The name of the app requesting gateway route.")
@@ -336,7 +353,7 @@ class GatewayRouteProvider(Object):
         """Handle relation broken/departed events."""
         self.on.data_removed.emit()
 
-    def get_data(self, relation: Relation) -> Optional[GatewayRouteRequirerData]:
+    def get_data(self, relation: Relation | None = None) -> GatewayRouteRequirerData | None:
         """Fetch requirer data.
 
         Args:
@@ -348,12 +365,11 @@ class GatewayRouteProvider(Object):
         Returns:
             GatewayRouteRequirerData: Validated data from the gateway-route requirer.
         """
-        requirer_data: Optional[GatewayRouteRequirerData] = None
-        if relation:
+        if requirer_relation := relation or self.relation:
             try:
-                application_data = self._get_requirer_application_data(relation)
-                requirer_data = GatewayRouteRequirerData(
-                    relation_id=relation.id,
+                application_data = self._get_requirer_application_data(requirer_relation)
+                return GatewayRouteRequirerData(
+                    relation_id=requirer_relation.id,
                     application_data=application_data,
                 )
             except DataValidationError as exc:
@@ -366,7 +382,7 @@ class GatewayRouteProvider(Object):
                     raise GatewayRouteInvalidRelationDataError(
                         f"gateway-route data validation failed for relation: {relation}"
                     ) from exc
-        return requirer_data
+        return None
 
     def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
         """Fetch and validate the requirer's application databag.
@@ -496,7 +512,7 @@ class GatewayRouteRequirer(Object):
         name: str,
         model: str,
         port: int,
-        hostname: str,
+        hostname: str | None,
         paths: Optional[list[str]] = None,
     ) -> None:
         """Update gateway-route requirements data in the relation.

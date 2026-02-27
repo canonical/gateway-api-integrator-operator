@@ -13,6 +13,7 @@ from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,
 )
+from state.config import CharmConfig
 from state.tls import TLSInformation
 
 from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -38,9 +39,19 @@ def test_secret_gen_resource(
         labels=harness.charm._labels,
         client=client_with_mock_external,
     )
-    tls_information = TLSInformation.from_charm(harness.charm, harness.charm.certificates)
+    charm_config = CharmConfig.from_charm_and_providers(
+        harness.charm,
+        client_with_mock_external,
+        harness.charm._ingress_provider,
+        harness.charm._gateway_route_provider,
+    )
+    tls_information = TLSInformation.from_charm(
+        harness.charm,
+        charm_config.hostname,
+        harness.charm.certificates,
+    )
     secret_resource = secret_resource_manager._gen_resource(
-        SecretResourceDefinition.from_tls_information(tls_information, config["external-hostname"])
+        SecretResourceDefinition.from_tls_information(tls_information)
     )
 
     assert (

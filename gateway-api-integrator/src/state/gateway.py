@@ -16,7 +16,6 @@ class GatewayResourceInformation:
         gateway_name: The gateway resource's name
     """
 
-    # We're expecting more fields to be added.
     gateway_name: str
 
     @classmethod

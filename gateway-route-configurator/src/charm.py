@@ -6,16 +6,13 @@
 """Gateway Route Configurator Charm."""
 
 import logging
-import re
 import typing
 
 import ops
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer
+from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteRequirer, domain
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 logger = logging.getLogger(__name__)
-
-HOSTNAME_REGEX = re.compile(r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$")
 
 
 class GatewayRouteConfiguratorCharm(ops.CharmBase):
@@ -40,22 +37,6 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
 
     def _on_update(self, _: typing.Any) -> None:
         """Handle updates to config or relations."""
-        self.unit.status = ops.MaintenanceStatus("Configuring gateway route")
-
-        # Check config values
-        hostname = str(self.model.config.get("hostname"))
-        paths_str = str(self.model.config.get("paths", "/"))
-
-        if not hostname:
-            self.unit.status = ops.BlockedStatus("Missing 'hostname' config")
-            return
-
-        if not HOSTNAME_REGEX.match(hostname):
-            self.unit.status = ops.BlockedStatus(f"Invalid hostname: {hostname}")
-            return
-
-        paths = [p.strip() for p in paths_str.split(",")]
-
         # Check both relations exist
         ingress_relation = self.model.get_relation("ingress")
         if not ingress_relation:
@@ -72,7 +53,17 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             port = data.app.port
 
         except DataValidationError:
-            self.unit.status = ops.BlockedStatus("Invalid ingress data")
+            self.unit.status = ops.BlockedStatus("Invalid ingress relation data")
+            return
+
+        # Check config values
+        hostname: str | None = typing.cast(str | None, self.model.config.get("hostname"))
+        paths_str = typing.cast(str, self.model.config.get("paths", "/"))
+        paths = [p.strip() for p in paths_str.split(",")]
+
+        self.unit.status = ops.MaintenanceStatus("Configuring gateway route")
+        if hostname and not bool(domain(hostname)):
+            self.unit.status = ops.BlockedStatus(f"Invalid hostname: {hostname}")
             return
 
         self.gateway_route.provide_gateway_route_requirements(
@@ -82,6 +73,7 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             paths=paths,
             hostname=hostname,
         )
+
         # Publish the ingress URL to the requirer charm
         if endpoints := self.gateway_route.get_routed_endpoints():
             self.ingress.publish_url(

@@ -42,22 +42,28 @@ from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 from client import get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
-    HTTPRouteRedirectResourceManager,
     HTTPRouteResourceDefinition,
     HTTPRouteResourceManager,
     HTTPRouteType,
 )
+from resource_manager.permission import InsufficientPermissionError
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
-from state.config import CharmConfig
+from state.config import (
+    CharmConfig,
+    GatewayClassUnavailableError,
+    IngressGatewayRouteConflictError,
+    InvalidCharmConfigError,
+    ProxyMode,
+)
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
+    GatewayRouteRelationNotReadyError,
     HTTPRouteResourceInformation,
-    IngressGatewayRouteConflictError,
     IngressIntegrationDataValidationError,
     IngressIntegrationMissingError,
 )
-from state.tls import TLSInformation
+from state.tls import HostnameMissingError, TLSInformation
 from state.validation import validate_config_and_integration
 
 logger = logging.getLogger(__name__)
@@ -133,10 +139,9 @@ class GatewayAPICharm(CharmBase):
         Returns:
             A list of CertificateRequestAttributes for the requested hostnames.
         """
-        hostnames = []
         if hostname := self.get_hostname():
-            hostnames = [hostname]
-        return [CertificateRequestAttributes(common_name=name) for name in hostnames]
+            return [CertificateRequestAttributes(common_name=hostname)]
+        return []
 
     @property
     def _labels(self) -> LabelSelector:
@@ -170,24 +175,19 @@ class GatewayAPICharm(CharmBase):
         Args:
             event: Juju event
         """
+        if not self.model.get_relation(TLS_CERT_RELATION):
+            event.fail("Certificate relation not ready.")
+
         hostname = event.params["hostname"]
-        TLSInformation.validate(self)
-        for request in self._get_certificate_requests():
-            if request.common_name == hostname:
-                provider_certificate, private_key = self.certificates.get_assigned_certificate(
-                    request
-                )
-                if not provider_certificate or not private_key:
-                    logger.warning(
-                        "BIP Certificate or private key not found for %s", request.common_name
-                    )
-                    event.fail(f"Missing or incomplete certificate data for {hostname}")
-                    return
+        provider_certificates = self.certificates.get_provider_certificates()
+        logger.info(f"certs: {provider_certificates}")
+        for certificate in provider_certificates:
+            if certificate.certificate.common_name == hostname:
                 event.set_results(
                     {
-                        "certificate": provider_certificate.certificate,
-                        "ca": provider_certificate.ca,
-                        "chain": provider_certificate.chain,
+                        "certificate": str(certificate.certificate),
+                        "ca": str(certificate.ca),
+                        "chain": "\n\n".join(str(cert) for cert in certificate.chain),
                     }
                 )
                 return
@@ -237,32 +237,43 @@ class GatewayAPICharm(CharmBase):
             2. Create the gateway and secret resources.
             3. Create ingress-related resources:
                 - service
-                - http_route (HTTPS)
-                - http_route (HTTPtoHTTPS redirect)
+                - http_route (HTTPS) or http_route (HTTP) depending on enforce_https
+                - http_route (HTTPtoHTTPS redirect) if enforce_https is true
             4. Publish the ingress URL to the requirer charm.
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
         """
-        client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm(self, client)
-        gateway_resource_information = GatewayResourceInformation.from_charm(self)
-        tls_information = TLSInformation.from_charm(self, self.certificates)
         self.unit.status = MaintenanceStatus("Creating resources.")
-        resource_manager = GatewayResourceManager(
+
+        # Validate/parse TLS information and create TLS secret resources.
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        config = CharmConfig.from_charm_and_providers(
+            self, client, self._ingress_provider, self._gateway_route_provider
+        )
+        tls_information = None
+        if self.model.get_relation(TLS_CERT_RELATION):
+            tls_information = TLSInformation.from_charm(self, config.hostname, self.certificates)
+
+        self._define_secret_resources(client, tls_information)
+
+        # Define gateway and HTTPRoute resources.
+        gateway_resource_information = GatewayResourceInformation.from_charm(self)
+        gateway_resource_manager = GatewayResourceManager(
             labels=self._labels,
             client=client,
         )
         self._define_gateway_resource(
-            resource_manager, gateway_resource_information, config, tls_information
+            gateway_resource_manager, gateway_resource_information, config, tls_information
         )
-        self._define_secret_resources(client, config, tls_information)
         self._define_ingress_resources_and_publish_url(
-            client, config, gateway_resource_information
+            client, config, tls_information, gateway_resource_information, gateway_resource_manager
         )
+
+        # Update DNS record relation with the gateway address.
         self._update_dns_record_relation(
-            resource_manager, config.external_hostname, gateway_resource_information
+            gateway_resource_manager, config.hostname, gateway_resource_information
         )
-        self._set_status_gateway_address(resource_manager, gateway_resource_information)
+        self._set_status_gateway_address(gateway_resource_manager, gateway_resource_information)
 
     def _update_dns_record_relation(
         self,
@@ -314,7 +325,7 @@ class GatewayAPICharm(CharmBase):
         resource_manager: GatewayResourceManager,
         gateway_resource_information: GatewayResourceInformation,
         config: CharmConfig,
-        tls_information: TLSInformation,
+        tls_information: TLSInformation | None,
     ) -> None:
         """Define the charm's gateway resource.
 
@@ -322,6 +333,7 @@ class GatewayAPICharm(CharmBase):
             resource_manager: The Gateway resource manager to define the gateway resource.
             gateway_resource_information: Information needed to create the gateway resource.
             config: Charm config.
+            hostname: External hostname for the gateway.
             tls_information: Information needed to create TLS secret resources.
         """
         resource_definition = GatewayResourceDefinition(
@@ -333,19 +345,25 @@ class GatewayAPICharm(CharmBase):
     def _define_secret_resources(
         self,
         client: Client,
-        config: CharmConfig,
-        tls_information: TLSInformation,
+        tls_information: TLSInformation | None,
     ) -> None:
         """Define TLS secret resources.
 
         Args:
             client: Lightkube client.
-            config: Charm config.
             tls_information: TLS-related information needed to create secret resources.
         """
-        resource_definition = SecretResourceDefinition.from_tls_information(
-            tls_information, config.external_hostname
-        )
+        # Only create TLS secrets when HTTPS is enforced
+        if tls_information is None:
+            # Clean up any existing secrets if we're not rendering the HTTPS listener.
+            resource_manager = TLSSecretResourceManager(
+                labels=self._labels,
+                client=client,
+            )
+            resource_manager.cleanup_resources(exclude=[])
+            return
+
+        resource_definition = SecretResourceDefinition.from_tls_information(tls_information)
         resource_manager = TLSSecretResourceManager(
             labels=self._labels,
             client=client,
@@ -353,70 +371,163 @@ class GatewayAPICharm(CharmBase):
         secret = resource_manager.define_resource(resource_definition)
         resource_manager.cleanup_resources(exclude=[secret])
 
-    def get_hostname(self) -> str:
+    def get_hostname(self) -> str | None:
         """Get the hostname from the charm's config or stored attribute.
 
         Returns:
             The hostname to be used for the gateway.
         """
         try:
-            if not self.model.get_relation(GATEWAY_ROUTE_RELATION):
-                return typing.cast(str, self.model.config.get("external-hostname"))
-
-            http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-                self, self._ingress_provider, self._gateway_route_provider
+            client = get_client(field_manager=self.app.name, namespace=self.model.name)
+            config = CharmConfig.from_charm_and_providers(
+                self, client, self._ingress_provider, self._gateway_route_provider
             )
-            return http_route_resource_information.hostname
+            gateway_route_requirer_data = self._gateway_route_provider.get_data()
+            hostname = config.hostname
+            if (
+                gateway_route_requirer_data is not None
+                and gateway_route_requirer_data.application_data.hostname is not None
+            ):
+                hostname = gateway_route_requirer_data.application_data.hostname
+
+            return hostname
         except (
             DataValidationError,
             IngressIntegrationMissingError,
             IngressIntegrationDataValidationError,
             IngressGatewayRouteConflictError,
+            HostnameMissingError,
+            GatewayRouteRelationNotReadyError,
+            GatewayClassUnavailableError,
+            InvalidCharmConfigError,
+            InsufficientPermissionError,
         ):
-            return typing.cast(str, self.model.config.get("external-hostname"))
+            return None
 
     def _define_ingress_resources_and_publish_url(
         self,
         client: Client,
         config: CharmConfig,
+        tls_information: TLSInformation | None,
         gateway_resource_information: GatewayResourceInformation,
+        gateway_resource_manager: GatewayResourceManager,
     ) -> None:
         """Define ingress-relation resources and publish the ingress URL.
 
         Args:
             client: Lightkube client.
             config: Charm config.
+            tls_information: TLS information state component.
             gateway_resource_information: Information needed to attach http_route resources.
+            gateway_resource_manager: Gateway resource manager.
         """
-        http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-            self, self._ingress_provider, self._gateway_route_provider
-        )
+        http_route_resource_information = None
+        if config.proxy_mode == ProxyMode.INGRESS:
+            http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
+                self._ingress_provider, config.hostname
+            )
+
+        if config.proxy_mode == ProxyMode.GATEWAY_ROUTE:
+            http_route_resource_information = HTTPRouteResourceInformation.from_gateway_route(
+                self._gateway_route_provider, config.hostname
+            )
+
+        if http_route_resource_information is None:
+            logger.error("Can't determine HTTP route resource information from providers.")
+            return
+
+        http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
+        # If HTTPS is enforced, create 2 HTTPRoute resources for "HTTP" (redirect) and "HTTPS".
+        # If HTTPS is not enforced but a hostname is defined, create both "HTTP" and "HTTPS" HTTPRoute resources.
+        # If HTTPS is not enforced and no hostname is defined, only create the "HTTP" HTTPRoute resource.
+        http_route_resources = []
+        if config.enforce_https:
+            # When HTTPS is enforced, create both redirect and HTTPS routes
+            http_route_resources = [
+                HTTPRouteResourceDefinition(
+                    http_route_resource_information,
+                    gateway_resource_information,
+                    HTTPRouteType.HTTP,
+                    redirect_https=True,
+                ),
+                HTTPRouteResourceDefinition(
+                    http_route_resource_information,
+                    gateway_resource_information,
+                    HTTPRouteType.HTTPS,
+                ),
+            ]
+        else:
+            http_route_resources = [
+                HTTPRouteResourceDefinition(
+                    http_route_resource_information,
+                    gateway_resource_information,
+                    HTTPRouteType.HTTP,
+                    redirect_https=False,
+                ),
+            ]
+            if tls_information is not None:
+                http_route_resources.append(
+                    HTTPRouteResourceDefinition(
+                        http_route_resource_information,
+                        gateway_resource_information,
+                        HTTPRouteType.HTTPS,
+                    )
+                )
+        managed_http_route_resources = [
+            http_route_resource_manager.define_resource(http_route_resource)
+            for http_route_resource in http_route_resources
+        ]
+        http_route_resource_manager.cleanup_resources(exclude=managed_http_route_resources)
+
+        # Define service resource.
         service_resource_manager = ServiceResourceManager(self._labels, client)
         service = service_resource_manager.define_resource(
             ServiceResourceDefinition(http_route_resource_information)
         )
-        http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
-        redirect_resource_manager = HTTPRouteRedirectResourceManager(self._labels, client)
-        redirect_route = redirect_resource_manager.define_resource(
-            HTTPRouteResourceDefinition(
-                http_route_resource_information,
-                gateway_resource_information,
-                HTTPRouteType.HTTP,
-            )
-        )
-        https_route = http_route_resource_manager.define_resource(
-            HTTPRouteResourceDefinition(
-                http_route_resource_information,
-                gateway_resource_information,
-                HTTPRouteType.HTTPS,
-            )
-        )
         service_resource_manager.cleanup_resources(exclude=[service])
-        http_route_resource_manager.cleanup_resources(exclude=[https_route, redirect_route])
+        self.publish_url(
+            gateway_resource_manager,
+            config,
+            gateway_resource_information,
+            http_route_resource_information,
+        )
+
+    def publish_url(
+        self,
+        gateway_resource_manager: GatewayResourceManager,
+        config: CharmConfig,
+        gateway_resource_information: GatewayResourceInformation,
+        http_route_resource_information: HTTPRouteResourceInformation,
+    ) -> None:
+        """Publish the ingress URL to the requirer charm.
+
+        Args:
+            gateway_resource_manager: The Gateway resource manager to get the gateway address.
+            config: Charm config.
+            tls_information: TLS information state component.
+            gateway_resource_information: Information needed to attach http_route resources.
+            http_route_resource_information: Information needed to create HTTPRoute resources.
+        """
+        ingress_base_url = None
+        if config.enforce_https:
+            if hostname := config.hostname:
+                ingress_base_url = f"https://{hostname}"
+            else:
+                logger.warning("Cannot publish URL, hostname is not defined for HTTPS route.")
+                return
+        else:
+            gateway_address = gateway_resource_manager.gateway_address(
+                gateway_resource_information.gateway_name
+            )
+            if not gateway_address:
+                logger.warning("Cannot publish URL, gateway address not found.")
+                return
+            ingress_base_url = f"http://{gateway_address}"
+
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:
             ingress_url = (
-                f"https://{config.external_hostname}"
+                f"{ingress_base_url}"
                 f"/{http_route_resource_information.requirer_model_name}"
                 f"-{http_route_resource_information.application_name}"
             )
@@ -429,7 +540,7 @@ class GatewayAPICharm(CharmBase):
         if gateway_route_relation := self.model.get_relation(GATEWAY_ROUTE_RELATION):
             endpoints = []
             for path in http_route_resource_information.paths:
-                endpoints.append(f"https://{self.get_hostname()}/{path.lstrip('/')}")
+                endpoints.append(f"{ingress_base_url}/{path.lstrip('/')}")
 
             self._gateway_route_provider.publish_endpoints(
                 endpoints,
@@ -454,30 +565,6 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
-
-    def _certificates_revocation_needed(self, client: Client, config: CharmConfig) -> bool:
-        """Check if a new certificate is needed.
-
-        Args:
-            client: Lightkube client
-            config: Charm config.
-
-        Returns:
-            True if the current certificate needs to be revoked.
-        """
-        gateway_resource_manager = GatewayResourceManager(
-            labels=self._labels,
-            client=client,
-        )
-        gateway = gateway_resource_manager.current_gateway_resource()
-        if not gateway:
-            return False
-
-        gateway_listeners = gateway.spec["listeners"]  # pyright: ignore[reportOptionalSubscript]
-        listener_hostnames = [listener["hostname"] for listener in gateway_listeners]
-        return not (
-            len(set(listener_hostnames)) == 1 and config.external_hostname == listener_hostnames[0]
-        )
 
 
 if __name__ == "__main__":  # pragma: no cover

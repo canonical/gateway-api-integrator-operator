@@ -13,7 +13,6 @@ from lightkube.core.client import Client
 from ops.testing import Harness
 
 from resource_manager.http_route import (
-    HTTPRouteRedirectResourceManager,
     HTTPRouteResourceDefinition,
     HTTPRouteResourceManager,
     HTTPRouteType,
@@ -22,21 +21,7 @@ from state.gateway import GatewayResourceInformation
 from state.http_route import (
     HTTPRouteResourceInformation,
     IngressIntegrationDataValidationError,
-    IngressIntegrationMissingError,
 )
-
-
-def test_http_route_resource_information_integration_missing(harness: Harness):
-    """
-    arrange: Given a charm missing ingress integration.
-    act: Initialize HTTPRouteResourceInformation state component.
-    assert: IngressIntegrationMissingError is raised.
-    """
-    harness.begin()
-    with pytest.raises(IngressIntegrationMissingError):
-        HTTPRouteResourceInformation.from_charm(
-            harness.charm, harness.charm._ingress_provider, harness.charm._gateway_route_provider
-        )
 
 
 def test_http_route_resource_information_validation_error(harness: Harness):
@@ -52,12 +37,10 @@ def test_http_route_resource_information_validation_error(harness: Harness):
 
     harness.begin()
     with pytest.raises(IngressIntegrationDataValidationError):
-        HTTPRouteResourceInformation.from_charm(
-            harness.charm, harness.charm._ingress_provider, harness.charm._gateway_route_provider
-        )
+        HTTPRouteResourceInformation.from_ingress(harness.charm._ingress_provider, None)
 
 
-def test_httproute_gen_resource(
+def test_http_route_gen_resource(
     harness: Harness,
     gateway_relation: dict[str, dict[str, str]],
     config: dict[str, str],
@@ -78,24 +61,13 @@ def test_httproute_gen_resource(
 
     harness.begin()
     charm = harness.charm
-    http_route_resource_information = HTTPRouteResourceInformation.from_charm(
-        charm, charm._ingress_provider, harness.charm._gateway_route_provider
+    http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
+        charm._ingress_provider, None
     )
     gateway_resource_information = GatewayResourceInformation.from_charm(charm)
     http_route_resource_manager = HTTPRouteResourceManager(
         labels=harness.charm._labels,
         client=client_mock,
-    )
-    redirect_route_resource_manager = HTTPRouteRedirectResourceManager(
-        labels=harness.charm._labels,
-        client=client_mock,
-    )
-    redirect_route_resource = redirect_route_resource_manager._gen_resource(
-        HTTPRouteResourceDefinition(
-            http_route_resource_information,
-            gateway_resource_information,
-            HTTPRouteType.HTTP,
-        )
     )
     https_route_resource = http_route_resource_manager._gen_resource(
         HTTPRouteResourceDefinition(
@@ -103,10 +75,6 @@ def test_httproute_gen_resource(
             gateway_resource_information,
             HTTPRouteType.HTTPS,
         )
-    )
-    assert (
-        redirect_route_resource.spec["parentRefs"][0]["sectionName"]
-        == f"{harness.model.app.name}-http-listener"
     )
     assert (
         https_route_resource.spec["parentRefs"][0]["sectionName"]

@@ -9,9 +9,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from httpx import Response
-from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError, ConfigError
-from lightkube.models.meta_v1 import Status
 from ops.testing import Harness
 
 from client import LightKubeInitializationError, cleanup_all_resources, get_client

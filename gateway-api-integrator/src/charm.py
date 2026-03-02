@@ -444,7 +444,10 @@ class GatewayAPICharm(CharmBase):
         # If HTTPS is not enforced but a hostname is defined, create both "HTTP" and "HTTPS" HTTPRoute resources.
         # If HTTPS is not enforced and no hostname is defined, only create the "HTTP" HTTPRoute resource.
         http_route_resources = []
+        ingress_base_url = None
         if config.enforce_https:
+            if config.hostname:
+                ingress_base_url = f"https://{config.hostname}"
             # When HTTPS is enforced, create both redirect and HTTPS routes
             http_route_resources = [
                 HTTPRouteResourceDefinition(
@@ -460,6 +463,12 @@ class GatewayAPICharm(CharmBase):
                 ),
             ]
         else:
+            if gateway_address := gateway_resource_manager.gateway_address(
+                gateway_resource_information.gateway_name
+            ):
+                ingress_base_url = f"http://{gateway_address}"
+            else:
+                logger.warning("Gateway address not found.")
             http_route_resources = [
                 HTTPRouteResourceDefinition(
                     http_route_resource_information,
@@ -489,43 +498,24 @@ class GatewayAPICharm(CharmBase):
         )
         service_resource_manager.cleanup_resources(exclude=[service])
         self.publish_url(
-            gateway_resource_manager,
-            config,
-            gateway_resource_information,
+            ingress_base_url,
             http_route_resource_information,
         )
 
     def publish_url(
         self,
-        gateway_resource_manager: GatewayResourceManager,
-        config: CharmConfig,
-        gateway_resource_information: GatewayResourceInformation,
+        ingress_base_url: str | None,
         http_route_resource_information: HTTPRouteResourceInformation,
     ) -> None:
         """Publish the ingress URL to the requirer charm.
 
         Args:
-            gateway_resource_manager: The Gateway resource manager to get the gateway address.
-            config: Charm config.
-            tls_information: TLS information state component.
-            gateway_resource_information: Information needed to attach http_route resources.
+            ingress_base_url: The base URL to publish.
             http_route_resource_information: Information needed to create HTTPRoute resources.
         """
-        ingress_base_url = None
-        if config.enforce_https:
-            if hostname := config.hostname:
-                ingress_base_url = f"https://{hostname}"
-            else:
-                logger.warning("Cannot publish URL, hostname is not defined for HTTPS route.")
-                return
-        else:
-            gateway_address = gateway_resource_manager.gateway_address(
-                gateway_resource_information.gateway_name
-            )
-            if not gateway_address:
-                logger.warning("Cannot publish URL, gateway address not found.")
-                return
-            ingress_base_url = f"http://{gateway_address}"
+        if not ingress_base_url:
+            logger.warning("Cannot determine base URL, skipping publish.")
+            return
 
         ingress_relation = self.model.get_relation(INGRESS_RELATION)
         if ingress_relation:

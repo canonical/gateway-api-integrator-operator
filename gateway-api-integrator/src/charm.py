@@ -180,7 +180,6 @@ class GatewayAPICharm(CharmBase):
 
         hostname = event.params["hostname"]
         provider_certificates = self.certificates.get_provider_certificates()
-        logger.info(f"certs: {provider_certificates}")
         for certificate in provider_certificates:
             if certificate.certificate.common_name == hostname:
                 event.set_results(
@@ -378,12 +377,9 @@ class GatewayAPICharm(CharmBase):
             The hostname to be used for the gateway.
         """
         try:
-            client = get_client(field_manager=self.app.name, namespace=self.model.name)
-            config = CharmConfig.from_charm_and_providers(
-                self, client, self._ingress_provider, self._gateway_route_provider
-            )
+            external_hostname = typing.cast(str | None, self.config.get("external-hostname"))
             gateway_route_requirer_data = self._gateway_route_provider.get_data()
-            hostname = config.hostname
+            hostname = external_hostname
             if (
                 gateway_route_requirer_data is not None
                 and gateway_route_requirer_data.application_data.hostname is not None

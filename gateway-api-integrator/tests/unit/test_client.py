@@ -84,15 +84,11 @@ def test_client_api_error_4xx(
     act: when agent reconciliation triggers.
     assert: Exception is re-raised.
     """
-    monkeypatch.setattr(
-        "lightkube.models.meta_v1.Status.from_dict", MagicMock(return_value=Status(code=404))
-    )
-    lightkube_client_mock = MagicMock(spec=Client)
-    lightkube_client_mock.list = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
+    get_client_mock = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
     monkeypatch.setattr(
         "charm.get_client",
-        MagicMock(return_value=lightkube_client_mock),
+        get_client_mock,
     )
-
+    harness.update_config({"enforce-https": False})
     with pytest.raises(ApiError):
-        harness.begin()
+        harness.begin_with_initial_hooks()

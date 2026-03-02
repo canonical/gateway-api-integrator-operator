@@ -68,7 +68,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
                 hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
                 enforce_https=True,
-                proxy_mode=ProxyMode.DEFAULT,
+                proxy_mode=ProxyMode.INACTIVE,
             )
         ),
     )

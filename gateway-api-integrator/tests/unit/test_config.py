@@ -3,12 +3,7 @@
 
 """Unit tests for charm config."""
 
-from unittest.mock import MagicMock
-
 import pytest
-from lightkube.core.client import Client
-from lightkube.generic_resource import GenericGlobalResource
-from lightkube.models.meta_v1 import ObjectMeta
 from ops.testing import Harness
 
 from state.config import CharmConfig, InvalidCharmConfigError
@@ -33,15 +28,11 @@ def test_config(harness: Harness, available_gateway_classes: str):
             "gateway-class": GATEWAY_CLASS_CONFIG,
         }
     )
-    client_mock = MagicMock(spec=Client)
-    client_mock.list = MagicMock(
-        return_value=[GenericGlobalResource(metadata=ObjectMeta(name=available_gateway_classes))]
-    )
     harness.begin()
     with pytest.raises(InvalidCharmConfigError):
         _ = CharmConfig.from_charm_and_providers(
             harness.charm,
-            client_mock,
+            [GATEWAY_CLASS_CONFIG],
             harness.charm._ingress_provider,
             harness.charm._gateway_route_provider,
         )

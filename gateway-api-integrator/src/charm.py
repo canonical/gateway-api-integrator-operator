@@ -35,6 +35,7 @@ from charms.traefik_k8s.v2.ingress import (
 )
 from lightkube import Client
 from lightkube.core.client import LabelSelector
+from lightkube.generic_resource import create_global_resource
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
@@ -46,7 +47,7 @@ from resource_manager.http_route import (
     HTTPRouteResourceManager,
     HTTPRouteType,
 )
-from resource_manager.permission import InsufficientPermissionError
+from resource_manager.permission import InsufficientPermissionError, map_k8s_auth_exception
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import (
@@ -73,6 +74,9 @@ GATEWAY_ROUTE_RELATION = "gateway-route"
 TLS_CERT_RELATION = "certificates"
 # Randomly selected UUID namespace for generating UUID for DNS records.
 UUID_NAMESPACE = uuid.UUID("f8f206da-a7f8-4206-b044-30be3724a09d")
+CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
+GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
+GATEWAY_CLASS_PLURAL = "gatewayclasses"
 
 
 class GatewayAPICharm(CharmBase):
@@ -247,7 +251,10 @@ class GatewayAPICharm(CharmBase):
         # Validate/parse TLS information and create TLS secret resources.
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
         config = CharmConfig.from_charm_and_providers(
-            self, client, self._ingress_provider, self._gateway_route_provider
+            self,
+            self.available_gateway_classes(),
+            self._ingress_provider,
+            self._gateway_route_provider,
         )
         tls_information = None
         if self.model.get_relation(TLS_CERT_RELATION):
@@ -561,6 +568,25 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = ActiveStatus(f"Gateway addresses: {gateway_address}")
         else:
             self.unit.status = WaitingStatus("Gateway address unavailable")
+
+    @map_k8s_auth_exception
+    def available_gateway_classes(self) -> list[str]:
+        """Get the list of available gateway classes on the cluster.
+
+        Returns:
+            A list of available gateway class names.
+        """
+        client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        gateway_class_generic_resource = create_global_resource(
+            CUSTOM_RESOURCE_GROUP_NAME, "v1", GATEWAY_CLASS_RESOURCE_NAME, GATEWAY_CLASS_PLURAL
+        )
+        gateway_classes = tuple(client.list(gateway_class_generic_resource))
+
+        return [
+            gateway_class.metadata.name
+            for gateway_class in gateway_classes
+            if gateway_class.metadata and gateway_class.metadata.name
+        ]
 
 
 if __name__ == "__main__":  # pragma: no cover

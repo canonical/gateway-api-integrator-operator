@@ -111,7 +111,7 @@ def test_gateway_gen_resource(
     )
     charm_config = CharmConfig.from_charm_and_providers(
         harness.charm,
-        client_with_mock_external,
+        [GATEWAY_CLASS_CONFIG],
         harness.charm._ingress_provider,
         harness.charm._gateway_route_provider,
     )

@@ -16,7 +16,7 @@ from resource_manager.secret import (
 from state.config import CharmConfig
 from state.tls import TLSInformation
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_secret_gen_resource(
@@ -41,7 +41,7 @@ def test_secret_gen_resource(
     )
     charm_config = CharmConfig.from_charm_and_providers(
         harness.charm,
-        client_with_mock_external,
+        [GATEWAY_CLASS_CONFIG],
         harness.charm._ingress_provider,
         harness.charm._gateway_route_provider,
     )

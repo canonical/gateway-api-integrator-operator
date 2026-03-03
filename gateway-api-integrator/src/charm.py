@@ -143,7 +143,7 @@ class GatewayAPICharm(CharmBase):
         Returns:
             A list of CertificateRequestAttributes for the requested hostnames.
         """
-        if hostname := self.get_hostname():
+        if hostname := self._get_hostname():
             return [CertificateRequestAttributes(common_name=hostname)]
         return []
 
@@ -377,7 +377,7 @@ class GatewayAPICharm(CharmBase):
         secret = resource_manager.define_resource(resource_definition)
         resource_manager.cleanup_resources(exclude=[secret])
 
-    def get_hostname(self) -> str | None:
+    def _get_hostname(self) -> str | None:
         """Get the hostname from the charm's config or stored attribute.
 
         Returns:

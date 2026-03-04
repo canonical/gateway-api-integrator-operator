@@ -100,7 +100,9 @@ class CharmConfig:
                 "Certificates relation is needed if enforce-https is enabled."
             )
 
-        proxy_mode = cls._validate_state(ingress_provider, gateway_route_provider)
+        proxy_mode = cls._validate_state(
+            ingress_provider.relations, gateway_route_provider.relation
+        )
         gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
         if gateway_class_name not in available_gateway_classes:
             available_gateway_classes_str = ",".join(available_gateway_classes)
@@ -132,16 +134,16 @@ class CharmConfig:
 
     @staticmethod
     def _validate_state(
-        ingress_provider: IngressPerAppProvider,
-        gateway_route_provider: GatewayRouteProvider,
+        ingress_relations: list[ops.Relation],
+        gateway_route_relation: ops.Relation | None,
     ) -> ProxyMode:
         """Validate the charm config state.
 
         Raises:
             InvalidCharmConfigError: When the charm config is invalid.
         """
-        is_ingress_related = bool(ingress_provider.relations)
-        is_gateway_route_related = gateway_route_provider.relation is not None
+        is_ingress_related = bool(ingress_relations)
+        is_gateway_route_related = gateway_route_relation is not None
         if is_ingress_related and is_gateway_route_related:
             raise IngressGatewayRouteConflictError(
                 "Both Ingress and Gateway Route integrations are established. Only one is allowed."

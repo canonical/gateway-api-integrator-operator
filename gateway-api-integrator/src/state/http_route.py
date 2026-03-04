@@ -5,7 +5,11 @@
 
 import dataclasses
 
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider
+from charms.gateway_api_integrator.v0.gateway_route import (
+    GatewayRouteInvalidRelationDataError,
+    GatewayRouteProvider,
+    GatewayRouteRelationMissingError,
+)
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 from .exception import CharmStateValidationBaseError
@@ -112,21 +116,22 @@ class HTTPRouteResourceInformation:
         Raises:
             GatewayRouteRelationNotReadyError: When data validation failed.
         """
-        relation_data = gateway_route_provider.get_data()
-        if relation_data is None:
-            raise GatewayRouteRelationNotReadyError(
-                "Validation of gateway-route relation data failed."
-            )
-        application_name = relation_data.application_data.name
-        service_port = relation_data.application_data.port
+        try:
+            relation_data = gateway_route_provider.get_data()
+            application_name = relation_data.application_data.name
+            service_port = relation_data.application_data.port
 
-        return cls(
-            application_name=application_name,
-            requirer_model_name=relation_data.application_data.model,
-            service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
-            service_port=service_port,
-            service_port_name=f"tcp-{service_port}",
-            filters=[],
-            paths=relation_data.application_data.paths,
-            hostname=hostname,
-        )
+            return cls(
+                application_name=application_name,
+                requirer_model_name=relation_data.application_data.model,
+                service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
+                service_port=service_port,
+                service_port_name=f"tcp-{service_port}",
+                filters=[],
+                paths=relation_data.application_data.paths,
+                hostname=hostname,
+            )
+        except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError) as exc:
+            raise GatewayRouteRelationNotReadyError(
+                "gateway-route relation is missing or has incomplete data."
+            ) from exc

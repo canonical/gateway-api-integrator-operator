@@ -9,7 +9,12 @@ import typing
 from enum import StrEnum
 
 import ops
-from charms.gateway_api_integrator.v0.gateway_route import GatewayRouteProvider, valid_fqdn
+from charms.gateway_api_integrator.v0.gateway_route import (
+    GatewayRouteInvalidRelationDataError,
+    GatewayRouteProvider,
+    GatewayRouteRelationMissingError,
+    valid_fqdn,
+)
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
 from pydantic import BeforeValidator, Field, ValidationError
 from pydantic.dataclasses import dataclass
@@ -108,13 +113,11 @@ class CharmConfig:
                 f"Gateway class must be one of: [{available_gateway_classes_str}]"
             )
 
-        gateway_route_requirer_data = gateway_route_provider.get_data()
-        hostname = typing.cast(str | None, charm.config.get("external-hostname"))
-        if (
-            gateway_route_requirer_data is not None
-            and gateway_route_requirer_data.application_data.hostname is not None
-        ):
+        try:
+            gateway_route_requirer_data = gateway_route_provider.get_data()
             hostname = gateway_route_requirer_data.application_data.hostname
+        except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError):
+            hostname = typing.cast(str | None, charm.config.get("external-hostname"))
 
         try:
             return cls(

@@ -92,7 +92,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -104,6 +104,10 @@ class DataValidationError(Exception):
 
 class GatewayRouteInvalidRelationDataError(Exception):
     """Raised when data validation of the gateway-route relation fails."""
+
+
+class GatewayRouteRelationMissingError(Exception):
+    """Raised when the gateway-route relation is missing."""
 
 
 class _DatabagModel(BaseModel):
@@ -312,23 +316,17 @@ class GatewayRouteProvider(Object):
         self,
         charm: CharmBase,
         relation_name: str = GATEWAY_ROUTE_RELATION_NAME,
-        raise_on_validation_error: bool = False,
     ) -> None:
         """Initialize the GatewayRouteProvider.
 
         Args:
             charm: The charm that is instantiating the library.
             relation_name: The name of the relation.
-            raise_on_validation_error: Whether the library should raise
-                GatewayRouteInvalidRelationDataError when requirer data validation fails.
-                If this is set to True the provider charm needs to also catch and handle the
-                thrown exception.
         """
         super().__init__(charm, relation_name)
 
         self._relation_name = relation_name
         self.charm = charm
-        self.raise_on_validation_error = raise_on_validation_error
         on = self.charm.on
         self.framework.observe(on[self._relation_name].relation_created, self._configure)
         self.framework.observe(on[self._relation_name].relation_changed, self._configure)
@@ -344,16 +342,18 @@ class GatewayRouteProvider(Object):
 
     def _configure(self, _event: EventBase) -> None:
         """Handle relation events."""
-        if self.relation:
-            # Only for data validation
+        try:
             _ = self.get_data(self.relation)
             self.on.data_available.emit()
+        except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError):
+            # If data is invalid or missing, we don't emit the data_available event and we wait for the next relation_changed event to try again.
+            logger.warning("Invalid or missing relation data")
 
     def _on_endpoint_removed(self, _: EventBase) -> None:
         """Handle relation broken/departed events."""
         self.on.data_removed.emit()
 
-    def get_data(self, relation: Relation | None = None) -> GatewayRouteRequirerData | None:
+    def get_data(self, relation: Relation | None = None) -> GatewayRouteRequirerData:
         """Fetch requirer data.
 
         Args:
@@ -365,24 +365,25 @@ class GatewayRouteProvider(Object):
         Returns:
             GatewayRouteRequirerData: Validated data from the gateway-route requirer.
         """
-        if requirer_relation := relation or self.relation:
-            try:
-                application_data = self._get_requirer_application_data(requirer_relation)
-                return GatewayRouteRequirerData(
-                    relation_id=requirer_relation.id,
-                    application_data=application_data,
-                )
-            except DataValidationError as exc:
-                if self.raise_on_validation_error:
-                    logger.error(
-                        "gateway-route data validation failed for relation %s: %s",
-                        relation,
-                        str(exc),
-                    )
-                    raise GatewayRouteInvalidRelationDataError(
-                        f"gateway-route data validation failed for relation: {relation}"
-                    ) from exc
-        return None
+        requirer_relation = relation or self.relation
+        if requirer_relation is None:
+            raise GatewayRouteRelationMissingError("No relation found for gateway-route requirer.")
+
+        try:
+            application_data = self._get_requirer_application_data(requirer_relation)
+            return GatewayRouteRequirerData(
+                relation_id=requirer_relation.id,
+                application_data=application_data,
+            )
+        except DataValidationError as exc:
+            logger.error(
+                "gateway-route data validation failed for relation %s: %s",
+                relation,
+                str(exc),
+            )
+            raise GatewayRouteInvalidRelationDataError(
+                f"gateway-route data validation failed for relation: {relation}"
+            ) from exc
 
     def _get_requirer_application_data(self, relation: Relation) -> RequirerApplicationData:
         """Fetch and validate the requirer's application databag.

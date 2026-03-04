@@ -20,7 +20,9 @@ from charms.gateway_api_integrator.v0.gateway_route import (
     DataValidationError,
     GatewayRouteDataAvailableEvent,
     GatewayRouteDataRemovedEvent,
+    GatewayRouteInvalidRelationDataError,
     GatewayRouteProvider,
+    GatewayRouteRelationMissingError,
 )
 from charms.tls_certificates_interface.v4.tls_certificates import (
     CertificateAvailableEvent,
@@ -404,6 +406,8 @@ class GatewayAPICharm(CharmBase):
             GatewayClassUnavailableError,
             InvalidCharmConfigError,
             InsufficientPermissionError,
+            GatewayRouteInvalidRelationDataError,
+            GatewayRouteRelationMissingError,
         ):
             return None
 

@@ -94,3 +94,116 @@ def test_patch_http_route(mock_lightkube_client: MagicMock):
     )
     http_route_resource_manager._patch_resource("", None)
     mock_lightkube_client.patch.assert_called_once()
+
+
+def test_http_route_resource_information():
+    """
+    arrange: Provide valid values for all HTTPRouteResourceInformation fields.
+    act: Instantiate HTTPRouteResourceInformation.
+    assert: All fields are correctly set.
+    """
+    info = HTTPRouteResourceInformation(
+        application_name="my-app",
+        requirer_model_name="my-model",
+        service_name="gateway-api-integrator-my-app-service",
+        service_port=8080,
+        service_port_name="tcp-8080",
+        filters=[],
+        paths=["/my-model-my-app"],
+        hostname="gateway.internal",
+    )
+    assert info.application_name == "my-app"
+    assert info.requirer_model_name == "my-model"
+    assert info.service_name == "gateway-api-integrator-my-app-service"
+    assert info.service_port == 8080
+    assert info.service_port_name == "tcp-8080"
+    assert info.filters == []
+    assert info.paths == ["/my-model-my-app"]
+    assert info.hostname == "gateway.internal"
+
+
+def test_http_route_resource_information_hostname_none():
+    """
+    arrange: Provide None as hostname.
+    act: Instantiate HTTPRouteResourceInformation.
+    assert: hostname is None.
+    """
+    info = HTTPRouteResourceInformation(
+        application_name="my-app",
+        requirer_model_name="my-model",
+        service_name="gateway-api-integrator-my-app-service",
+        service_port=8080,
+        service_port_name="tcp-8080",
+        filters=[],
+        paths=["/my-model-my-app"],
+        hostname=None,
+    )
+    assert info.hostname is None
+
+
+def test_http_route_resource_information_with_strip_prefix_filter():
+    """
+    arrange: Provide a URLRewrite filter (strip_prefix use case).
+    act: Instantiate HTTPRouteResourceInformation.
+    assert: The filters list contains the expected URLRewrite filter.
+    """
+    url_rewrite_filter = {
+        "type": "URLRewrite",
+        "urlRewrite": {
+            "path": {
+                "type": "ReplacePrefixMatch",
+                "replacePrefixMatch": "/",
+            }
+        },
+    }
+    info = HTTPRouteResourceInformation(
+        application_name="my-app",
+        requirer_model_name="my-model",
+        service_name="gateway-api-integrator-my-app-service",
+        service_port=8080,
+        service_port_name="tcp-8080",
+        filters=[url_rewrite_filter],
+        paths=["/my-model-my-app"],
+        hostname="gateway.internal",
+    )
+    assert len(info.filters) == 1
+    assert info.filters[0]["type"] == "URLRewrite"
+
+
+def test_http_route_resource_information_multiple_paths():
+    """
+    arrange: Provide multiple paths.
+    act: Instantiate HTTPRouteResourceInformation.
+    assert: All paths are stored correctly.
+    """
+    info = HTTPRouteResourceInformation(
+        application_name="my-app",
+        requirer_model_name="my-model",
+        service_name="gateway-api-integrator-my-app-service",
+        service_port=8080,
+        service_port_name="tcp-8080",
+        filters=[],
+        paths=["/path-a", "/path-b", "/path-c"],
+        hostname="gateway.internal",
+    )
+    assert info.paths == ["/path-a", "/path-b", "/path-c"]
+
+
+def test_http_route_resource_information_empty_filters_and_paths():
+    """
+    arrange: Provide empty filters and paths lists.
+    act: Instantiate HTTPRouteResourceInformation.
+    assert: Both lists are empty.
+    """
+    info = HTTPRouteResourceInformation(
+        application_name="my-app",
+        requirer_model_name="my-model",
+        service_name="gateway-api-integrator-my-app-service",
+        service_port=8080,
+        service_port_name="tcp-8080",
+        filters=[],
+        paths=[],
+        hostname=None,
+    )
+    assert info.filters == []
+    assert info.paths == []

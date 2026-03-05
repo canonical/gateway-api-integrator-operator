@@ -17,7 +17,6 @@ from charms.bind.v0.dns_record import (
     RequirerEntry,
 )
 from charms.gateway_api_integrator.v0.gateway_route import (
-    DataValidationError,
     GatewayRouteDataAvailableEvent,
     GatewayRouteDataRemovedEvent,
     GatewayRouteInvalidRelationDataError,
@@ -49,24 +48,18 @@ from resource_manager.http_route import (
     HTTPRouteResourceManager,
     HTTPRouteType,
 )
-from resource_manager.permission import InsufficientPermissionError, map_k8s_auth_exception
+from resource_manager.permission import map_k8s_auth_exception
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
 from state.config import (
     CharmConfig,
-    GatewayClassUnavailableError,
-    IngressGatewayRouteConflictError,
-    InvalidCharmConfigError,
     ProxyMode,
 )
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
-    GatewayRouteRelationNotReadyError,
     HTTPRouteResourceInformation,
-    IngressIntegrationDataValidationError,
-    IngressIntegrationMissingError,
 )
-from state.tls import HostnameMissingError, TLSInformation
+from state.tls import TLSInformation
 from state.validation import validate_config_and_integration
 
 logger = logging.getLogger(__name__)

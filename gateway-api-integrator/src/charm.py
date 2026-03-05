@@ -37,6 +37,7 @@ from charms.traefik_k8s.v2.ingress import (
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.generic_resource import create_global_resource
+from ops import BlockedStatus
 from ops.charm import ActionEvent, CharmBase, RelationCreatedEvent, RelationJoinedEvent
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
@@ -241,6 +242,10 @@ class GatewayAPICharm(CharmBase):
             5. Update the DNS record relation with the DNS record data
             6. Set the gateway LB address in the charm's status message.
         """
+        if not self.unit.is_leader():
+            self.unit.status = BlockedStatus("Deploying more than one unit is not supported.")
+            return
+
         self.unit.status = MaintenanceStatus("Creating resources.")
 
         # Validate/parse TLS information and create TLS secret resources.

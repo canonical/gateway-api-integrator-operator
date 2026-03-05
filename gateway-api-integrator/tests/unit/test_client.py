@@ -87,6 +87,7 @@ def test_client_api_error_4xx(
         "charm.get_client",
         get_client_mock,
     )
+    harness.set_leader(True)
     harness.update_config({"enforce-https": False})
     with pytest.raises(ApiError):
         harness.begin_with_initial_hooks()

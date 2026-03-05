@@ -361,6 +361,7 @@ class GatewayRouteProvider(Object):
 
         Raises:
             GatewayRouteInvalidRelationDataError: When requirer data validation fails.
+            GatewayRouteRelationMissingError: When the relation is missing.
 
         Returns:
             GatewayRouteRequirerData: Validated data from the gateway-route requirer.

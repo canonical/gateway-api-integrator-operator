@@ -386,30 +386,13 @@ class GatewayAPICharm(CharmBase):
             The hostname to be used for the gateway.
         """
         try:
-            external_hostname = typing.cast(str | None, self.config.get("external-hostname"))
             gateway_route_requirer_data = self._gateway_route_provider.get_data()
-            hostname = external_hostname
-            if (
-                gateway_route_requirer_data is not None
-                and gateway_route_requirer_data.application_data.hostname is not None
-            ):
-                hostname = gateway_route_requirer_data.application_data.hostname
-
-            return hostname
+            return gateway_route_requirer_data.application_data.hostname
         except (
-            DataValidationError,
-            IngressIntegrationMissingError,
-            IngressIntegrationDataValidationError,
-            IngressGatewayRouteConflictError,
-            HostnameMissingError,
-            GatewayRouteRelationNotReadyError,
-            GatewayClassUnavailableError,
-            InvalidCharmConfigError,
-            InsufficientPermissionError,
             GatewayRouteInvalidRelationDataError,
             GatewayRouteRelationMissingError,
         ):
-            return None
+            return typing.cast(str | None, self.config.get("external-hostname"))
 
     def _define_ingress_resources_and_publish_url(
         self,

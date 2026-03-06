@@ -98,7 +98,7 @@ def test_configurator(
     )
     assert response.status_code == 200
     assert "Welcome to flask-k8s Charm" in response.text
-    assert get_url_from_relation(juju, "flask-k8s/0") == "https://{gateway_address}/app1"
+    assert get_url_from_relation(juju, "flask-k8s/0") == f"https://{gateway_address}/app1"
 
     # HTTP with hostname
     juju.config(gateway_api_integrator.name, {"enforce-https": False})

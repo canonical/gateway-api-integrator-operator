@@ -20,6 +20,7 @@ dependencies = [
   "ops==3.5.2",
   "pydantic==2.12.5",
   "rpds-py==0.30.0",
+  "charmlibs-interfaces-tls-certificates==1.8.0",
 ]
 
 [dependency-groups]

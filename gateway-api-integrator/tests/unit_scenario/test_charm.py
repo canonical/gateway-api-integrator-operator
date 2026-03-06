@@ -23,13 +23,13 @@ def test_dns_record(
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.start(), state)
     mock_dns_entry_str = (
-        '[{"domain": "www.gateway.internal", '
+        '[{"domain": "example.com", '
         '"host_label": "@", '
         '"ttl": 600, '
         '"record_class": "IN", '
         '"record_type": "A", '
         '"record_data": "1.2.3.4", '
-        '"uuid": "5e7b1cba-450c-5238-b811-4ace6d6fdbbf"}]'
+        '"uuid": "f6cb0ca1-3d64-5afc-9690-af437ff74415"}]'
     )
     # Find the dns-record relation and check its dns_entries
     dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
@@ -98,13 +98,13 @@ def test_gateway_route(
     )
     state = ctx.run(ctx.on.relation_changed(gateway_route_relation), state)
     mock_dns_entry_str = (
-        '[{"domain": "www.gateway.internal", '
+        '[{"domain": "example.com", '
         '"host_label": "@", '
         '"ttl": 600, '
         '"record_class": "IN", '
         '"record_type": "A", '
         '"record_data": "1.2.3.4", '
-        '"uuid": "5e7b1cba-450c-5238-b811-4ace6d6fdbbf"}]'
+        '"uuid": "f6cb0ca1-3d64-5afc-9690-af437ff74415"}]'
     )
     # Find the dns-record relation and check its dns_entries
     dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")

@@ -3,7 +3,6 @@
 
 """Integration tests for testing both charms."""
 
-from httpx import head
 import jubilant
 import requests
 import urllib3

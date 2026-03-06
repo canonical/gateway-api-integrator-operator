@@ -113,9 +113,10 @@ def gateway_api_integrator_no_tls(
     charm: str,
 ) -> str:
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
+    application = "gateway"
     juju.deploy(
         charm,
-        "gateway-api-integrator",
+        app=application,
         base="ubuntu@24.04",
         trust=True,
         config={
@@ -123,7 +124,7 @@ def gateway_api_integrator_no_tls(
             "enforce-https": False,
         },
     )
-    return "gateway-api-integrator"
+    return application
 
 
 @pytest.fixture(scope="module")
@@ -131,9 +132,10 @@ def gateway_route_backend_application(
     juju: jubilant.Juju,
 ) -> str:
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
-    application = "gateway-route-backend-application"
+    application = "flask"
     juju.deploy(
         "flask-k8s",
         application,
+        channel="latest/edge",
     )
     return application

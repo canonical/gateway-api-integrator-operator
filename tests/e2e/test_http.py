@@ -3,6 +3,7 @@
 
 """Integration tests for testing both charms."""
 
+from httpx import head
 import jubilant
 import requests
 import urllib3
@@ -62,11 +63,6 @@ def test_http(
     gateway_route_backend_application: str,
 ):
     """Test that the gateway-api-integrator charm can route HTTP traffic to a backend application."""
-    juju.deploy(
-        "flask-k8s",
-        channel="latest/edge",
-    )
-
     juju.integrate(
         f"{gateway_route_configurator.name}:ingress",
         f"{gateway_route_backend_application}:ingress",
@@ -87,6 +83,15 @@ def test_http(
 
     # send a request to verify routing
     gateway_address = get_gateway_ip(juju, App(gateway_api_integrator_no_tls))
+    response = requests.get(
+        f"http://{gateway_address}/app1",
+        timeout=10,
+        headers={"Host": "www.gateway.internal"},
+    )
+    assert response.status_code == 200
+    assert "Welcome to flask-k8s Charm" in response.text
+
+    juju.config(gateway_route_configurator.name, reset="hostname")
     response = requests.get(
         f"http://{gateway_address}/app1",
         timeout=10,

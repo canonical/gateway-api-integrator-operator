@@ -119,7 +119,7 @@ def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
     ]  # Chain should be list of Certificate objects with .raw attribute
     monkeypatch.setattr(
         (
-            "charms.tls_certificates_interface.v4.tls_certificates"
+            "charmlibs.interfaces.tls_certificates"
             ".TLSCertificatesRequiresV4.get_provider_certificates"
         ),
         MagicMock(return_value=[provider_cert_mock]),

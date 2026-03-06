@@ -6,7 +6,7 @@
 from datetime import timedelta
 
 import pytest
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
     CertificateSigningRequest,
@@ -81,7 +81,7 @@ def test_get_certificate_action(
 
     # Mock the get_assigned_certificate method to return our certificate
     monkeypatch.setattr(
-        "charms.tls_certificates_interface.v4.tls_certificates."
+        "charmlibs.interfaces.tls_certificates."
         + "TLSCertificatesRequiresV4.get_assigned_certificate",
         lambda self, certificate_request: (provider_certificate, private_key),
     )

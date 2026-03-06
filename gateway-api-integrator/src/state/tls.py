@@ -6,8 +6,8 @@
 from typing import Annotated
 
 import ops
+from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
 from charms.gateway_api_integrator.v0.gateway_route import valid_fqdn
-from charms.tls_certificates_interface.v4.tls_certificates import TLSCertificatesRequiresV4
 from pydantic import BeforeValidator, ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 

@@ -23,7 +23,7 @@ from charms.gateway_api_integrator.v0.gateway_route import (
     GatewayRouteProvider,
     GatewayRouteRelationMissingError,
 )
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     CertificateAvailableEvent,
     CertificateRequestAttributes,
     Mode,

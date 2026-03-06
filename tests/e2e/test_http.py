@@ -91,6 +91,15 @@ def test_http(
     assert "Welcome to flask-k8s Charm" in response.text
 
     juju.config(gateway_route_configurator.name, reset="hostname")
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status,
+            gateway_route_configurator.name,
+            gateway_route_backend_application,
+            gateway_api_integrator_no_tls,
+        ),
+        timeout=600,
+    )
     response = requests.get(
         f"http://{gateway_address}/app1",
         timeout=10,

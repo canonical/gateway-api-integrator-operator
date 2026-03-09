@@ -36,7 +36,7 @@ def test_deploy_charm(juju: jubilant.Juju, gateway_app: str, external_hostname: 
             break
 
     juju.remove_relation(gateway_app, "flask-k8s")
-    juju.wait(lambda status: jubilant.all_blocked(status, gateway_app))
+    juju.wait(lambda status: jubilant.all_active(status, gateway_app))
     cmd = (
         "kubectl -n gateway get all,httproute,service "
         f"--selector gateway-api-integrator.charm.juju.is/managed-by={gateway_app} | wc -l"

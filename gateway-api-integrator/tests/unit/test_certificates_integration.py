@@ -18,4 +18,8 @@ def test_tls_information_integration_missing(harness: Harness):
     """
     harness.begin()
     with pytest.raises(TlsIntegrationMissingError):
-        TLSInformation.from_charm(harness.charm, harness.charm.certificates)
+        TLSInformation.from_charm(
+            harness.charm,
+            "example.com",
+            harness.charm.certificates,
+        )

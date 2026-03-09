@@ -55,63 +55,54 @@ def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: App) -> str:
     return ""
 
 
-def test_configurator(
+def test_http(
     juju: jubilant.Juju,
     gateway_route_configurator: App,
-    gateway_api_integrator: App,
-    external_hostname: str,
+    gateway_api_integrator_no_tls: str,
+    gateway_route_backend_application: str,
 ):
-    """
-    Test that the charms correctly set up the gateway route relation.
-    Deploy gateway-route-configurator and integrate it on gateway-route relation.
-    Assert that a request to the external hostname is correctly routed to the flask-k8s app
-    """
-    juju.deploy(
-        "flask-k8s",
-        channel="latest/edge",
-    )
-
+    """Test that the gateway-api-integrator charm can route HTTP traffic to a backend application."""
     juju.integrate(
         f"{gateway_route_configurator.name}:ingress",
-        "flask-k8s:ingress",
+        f"{gateway_route_backend_application}:ingress",
     )
     juju.integrate(
-        f"{gateway_api_integrator.name}:gateway-route",
+        f"{gateway_api_integrator_no_tls}:gateway-route",
         f"{gateway_route_configurator.name}:gateway-route",
     )
     juju.wait(
         lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
+            status,
+            gateway_route_configurator.name,
+            gateway_route_backend_application,
+            gateway_api_integrator_no_tls,
         ),
         timeout=600,
     )
 
     # send a request to verify routing
-    gateway_address = get_gateway_ip(juju, gateway_api_integrator)
-
-    # HTTPS
+    gateway_address = get_gateway_ip(juju, App(gateway_api_integrator_no_tls))
     response = requests.get(
-        f"https://{gateway_address}/app1",
-        verify=False,
+        f"http://{gateway_address}/app1",
         timeout=10,
-        headers={"Host": external_hostname},
+        headers={"Host": "www.gateway.internal"},
     )
     assert response.status_code == 200
     assert "Welcome to flask-k8s Charm" in response.text
-    assert get_url_from_relation(juju, "flask-k8s/0") == f"https://{external_hostname}/app1"
 
-    # HTTP with hostname
-    juju.config(gateway_api_integrator.name, {"enforce-https": False})
+    juju.config(gateway_route_configurator.name, reset="hostname")
     juju.wait(
         lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
+            status,
+            gateway_route_configurator.name,
+            gateway_route_backend_application,
+            gateway_api_integrator_no_tls,
         ),
         timeout=600,
     )
     response = requests.get(
         f"http://{gateway_address}/app1",
         timeout=10,
-        headers={"Host": external_hostname},
     )
     assert response.status_code == 200
     assert "Welcome to flask-k8s Charm" in response.text

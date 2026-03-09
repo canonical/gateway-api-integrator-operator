@@ -104,3 +104,38 @@ def gateway_route_configurator(
     )
 
     return App("gateway-route-configurator")
+
+
+@pytest.fixture(scope="module")
+def gateway_api_integrator_no_tls(
+    juju: jubilant.Juju,
+    gateway_class: str,
+    charm: str,
+) -> str:
+    """Deploy the gateway-api-integrator charm and necessary charms for it."""
+    application = "gateway"
+    juju.deploy(
+        charm,
+        app=application,
+        base="ubuntu@24.04",
+        trust=True,
+        config={
+            "gateway-class": gateway_class,
+            "enforce-https": False,
+        },
+    )
+    return application
+
+
+@pytest.fixture(scope="module")
+def gateway_route_backend_application(
+    juju: jubilant.Juju,
+) -> str:
+    """Deploy the gateway-api-integrator charm and necessary charms for it."""
+    application = "flask"
+    juju.deploy(
+        "flask-k8s",
+        application,
+        channel="latest/edge",
+    )
+    return application

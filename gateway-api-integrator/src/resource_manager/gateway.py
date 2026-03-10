@@ -168,14 +168,14 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name: The name of the resource to patch.
             resource: The modified gateway resource object.
         """
-        # Patch the resource with server-side apply
+        # Patch the resource with merge to correctly handle tls-certificates relation removal.
         # force=True is required here so that the charm keeps control of the resource
         self._client.patch(  # type: ignore[type-var]
             # mypy can't detect that this is ok for patching custom resources
             self._gateway_generic_resource,
             name,
             resource,
-            patch_type=PatchType.APPLY,
+            patch_type=PatchType.MERGE,
             force=True,
         )
 

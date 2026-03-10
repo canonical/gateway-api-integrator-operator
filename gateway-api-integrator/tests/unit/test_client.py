@@ -8,7 +8,9 @@ from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
-from lightkube.core.exceptions import ConfigError
+from httpx import Response
+from lightkube.core.exceptions import ApiError, ConfigError
+from ops.testing import Harness
 
 from client import LightKubeInitializationError, cleanup_all_resources, get_client
 
@@ -69,3 +71,23 @@ def test_cleanup_resources():
     )
     cleanup_all_resources(client_mock, {})
     delete_mock.assert_not_called()
+
+
+def test_client_api_error_4xx(
+    harness: Harness,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    """
+    arrange: given a charm with mocked lightkube client that returns 404.
+    act: when agent reconciliation triggers.
+    assert: Exception is re-raised.
+    """
+    get_client_mock = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
+    monkeypatch.setattr(
+        "charm.get_client",
+        get_client_mock,
+    )
+    harness.set_leader(True)
+    harness.update_config({"enforce-https": False})
+    with pytest.raises(ApiError):
+        harness.begin_with_initial_hooks()

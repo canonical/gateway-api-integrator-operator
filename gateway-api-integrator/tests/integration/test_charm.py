@@ -7,12 +7,12 @@ import logging
 
 import lightkube
 import pytest
+import requests
 from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from helper import DNSResolverHTTPSAdapter, get_ingress_url_for_application
+from helper import get_ingress_url_for_application
 from juju.application import Application
 from lightkube.generic_resource import create_namespaced_resource
 from pytest_operator.plugin import OpsTest
-from requests import Session
 
 logger = logging.getLogger(__name__)
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
@@ -59,29 +59,24 @@ async def test_deploy(
     assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
     assert ingress_url.path == f"/{application.model.name}-{ingress_requirer_application.name}"
 
-    session = Session()
-    session.mount("https://", DNSResolverHTTPSAdapter(ingress_url.netloc, gateway_lb_ip))
-
-    res = session.get(
+    res = requests.get(
         f"http://{gateway_lb_ip}{ingress_url.path}",
         headers={"Host": ingress_url.netloc},
-        verify=False,  # nosec - calling charm ingress URL
         allow_redirects=False,
         timeout=30,
     )
     assert res.status_code == 301
-
     assert res.headers["location"] == f"https://{ingress_url.netloc}:443{ingress_url.path}"
-    res = session.get(
-        f"http://{gateway_lb_ip}/invalid",
+    res = requests.get(
+        f"https://{gateway_lb_ip}/invalid",
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=30,
     )
     assert res.status_code == 404
 
-    res = session.get(
-        f"http://{gateway_lb_ip}{ingress_url.path}",
+    res = requests.get(
+        f"https://{gateway_lb_ip}{ingress_url.path}",
         headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=30,

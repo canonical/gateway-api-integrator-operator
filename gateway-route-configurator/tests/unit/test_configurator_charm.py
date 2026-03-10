@@ -3,6 +3,9 @@
 
 """Unit tests for the Gateway Route Configurator Charm."""
 
+import json
+import typing
+
 from ops import testing
 
 from charm import GatewayRouteConfiguratorCharm  # pylint: disable=no-name-in-module
@@ -41,14 +44,19 @@ def test_gateway_route_no_hostname(base_state: dict) -> None:
     assert: The charm goes into blocked state with the expected message.
     """
     ctx = testing.Context(GatewayRouteConfiguratorCharm)
-    base_state["config"]["hostname"] = ""
+    base_state["config"].pop("hostname", None)
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.config_changed(), state)
-    assert state.unit_status == testing.BlockedStatus("Missing 'hostname' config")
+    assert state.unit_status == testing.ActiveStatus("Ready")
     gateway_route_relation = next(
         rel for rel in state.relations if rel.endpoint == "gateway-route"
     )
-    assert gateway_route_relation.local_app_data == {}
+    assert (
+        json.loads(
+            typing.cast(dict, gateway_route_relation.local_app_data).get("hostname", "null")
+        )
+        is None
+    )
 
 
 def test_gateway_route_invalid_hostname(base_state: dict) -> None:

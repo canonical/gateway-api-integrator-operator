@@ -24,9 +24,10 @@ class App(NamedTuple):
 
 
 @pytest.fixture(scope="module", name="gateway_class")
-def gateway_class_fixture():
+def gateway_class_fixture(pytestconfig: pytest.Config):
     """Fixture to provide the gateway class for the charm."""
-    yield "cilium"
+    gateway_class = pytestconfig.getoption("--gateway-class")
+    yield gateway_class or "cilium"  # default to cilium if not set
 
 
 @pytest.fixture(scope="module", name="external_hostname")

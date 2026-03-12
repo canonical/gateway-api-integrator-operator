@@ -8,7 +8,7 @@ from datetime import timedelta
 from unittest.mock import MagicMock
 
 import pytest
-from charms.tls_certificates_interface.v4.tls_certificates import (
+from charmlibs.interfaces.tls_certificates import (
     Certificate,
     CertificateRequestAttributes,
     CertificateSigningRequest,

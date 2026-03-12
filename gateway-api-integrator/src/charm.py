@@ -9,6 +9,12 @@ import typing
 import uuid
 from ipaddress import ip_address
 
+from charmlibs.interfaces.tls_certificates import (
+    CertificateAvailableEvent,
+    CertificateRequestAttributes,
+    Mode,
+    TLSCertificatesRequiresV4,
+)
 from charms.bind.v0.dns_record import (
     DNSRecordRequirerData,
     DNSRecordRequires,
@@ -22,12 +28,6 @@ from charms.gateway_api_integrator.v0.gateway_route import (
     GatewayRouteInvalidRelationDataError,
     GatewayRouteProvider,
     GatewayRouteRelationMissingError,
-)
-from charms.tls_certificates_interface.v4.tls_certificates import (
-    CertificateAvailableEvent,
-    CertificateRequestAttributes,
-    Mode,
-    TLSCertificatesRequiresV4,
 )
 from charms.traefik_k8s.v2.ingress import (
     IngressPerAppDataProvidedEvent,

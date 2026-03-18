@@ -74,7 +74,7 @@ def __init__(self, *args):
 
 import json
 import logging
-from typing import Annotated, Any, MutableMapping, Optional, cast
+from typing import Annotated, Any, MutableMapping, Optional, Self, cast
 
 from ops import CharmBase, ModelError, RelationBrokenEvent
 from ops.charm import CharmEvents
@@ -129,7 +129,7 @@ class _DatabagModel(BaseModel):
     """Pydantic config."""
 
     @classmethod
-    def load(cls, databag: MutableMapping) -> "_DatabagModel":
+    def load(cls, databag: MutableMapping) -> Self:
         """Load this model from a Juju json databag.
 
         Args:
@@ -139,7 +139,7 @@ class _DatabagModel(BaseModel):
             DataValidationError: When model validation failed.
 
         Returns:
-            _DatabagModel: The validated model.
+            Self: The validated model.
         """
         nest_under = cls.model_config.get("_NEST_UNDER")
         if nest_under:
@@ -165,7 +165,7 @@ class _DatabagModel(BaseModel):
             raise DataValidationError(msg) from e
 
     @classmethod
-    def from_dict(cls, values: dict) -> "_DatabagModel":
+    def from_dict(cls, values: dict) -> Self:
         """Load this model from a dict.
 
         Args:
@@ -175,7 +175,7 @@ class _DatabagModel(BaseModel):
             DataValidationError: When model validation failed.
 
         Returns:
-            _DatabagModel: The validated model.
+            Self: The validated model.
         """
         try:
             logger.info("Loading values from dictionary: %s", values)
@@ -399,10 +399,7 @@ class GatewayRouteProvider(Object):
             RequirerApplicationData: Validated application data from the requirer.
         """
         try:
-            return cast(
-                RequirerApplicationData,
-                RequirerApplicationData.load(relation.data.get(relation.app, {})),
-            )
+            return RequirerApplicationData.load(relation.data.get(relation.app, {}))
         except DataValidationError:
             logger.error("Invalid requirer application data for %s", relation.app.name)
             raise

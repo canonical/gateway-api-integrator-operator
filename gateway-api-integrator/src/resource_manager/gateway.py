@@ -131,7 +131,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
         return ",".join(f"{k}={v}" for k, v in self._labels.items())
 
     @map_k8s_auth_exception
-    def _gen_resource(self, resource_definition: ResourceDefinition) -> dict:
+    def _gen_resource(self, resource_definition: ResourceDefinition) -> GenericNamespacedResource:
         """Generate a Gateway resource from a gateway resource definition.
 
         Args:

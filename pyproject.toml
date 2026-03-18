@@ -124,7 +124,7 @@ dev = [
     "pytest-operator>=0.31.0",
     "requests>=2.32.5",
     "rpds-py==0.30.0",
-    "tox>=4.32.0",
+    "tox-uv>=1.33.4",
 ]
 integration = [
     "allure-pytest>=2.8.18",

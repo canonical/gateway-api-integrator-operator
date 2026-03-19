@@ -66,6 +66,12 @@ def test_configurator(
     Deploy gateway-route-configurator and integrate it on gateway-route relation.
     Assert that a request to the external hostname is correctly routed to the flask-k8s app
     """
+    additional_hostnames = ["gateway-alt.internal", "gateway-alt2.internal"]
+    juju.config(
+        gateway_route_configurator.name,
+        {"additional-hostnames": ",".join(additional_hostnames)},
+    )
+
     juju.deploy(
         "flask-k8s",
         channel="latest/edge",
@@ -108,72 +114,8 @@ def test_configurator(
         ),
         timeout=600,
     )
-    response = requests.get(
-        f"http://{gateway_address}/app1",
-        timeout=10,
-        headers={"Host": external_hostname},
-    )
-    assert response.status_code == 200
-    assert "Welcome to flask-k8s Charm" in response.text
 
-    # Reset enforce-https for next test
-    juju.config(gateway_api_integrator.name, {"enforce-https": True})
-
-
-
-def test_configurator_with_additional_hostnames(
-    juju: jubilant.Juju,
-    gateway_route_configurator: App,
-    gateway_api_integrator: App,
-    external_hostname: str,
-):
-    """
-    Test that additional hostnames are correctly configured and routed.
-    Configure gateway-route-configurator with additional hostnames and assert
-    that requests to all hostnames are correctly routed to the flask-k8s app.
-    """
-    # Configure additional hostnames
-    additional_hostnames = ["gateway-alt.internal"]
-    juju.config(
-        gateway_route_configurator.name,
-        {"additional-hostnames": ",".join(additional_hostnames)},
-    )
-
-    juju.deploy(
-        "flask-k8s",
-        channel="latest/edge",
-    )
-
-    juju.integrate(
-        f"{gateway_route_configurator.name}:ingress",
-        "flask-k8s:ingress",
-    )
-    juju.integrate(
-        f"{gateway_api_integrator.name}:gateway-route",
-        f"{gateway_route_configurator.name}:gateway-route",
-    )
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
-        ),
-        timeout=600,
-    )
-
-    # Get gateway address
-    gateway_address = get_gateway_ip(juju, gateway_api_integrator)
-
-    # Test primary hostname
-    response = requests.get(
-        f"https://{gateway_address}/app1",
-        verify=False,
-        timeout=10,
-        headers={"Host": external_hostname},
-    )
-    assert response.status_code == 200
-    assert "Welcome to flask-k8s Charm" in response.text
-
-    # Test each additional hostname with HTTP to avoid certificate issues
-    for additional_hostname in additional_hostnames:
+    for additional_hostname in [external_hostname] + additional_hostnames:
         response = requests.get(
             f"https://{gateway_address}/app1",
             verify=False,

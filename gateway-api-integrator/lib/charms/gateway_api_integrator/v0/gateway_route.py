@@ -38,6 +38,7 @@ def __init__(self, *args):
         model=<optional>,
         port=<optional>,
         hostname=<optional>,
+        additional_hostnames=<optional>,
         paths=<optional>,
     )
 
@@ -92,7 +93,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 5
+LIBPATCH = 6
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -235,6 +236,7 @@ class RequirerApplicationData(_DatabagModel):
 
     Attributes:
         hostname: Optional: The hostname of this service.
+        additional_hostnames: Optional: Additional hostnames for this service.
         paths: List of URL paths to route to this service. Defaults to an empty list.
         model: The model the application is in.
         name: Name of the app requesting gateway route.
@@ -244,12 +246,28 @@ class RequirerApplicationData(_DatabagModel):
     hostname: Annotated[str, BeforeValidator(valid_fqdn)] | None = Field(
         description="Hostname of this service."
     )
+    additional_hostnames: list[Annotated[str, BeforeValidator(valid_fqdn)]] = Field(
+        description="Additional hostnames for this service.", default=[]
+    )
     paths: list[str] = Field(description="The list of paths to route to this service.", default=[])
     model: str = Field(description="The model the application is in.")
     name: str = Field(description="The name of the app requesting gateway route.")
     port: int = Field(
         description="The port number on which the service is listening.", ge=1, le=65535
     )
+
+    @property
+    def hostnames(self) -> list[str]:
+        """Get all hostnames related to this service.
+
+        Returns:
+            A list of hostnames, including the main hostname and any additional hostnames.
+        """
+        hostnames = []
+        if self.hostname:
+            hostnames.append(self.hostname)
+        hostnames.extend(self.additional_hostnames)
+        return hostnames
 
 
 class GatewayRouteProviderAppData(_DatabagModel):
@@ -455,6 +473,7 @@ class GatewayRouteRequirer(Object):
         model: str | None = None,
         port: int | None = None,
         hostname: str | None = None,
+        additional_hostnames: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
     ) -> None:
         """Initialize the GatewayRouteRequirer.
@@ -466,6 +485,7 @@ class GatewayRouteRequirer(Object):
             model: The model of the service to route traffic to.
             port: The port the service is listening on.
             hostname: Hostname of this service.
+            additional_hostnames: Additional hostnames for this service.
             paths: List of URL paths to route to this service.
         """
         super().__init__(charm, relation_name)
@@ -481,6 +501,7 @@ class GatewayRouteRequirer(Object):
                 model,
                 port,
                 hostname,
+                additional_hostnames,
                 paths,
             )
         else:
@@ -512,6 +533,7 @@ class GatewayRouteRequirer(Object):
         model: str,
         port: int,
         hostname: str | None,
+        additional_hostnames: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
     ) -> None:
         """Update gateway-route requirements data in the relation.
@@ -521,6 +543,7 @@ class GatewayRouteRequirer(Object):
             model: The model of the service to route traffic to.
             port: The port the service is listening on.
             hostname: Hostname of this service.
+            additional_hostnames: Additional hostnames for this service.
             paths: List of URL paths to route to this service.
         """
         self._application_data = self._generate_application_data(
@@ -528,6 +551,7 @@ class GatewayRouteRequirer(Object):
             model,
             port,
             hostname,
+            additional_hostnames,
             paths,
         )
         self.update_relation_data()
@@ -539,6 +563,7 @@ class GatewayRouteRequirer(Object):
         model: Optional[str] = None,
         port: Optional[int] = None,
         hostname: Optional[str] = None,
+        additional_hostnames: Optional[list[str]] = None,
         paths: Optional[list[str]] = None,
     ) -> dict[str, Any]:
         """Generate the complete application data structure.
@@ -549,6 +574,7 @@ class GatewayRouteRequirer(Object):
             port: The port the service is listening on.
             paths: List of URL paths to route to this service.
             hostname: Hostname of this service.
+            additional_hostnames: Additional hostnames for this service.
 
         Returns:
             dict: A dictionary containing the complete application data structure.
@@ -559,6 +585,7 @@ class GatewayRouteRequirer(Object):
 
         application_data: dict[str, Any] = {
             "hostname": hostname,
+            "additional_hostnames": additional_hostnames or [],
             "model": model,
             "name": name,
             "paths": paths,

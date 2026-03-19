@@ -85,7 +85,9 @@ class TLSInformation:
         tls_keys = {}
         secret_resource_name_prefix = f"{charm.app.name}-secret"
         for cert in certificates.get_provider_certificates():
-            if hostname == cert.certificate.common_name:
+            if hostname == cert.certificate.common_name or hostname in (
+                cert.certificate.sans_dns or []
+            ):
                 chain = cert.chain
                 if chain[0] != cert.certificate:
                     chain.reverse()

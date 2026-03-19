@@ -58,7 +58,9 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
 
         # Check config values
         hostname: str | None = typing.cast(str | None, self.model.config.get("hostname"))
-        additional_hostnames_str = typing.cast(str, self.model.config.get("additional-hostnames", ""))
+        additional_hostnames_str = typing.cast(
+            str, self.model.config.get("additional-hostnames", "")
+        )
         additional_hostnames = [
             h.strip() for h in additional_hostnames_str.split(",") if h.strip()
         ]

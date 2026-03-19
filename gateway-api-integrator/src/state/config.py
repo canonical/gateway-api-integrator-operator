@@ -68,7 +68,9 @@ class CharmConfig:
     gateway_class_name: str = Field(min_length=1)
     enforce_https: bool = Field()
     proxy_mode: ProxyMode = Field()
-    additional_hostnames: list[typing.Annotated[str, BeforeValidator(valid_fqdn)]] = Field(default_factory=list)
+    additional_hostnames: list[typing.Annotated[str, BeforeValidator(valid_fqdn)]] = Field(
+        default_factory=list
+    )
 
     @classmethod
     @map_k8s_auth_exception
@@ -119,7 +121,9 @@ class CharmConfig:
         try:
             gateway_route_requirer_data = gateway_route_provider.get_data()
             hostname = gateway_route_requirer_data.application_data.hostname
-            additional_hostnames = gateway_route_requirer_data.application_data.additional_hostnames or []
+            additional_hostnames = (
+                gateway_route_requirer_data.application_data.additional_hostnames or []
+            )
         except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError):
             hostname = typing.cast(str | None, charm.config.get("external-hostname"))
             additional_hostnames = []

@@ -37,6 +37,9 @@ config:
     hostname:
       description: The hostname to serve the application on.
       type: string
+    additional-hostnames:
+      description: Comma-separated list of additional hostnames to serve the application on.
+      type: string
     paths:
       description: Comma-separated list of paths to serve.
       type: string

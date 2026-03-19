@@ -58,6 +58,10 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
 
         # Check config values
         hostname: str | None = typing.cast(str | None, self.model.config.get("hostname"))
+        additional_hostnames_str = typing.cast(str, self.model.config.get("additional-hostnames", ""))
+        additional_hostnames = [
+            h.strip() for h in additional_hostnames_str.split(",") if h.strip()
+        ]
         paths_str = typing.cast(str, self.model.config.get("paths", "/"))
         paths = [p.strip() for p in paths_str.split(",")]
 
@@ -65,6 +69,12 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         if hostname and not bool(domain(hostname)):
             self.unit.status = ops.BlockedStatus(f"Invalid hostname: {hostname}")
             return
+        for additional_hostname in additional_hostnames:
+            if not bool(domain(additional_hostname)):
+                self.unit.status = ops.BlockedStatus(
+                    f"Invalid additional hostname: {additional_hostname}"
+                )
+                return
 
         self.gateway_route.provide_gateway_route_requirements(
             name=application_name,
@@ -72,6 +82,7 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
             port=port,
             paths=paths,
             hostname=hostname,
+            additional_hostnames=additional_hostnames,
         )
 
         # Publish the ingress URL to the requirer charm

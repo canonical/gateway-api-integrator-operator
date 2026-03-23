@@ -1,3 +1,4 @@
+(reference_charm_architecture)=
 # Charm architecture
 
 The `gateway-api-integrator` charm is very similar to the [`nginx-ingress-integrator`](https://charmhub.io/nginx-ingress-integrator)
@@ -84,7 +85,7 @@ libraries to handle charm relations. It also uses the `lightkube` Python
 Kubernetes client, which is wrapped in custom modules to reconcile the 
 Kubernetes resources necessary for ingress.
 
-```mermaid
+```{mermaid}
 C4Context
     System_Boundary(gateway-api-integrator, "Gateway API Integrator") {
         Container_Boundary(charm-lib, "Charm Libraries") {

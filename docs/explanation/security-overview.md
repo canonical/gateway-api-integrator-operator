@@ -1,3 +1,4 @@
+(explanation_security_overview)=
 # Gateway API integrator security overview
 
 This explanation covers several security-related topics for the Gateway API integrator charm. This charm is a [configurator charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/#workloadless-charm) and, as such, is workloadless.

@@ -1,3 +1,4 @@
+(tutorial_using_gateway_route)=
 <!-- vale Canonical.007-Headings-sentence-case = NO -->
 # Deploy the Gateway API integrator and Gateway Route Configurator charms
 <!-- vale Canonical.007-Headings-sentence-case = YES -->

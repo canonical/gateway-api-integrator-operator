@@ -1,3 +1,4 @@
+(explanation_workflow)=
 # The charm's workflow
 1. When the charm starts, it goes into a blocked state until TLS is configured, either with a config option or using an integration with a TLS provider charm.
 

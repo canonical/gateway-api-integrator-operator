@@ -1,3 +1,8 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "TBD"
+---
 A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) deploying and managing external access to HTTP/HTTPS services in a
 Kubernetes cluster using a Gateway and an HTTPRoute resource. This requires the Kubernetes
 cluster in question to have a [Gateway API controller](https://gateway-api.sigs.k8s.io/implementations/) already deployed into it.
@@ -24,16 +29,14 @@ If there’s a particular area of documentation that you’d like to see that’
 | [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator ||
 | [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |
 
-# Contents
 
-1. [Explanation](explanation)
-  1. [The charm's workflow](explanation/workflow.md)
-  1. [Security overview](explanation/security-overview.md)
-1. [Reference](reference)
-  1. [Actions](reference/actions.md)
-  1. [Charm architecture](reference/charm-architecture.md)
-1. [Tutorial](tutorial)
-  1. [Tutorial: Deploy the Gateway API integrator charm](tutorial/getting-started.md)
-  2. [Tutorial: Deploy the Gateway Route configurator charm](tutorial/using-gateway-route.md)
-1. [How-to](how-to)
-  1. [Upgrade](how-to/upgrade.md)
+```{toctree}
+:hidden:
+_static/index.md
+_templates/index.md
+explanation/index.md
+how-to/index.md
+reference/index.md
+tutorial/index.md
+
+```

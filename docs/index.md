@@ -3,6 +3,9 @@ myst:
   html_meta:
     "description lang=en": "A Juju charm for managing external access to HTTP/HTTPS in a Kubernetes cluster."
 ---
+
+# Gateway API integrator operator
+
 A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) deploying and managing external access to HTTP/HTTPS services in a
 Kubernetes cluster using a Gateway and an HTTPRoute resource. This requires the Kubernetes
 cluster in question to have a [Gateway API controller](https://gateway-api.sigs.k8s.io/implementations/) already deployed into it.
@@ -27,8 +30,8 @@ If there’s a particular area of documentation that you’d like to see that’
 
 |||
 |-----------------|----------------|
-| [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator ||
-| [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |
+| {ref}`Tutorial <tutorial_index>`</br>  Hands-on introductions to Gateway API integrator | {ref}`How-to  guides <how_to_index>`</br> Step-by-step guides covering key operations and common tasks |
+| {ref}`Explanation <explanation_index>` </br>  Concepts - discussion and clarification of key topics | {ref}`Reference <reference_index>` </br>  Technical information - specifications, commands, architecture |
 
 ```{toctree}
 :hidden:

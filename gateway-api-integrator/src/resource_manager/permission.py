@@ -17,11 +17,14 @@ class InsufficientPermissionError(CharmStateValidationBaseError):
     """Custom error that indicates insufficient permission to create k8s resources."""
 
 
-P = typing.ParamSpec("P")
-R = typing.TypeVar("R")
+Parameters = typing.ParamSpec("Parameters")
+ReturnType = typing.TypeVar("ReturnType")
 
 
-def map_k8s_auth_exception(func: typing.Callable[P, R]) -> typing.Callable[P, R]:
+# Using ParamSpec and TypeVar to allow the decorator to be used with any function signature while preserving type hints.
+def map_k8s_auth_exception(
+    func: typing.Callable[Parameters, ReturnType],
+) -> typing.Callable[Parameters, ReturnType]:
     """Remap the kubernetes 403 ApiException to InsufficientPermissionError.
 
     Args:
@@ -32,7 +35,7 @@ def map_k8s_auth_exception(func: typing.Callable[P, R]) -> typing.Callable[P, R]
     """
 
     @functools.wraps(func)
-    def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
+    def wrapper(*args: Parameters.args, **kwargs: Parameters.kwargs) -> ReturnType:
         """Remap the kubernetes 403 ApiException to InsufficientPermissionError.
 
         Args:

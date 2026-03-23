@@ -256,19 +256,6 @@ class RequirerApplicationData(_DatabagModel):
         description="The port number on which the service is listening.", ge=1, le=65535
     )
 
-    @property
-    def hostnames(self) -> list[str]:
-        """Get all hostnames related to this service.
-
-        Returns:
-            A list of hostnames, including the main hostname and any additional hostnames.
-        """
-        hostnames = []
-        if self.hostname:
-            hostnames.append(self.hostname)
-        hostnames.extend(self.additional_hostnames)
-        return hostnames
-
 
 class GatewayRouteProviderAppData(_DatabagModel):
     """gateway-route provider databag schema.

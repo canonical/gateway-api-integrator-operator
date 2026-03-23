@@ -109,7 +109,6 @@ class HTTPRouteResourceInformation:
         cls,
         gateway_route_provider: GatewayRouteProvider,
         hostname: str | None,
-        additional_hostnames: list[str] | None = None,
     ) -> "HTTPRouteResourceInformation":
         """Populate fields from ingress integration.
 
@@ -135,7 +134,7 @@ class HTTPRouteResourceInformation:
                 filters=[],
                 paths=relation_data.application_data.paths,
                 hostname=hostname,
-                additional_hostnames=additional_hostnames or [],
+                additional_hostnames=relation_data.application_data.additional_hostnames,
             )
         except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError) as exc:
             raise GatewayRouteRelationNotReadyError(

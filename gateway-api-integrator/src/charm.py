@@ -425,7 +425,8 @@ class GatewayAPICharm(CharmBase):
 
         if config.proxy_mode == ProxyMode.GATEWAY_ROUTE:
             http_route_resource_information = HTTPRouteResourceInformation.from_gateway_route(
-                self._gateway_route_provider, config.hostname, config.additional_hostnames
+                self._gateway_route_provider,
+                config.hostname,
             )
 
         if http_route_resource_information is None:

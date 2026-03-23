@@ -29,7 +29,7 @@ As a result, if you run `kubectl get pods` on a namespace named for the Juju
 model you’ve deployed the gateway-api-integrator charm into, you’ll see 
 something like the following:
 
-```log
+```text
 NAME                             READY   STATUS    RESTARTS   AGE
 gateway-api-integrator-0       1/1     Running   0          3h47m
 ```

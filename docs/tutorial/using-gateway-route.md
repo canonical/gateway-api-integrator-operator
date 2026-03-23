@@ -1,7 +1,6 @@
 (tutorial_using_gateway_route)=
-<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
 # Deploy the Gateway API integrator and Gateway Route Configurator charms
-<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 ## What you'll do
 
@@ -66,7 +65,7 @@ This tutorial will walk you through deploying the gateway-api-integrator and gat
 
 Check `juju status` to verify that the deployment was successful. The terminal output should look similar to the following:
 
-```log
+```text
 App                         Version  Status  Scale  Charm                       Channel      Rev  Address         Exposed  Message
 flask-k8s                            active      1  flask-k8s                   latest/edge   19  10.152.183.114  no                                                                          
 gateway-api-integrator               active      1  gateway-api-integrator                     0  10.152.183.106  no       Gateway addresses: 10.43.45.1                                      
@@ -84,7 +83,6 @@ flask-k8s:secret-storage               flask-k8s:secret-storage                 
 gateway-api-integrator:gateway-route   gateway-route-configurator:gateway-route  gateway-route     regular    
 gateway-route-configurator:ingress     flask-k8s:ingress                         ingress           regular
 self-signed-certificates:certificates  gateway-api-integrator:certificates       tls-certificates  regular
-
 ```
 
 Now curl the endpoint:

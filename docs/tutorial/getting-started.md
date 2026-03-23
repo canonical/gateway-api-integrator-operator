@@ -1,7 +1,6 @@
 (tutorial_getting_started)=
-<!-- vale Canonical.007-Headings-sentence-case = NO -->
+
 # Deploy the Gateway API integrator charm
-<!-- vale Canonical.007-Headings-sentence-case = YES -->
 
 ## What you'll do
 

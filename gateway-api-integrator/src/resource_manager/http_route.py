@@ -137,11 +137,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         Returns:
             The list of hostnames or an empty list if none are set.
         """
-        hostnames = []
-        if self.hostname:
-            hostnames.append(self.hostname)
-        hostnames.extend(self.additional_hostnames)
-        return hostnames
+        return [] if self.hostname is None else [self.hostname] + self.additional_hostnames
 
     def http_route_resource_spec(self, namespace: str) -> dict[str, typing.Any]:
         """Generate a Gateway resource from a gateway resource definition.

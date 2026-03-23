@@ -1,4 +1,5 @@
 (reference_charm_architecture)=
+
 # Charm architecture
 
 The `gateway-api-integrator` charm is very similar to the [`nginx-ingress-integrator`](https://charmhub.io/nginx-ingress-integrator)
@@ -28,7 +29,7 @@ As a result, if you run `kubectl get pods` on a namespace named for the Juju
 model you’ve deployed the gateway-api-integrator charm into, you’ll see 
 something like the following:
 
-```
+```log
 NAME                             READY   STATUS    RESTARTS   AGE
 gateway-api-integrator-0       1/1     Running   0          3h47m
 ```
@@ -68,14 +69,18 @@ base class from which all Charms are formed, defined by [Ops](https://juju.is/do
 Take, for example, when a configuration is changed by using the CLI.
 
 1. User runs the configuration command:
-```bash
-juju config gateway-api-integrator external-hostname=example.com
-```
+
+    ```bash
+    juju config gateway-api-integrator external-hostname=example.com
+    ```
+
 2. A `config-changed` event is emitted.
 3. In the `__init__` method is defined how to handle this event like this:
-```python
-self.framework.observe(self.on.config_changed, self._on_config_changed)
-```
+
+    ```python
+    self.framework.observe(self.on.config_changed, self._on_config_changed)
+    ```
+
 4. The method `_on_config_changed`, for its turn, will take the necessary actions such as waiting for all the relations to be ready and then configuring the containers.
 
 ## Charm architecture diagram

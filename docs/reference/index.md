@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    "description lang=en": "TBD"
+    "description lang=en": "Technical information related to the Gateway API integrator charm."
 ---
 
 (reference)=

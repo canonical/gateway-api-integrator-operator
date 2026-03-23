@@ -1,7 +1,7 @@
 ---
 myst:
   html_meta:
-    "description lang=en": "TBD"
+    "description lang=en": "A Juju charm for managing external access to HTTP/HTTPS in a Kubernetes cluster."
 ---
 A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) deploying and managing external access to HTTP/HTTPS services in a
 Kubernetes cluster using a Gateway and an HTTPRoute resource. This requires the Kubernetes
@@ -24,19 +24,19 @@ Documentation is an important part of this project, and we take the same open-so
 If there’s a particular area of documentation that you’d like to see that’s missing, please [file a bug](https://github.com/canonical/gateway-api-integrator-operator/issues).
 
 # In this documentation
+
 |||
 |-----------------|----------------|
 | [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator ||
 | [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |
 
-
 ```{toctree}
 :hidden:
 _static/index.md
 _templates/index.md
-explanation/index.md
+tutorial/index.md
 how-to/index.md
 reference/index.md
-tutorial/index.md
+explanation/index.md
 
 ```

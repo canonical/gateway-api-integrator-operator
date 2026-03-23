@@ -287,7 +287,7 @@ class GatewayAPICharm(CharmBase):
     def _update_dns_record_relation(
         self,
         resource_manager: GatewayResourceManager,
-        external_hostname: str,
+        external_hostname: str | None,
         gateway_resource_information: GatewayResourceInformation,
     ) -> None:
         """Update the DNS record relation with the external hostname and gateway address.

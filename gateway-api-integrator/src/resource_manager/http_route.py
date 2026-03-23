@@ -69,6 +69,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     paths: list[str]
     filters: list[dict]
     hostname: str | None
+    additional_hostnames: list[str]
 
     def __init__(
         self,
@@ -134,9 +135,9 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         """Get the hostnames for the HTTPRoute resource.
 
         Returns:
-            The list of hostnames or an empty list if hostname is not set.
+            The list of hostnames or an empty list if none are set.
         """
-        return [] if self.hostname is None else [self.hostname]
+        return [] if self.hostname is None else [self.hostname, *self.additional_hostnames]
 
     def http_route_resource_spec(self, namespace: str) -> dict[str, typing.Any]:
         """Generate a Gateway resource from a gateway resource definition.

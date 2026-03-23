@@ -66,6 +66,12 @@ def test_configurator(
     Deploy gateway-route-configurator and integrate it on gateway-route relation.
     Assert that a request to the external hostname is correctly routed to the flask-k8s app
     """
+    additional_hostnames = ["gateway-alt.internal", "gateway-alt2.internal"]
+    juju.config(
+        gateway_route_configurator.name,
+        {"additional-hostnames": ",".join(additional_hostnames)},
+    )
+
     juju.deploy(
         "flask-k8s",
         channel="latest/edge",
@@ -108,10 +114,16 @@ def test_configurator(
         ),
         timeout=600,
     )
-    response = requests.get(
-        f"http://{gateway_address}/app1",
-        timeout=10,
-        headers={"Host": external_hostname},
-    )
-    assert response.status_code == 200
-    assert "Welcome to flask-k8s Charm" in response.text
+
+    for additional_hostname in [external_hostname] + additional_hostnames:
+        response = requests.get(
+            f"https://{gateway_address}/app1",
+            verify=False,
+            timeout=10,
+            headers={"Host": additional_hostname},
+        )
+        assert response.status_code == 200, (
+            f"Failed to route to {additional_hostname}: "
+            f"status={response.status_code}"
+        )
+        assert "Welcome to flask-k8s Charm" in response.text

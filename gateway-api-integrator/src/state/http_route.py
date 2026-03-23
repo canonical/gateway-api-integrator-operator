@@ -43,6 +43,7 @@ class HTTPRouteResourceInformation:
         filters: The list of filters to be applied to the HTTPRoute resource.
         paths: The list of paths to be added to the HTTPRoute resource.
         hostname: The hostname to be used in the HTTPRoute resource.
+        additional_hostnames: Additional hostnames to be used in the HTTPRoute resource.
     """
 
     application_name: str
@@ -53,6 +54,7 @@ class HTTPRouteResourceInformation:
     filters: list[dict]
     paths: list[str]
     hostname: str | None
+    additional_hostnames: list[str]
 
     @classmethod
     def from_ingress(
@@ -95,6 +97,7 @@ class HTTPRouteResourceInformation:
                 ),
                 paths=[f"/{integration_data.app.model}-{application_name}"],
                 hostname=hostname,
+                additional_hostnames=[],
             )
         except DataValidationError as exc:
             raise IngressIntegrationDataValidationError(
@@ -112,6 +115,7 @@ class HTTPRouteResourceInformation:
         Args:
             gateway_route_provider: The gateway route provider library.
             hostname: The hostname to be used in the HTTPRoute resource.
+            additional_hostnames: Additional hostnames to be used in the HTTPRoute resource.
 
         Raises:
             GatewayRouteRelationNotReadyError: When data validation failed.
@@ -130,6 +134,7 @@ class HTTPRouteResourceInformation:
                 filters=[],
                 paths=relation_data.application_data.paths,
                 hostname=hostname,
+                additional_hostnames=relation_data.application_data.additional_hostnames,
             )
         except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError) as exc:
             raise GatewayRouteRelationNotReadyError(

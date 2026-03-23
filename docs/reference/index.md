@@ -4,11 +4,11 @@ myst:
     "description lang=en": "Technical information related to the Gateway API integrator charm."
 ---
 
-(reference)=
+(reference_index)=
 
-# docs/reference
+# Reference
 
-Description TBD
+The pages in this section contain technical information for topics relevant to the Gateway API integrator charm.
 
 ```{toctree}
 :maxdepth: 1

@@ -4,11 +4,11 @@ myst:
     "description lang=en": "How-to guides for Gateway API integrator charm"
 ---
 
-(how_to)=
+(how_to_index)=
 
-# docs/how-to
+# How-to
 
-Description TBD
+How-to guides for Gateway API integrator charm.
 
 ```{toctree}
 :maxdepth: 1

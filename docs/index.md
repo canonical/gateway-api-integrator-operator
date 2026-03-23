@@ -32,11 +32,8 @@ If there’s a particular area of documentation that you’d like to see that’
 
 ```{toctree}
 :hidden:
-_static/index.md
-_templates/index.md
-tutorial/index.md
-how-to/index.md
-reference/index.md
-explanation/index.md
-
+Tutorial <tutorial/index.md>
+Reference <reference/index.md>
+How-to <how-to/index.md>
+Explanation <explanation/index.md>
 ```

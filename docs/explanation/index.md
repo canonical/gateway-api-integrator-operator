@@ -6,7 +6,7 @@ myst:
 
 (explanation_index)=
 
-# docs/explanation
+# Explanation
 
 The pages in this section provide additional context and deeper understanding of foundational topics and concepts relevant to the Gateway API integrator charm.
 

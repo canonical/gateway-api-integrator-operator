@@ -106,7 +106,7 @@ html_context = {
     # TODO: If there's no such website,
     #       remove the {{ product_page }} link from the page header template
     #       (usually .sphinx/_templates/header.html; also, see README.rst).
-    "product_page": "documentation.ubuntu.com",
+    "product_page": "charmhub.io/gateway-api-integrator",
     # Product tag image; the orange part of your logo, shown in the page header
     #
     # TODO: To add a tag image, uncomment and update as needed.
@@ -132,7 +132,7 @@ html_context = {
     #
     # NOTE: If set, links for viewing the documentation source files
     #       and creating GitHub issues are added at the bottom of each page.
-    "github_url": "https://github.com/canonical/sphinx-docs-starter-pack",
+    "github_url": "https://github.com/canonical/gateway-api-integrator-operator",
     # Docs branch in the repo; used in links for viewing the source files
     #
     # TODO: To customise the branch, uncomment and update as needed.
@@ -149,7 +149,7 @@ html_context = {
     # TODO: To enable listing contributors on individual pages, set to True
     "display_contributors": False,
 
-    # Required for feedback button    
+    # Required for feedback button
     'github_issues': 'enabled',
 }
 
@@ -167,9 +167,9 @@ if os.getenv("OPENAPI", ""):
 # - https://launchpad.net/example
 # - https://git.launchpad.net/example
 #
-# html_theme_options = {
-# 'source_edit_link': 'https://github.com/canonical/sphinx-docs-starter-pack',
-# }
+html_theme_options = {
+"source_edit_link": "https://github.com/canonical/gateway-api-integrator-operator",
+}
 
 # Project slug; see https://meta.discourse.org/t/what-is-category-slug/87897
 #

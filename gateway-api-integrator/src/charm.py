@@ -139,8 +139,11 @@ class GatewayAPICharm(CharmBase):
         Returns:
             A list of CertificateRequestAttributes for the requested hostnames.
         """
-        if hostname := self._get_hostname():
-            return [CertificateRequestAttributes(common_name=hostname)]
+        hostname, additional_hostnames = self._get_hostnames()
+        if hostname:
+            return [
+                CertificateRequestAttributes(common_name=hostname, sans_dns=additional_hostnames)
+            ]
         return []
 
     @property
@@ -284,7 +287,7 @@ class GatewayAPICharm(CharmBase):
     def _update_dns_record_relation(
         self,
         resource_manager: GatewayResourceManager,
-        external_hostname: str,
+        external_hostname: str | None,
         gateway_resource_information: GatewayResourceInformation,
     ) -> None:
         """Update the DNS record relation with the external hostname and gateway address.
@@ -377,7 +380,7 @@ class GatewayAPICharm(CharmBase):
         secret = resource_manager.define_resource(resource_definition)
         resource_manager.cleanup_resources(exclude=[secret])
 
-    def _get_hostname(self) -> str | None:
+    def _get_hostnames(self) -> tuple[str | None, list[str]]:
         """Get the hostname from the charm's config or stored attribute.
 
         Returns:
@@ -385,12 +388,17 @@ class GatewayAPICharm(CharmBase):
         """
         try:
             gateway_route_requirer_data = self._gateway_route_provider.get_data()
-            return gateway_route_requirer_data.application_data.hostname
+            hostname = gateway_route_requirer_data.application_data.hostname
+            additional_hostnames = (
+                gateway_route_requirer_data.application_data.additional_hostnames
+            )
         except (
             GatewayRouteInvalidRelationDataError,
             GatewayRouteRelationMissingError,
         ):
-            return typing.cast(str | None, self.config.get("external-hostname"))
+            hostname = typing.cast(str | None, self.config.get("external-hostname"))
+            additional_hostnames = []
+        return hostname, additional_hostnames
 
     def _define_ingress_resources_and_publish_url(
         self,
@@ -417,7 +425,8 @@ class GatewayAPICharm(CharmBase):
 
         if config.proxy_mode == ProxyMode.GATEWAY_ROUTE:
             http_route_resource_information = HTTPRouteResourceInformation.from_gateway_route(
-                self._gateway_route_provider, config.hostname
+                self._gateway_route_provider,
+                config.hostname,
             )
 
         if http_route_resource_information is None:

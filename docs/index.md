@@ -39,4 +39,5 @@ Tutorial <tutorial/index.md>
 Reference <reference/index.md>
 How-to <how-to/index.md>
 Explanation <explanation/index.md>
+Changelog <../changelog.md>
 ```

@@ -1,4 +1,12 @@
-A [Juju](https://juju.is/) [charm](https://documentation.ubuntu.com/juju/3.6/reference/charm/) deploying and managing external access to HTTP/HTTPS services in a
+---
+myst:
+  html_meta:
+    "description lang=en": "A Juju charm for managing external access to HTTP/HTTPS in a Kubernetes cluster."
+---
+
+# Gateway API integrator operator
+
+A [Juju](https://juju.is/) {ref}`charm <juju:charm>` deploying and managing external access to HTTP/HTTPS services in a
 Kubernetes cluster using a Gateway and an HTTPRoute resource. This requires the Kubernetes
 cluster in question to have a [Gateway API controller](https://gateway-api.sigs.k8s.io/implementations/) already deployed into it.
 
@@ -18,22 +26,18 @@ Documentation is an important part of this project, and we take the same open-so
 
 If there’s a particular area of documentation that you’d like to see that’s missing, please [file a bug](https://github.com/canonical/gateway-api-integrator-operator/issues).
 
-# In this documentation
+## In this documentation
+
 |||
 |-----------------|----------------|
-| [Tutorial](tutorial)</br>  Hands-on introductions to Gateway API integrator ||
-| [Explanation](explanation) </br>  Concepts - discussion and clarification of key topics | [Reference](reference) </br>  Technical information - specifications, commands, architecture |
+| {ref}`Tutorial <tutorial_index>`</br>  Hands-on introductions to Gateway API integrator | {ref}`How-to  guides <how_to_index>`</br> Step-by-step guides covering key operations and common tasks |
+| {ref}`Explanation <explanation_index>` </br>  Concepts - discussion and clarification of key topics | {ref}`Reference <reference_index>` </br>  Technical information - specifications, commands, architecture |
 
-# Contents
-
-1. [Explanation](explanation)
-  1. [The charm's workflow](explanation/workflow.md)
-  1. [Security overview](explanation/security-overview.md)
-1. [Reference](reference)
-  1. [Actions](reference/actions.md)
-  1. [Charm architecture](reference/charm-architecture.md)
-1. [Tutorial](tutorial)
-  1. [Tutorial: Deploy the Gateway API integrator charm](tutorial/getting-started.md)
-  2. [Tutorial: Deploy the Gateway Route configurator charm](tutorial/using-gateway-route.md)
-1. [How-to](how-to)
-  1. [Upgrade](how-to/upgrade.md)
+```{toctree}
+:hidden:
+Tutorial <tutorial/index.md>
+Reference <reference/index.md>
+How-to <how-to/index.md>
+Explanation <explanation/index.md>
+Changelog <../changelog.md>
+```

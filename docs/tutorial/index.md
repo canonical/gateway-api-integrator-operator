@@ -8,7 +8,7 @@ myst:
 
 # Tutorial
 
-This section contains a step-by-step guide to help you start exploring how to deploy and configure Gateway API integrator charm.
+This section contains step-by-step guides to help you start exploring how to deploy and configure Gateway API integrator charm.
 
 ```{toctree}
 :maxdepth: 1

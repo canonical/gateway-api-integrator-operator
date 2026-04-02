@@ -64,7 +64,9 @@ The `src/charm.py` is the default entry point for a charm and has the
 base class from which all Charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops)
 (Python framework for developing charms).
 
-> See more in the Juju docs: {ref}`Charm <juju:charm>`
+```{note}
+See more in the Juju docs: {ref}`Charm <juju:charm>`
+```
 
 Take, for example, when a configuration is changed by using the CLI.
 

@@ -6,11 +6,11 @@ myst:
 
 (how_to_index)=
 
-# How-to
+# How-to guides
 
-How-to guides for Gateway API integrator charm.
+The following guides cover key processes and common tasks for managing and using the Gateway API integrator charm.
 
 ```{toctree}
 :maxdepth: 1
-upgrade.md
+Upgrade <upgrade.md>
 ```

@@ -9,6 +9,7 @@ name: gateway-route-configurator
 title: Gateway Route Configurator
 summary: Configurator for Gateway API routes.
 links:
+  documentation: https://documentation.ubuntu.com/gateway-api-integrator-charm/
   issues: https://github.com/canonical/gateway-api-integrator-operator/issues
   source: https://github.com/canonical/gateway-api-integrator-operator/tree/main/gateway-route-configurator
   contact: https://launchpad.net/~canonical-is-devops

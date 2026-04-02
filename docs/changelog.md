@@ -5,10 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
-## [Unreleased]
-
-Place any unreleased changes here, that are subject to release in coming versions :).
-
 ## 2026-03-23
 
 - Added support for additional hostnames.

@@ -10,4 +10,3 @@ jobs:
     with:
       enable-sphinx-python-dependency-build-checks: false
       python-version: '3.12'
-

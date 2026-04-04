@@ -18,7 +18,7 @@ run "basic_deploy" {
     gateway_route_configurator = {
       channel = "latest/edge"
       # renovate: depName="gateway-route-configurator"
-      revision = 13
+      revision = 14
     }
   }
 

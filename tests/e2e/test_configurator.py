@@ -70,12 +70,10 @@ def test_configurator(
     juju.config(
         gateway_route_configurator.name,
         {"additional-hostnames": ",".join(additional_hostnames)},
+        log=False,
     )
 
-    juju.deploy(
-        "flask-k8s",
-        channel="latest/edge",
-    )
+    juju.deploy("flask-k8s", channel="latest/edge", log=False)
 
     juju.integrate(
         f"{gateway_route_configurator.name}:ingress",
@@ -107,7 +105,7 @@ def test_configurator(
     assert get_url_from_relation(juju, "flask-k8s/0") == f"https://{external_hostname}/app1"
 
     # HTTP with hostname
-    juju.config(gateway_api_integrator.name, {"enforce-https": False})
+    juju.config(gateway_api_integrator.name, {"enforce-https": False}, log=False)
     juju.wait(
         lambda status: jubilant.all_active(
             status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
@@ -123,7 +121,6 @@ def test_configurator(
             headers={"Host": additional_hostname},
         )
         assert response.status_code == 200, (
-            f"Failed to route to {additional_hostname}: "
-            f"status={response.status_code}"
+            f"Failed to route to {additional_hostname}: " f"status={response.status_code}"
         )
         assert "Welcome to flask-k8s Charm" in response.text

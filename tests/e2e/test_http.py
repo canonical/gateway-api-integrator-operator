@@ -90,7 +90,7 @@ def test_http(
     assert response.status_code == 200
     assert "Welcome to flask-k8s Charm" in response.text
 
-    juju.config(gateway_route_configurator.name, reset="hostname")
+    juju.config(gateway_route_configurator.name, reset="hostname", log=False)
     juju.wait(
         lambda status: jubilant.all_active(
             status,

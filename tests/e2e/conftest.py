@@ -77,8 +77,9 @@ def gateway_api_integrator(
         config={
             "gateway-class": gateway_class,
         },
+        log=False,
     )
-    juju.deploy("self-signed-certificates")
+    juju.deploy("self-signed-certificates", log=False)
     juju.integrate(
         "gateway-api-integrator",
         "self-signed-certificates",
@@ -102,6 +103,7 @@ def gateway_route_configurator(
         base="ubuntu@24.04",
         trust=True,
         config={"hostname": external_hostname, "paths": "/app1,/app2"},
+        log=False,
     )
 
     return App("gateway-route-configurator")
@@ -124,6 +126,7 @@ def gateway_api_integrator_no_tls(
             "gateway-class": gateway_class,
             "enforce-https": False,
         },
+        log=False,
     )
     return application
 
@@ -134,9 +137,5 @@ def gateway_route_backend_application(
 ) -> str:
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     application = "flask"
-    juju.deploy(
-        "flask-k8s",
-        application,
-        channel="latest/edge",
-    )
+    juju.deploy("flask-k8s", application, channel="latest/edge", log=False)
     return application

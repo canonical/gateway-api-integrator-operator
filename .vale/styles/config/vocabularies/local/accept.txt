@@ -1,3 +1,4 @@
-HTTPRoute
+AI
 configurator
+HTTPRoute
 workloadless

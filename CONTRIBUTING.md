@@ -108,27 +108,11 @@ The code for this charm can be downloaded as follows:
 git clone https://github.com/canonical/gateway-api-integrator-operator
 ```
 
-Make sure to install [`uv`](https://docs.astral.sh/uv/). For example, you can install `uv` on Ubuntu using:
+You can create an environment for development with `tox`:
 
-```bash
-sudo snap install astral-uv --classic
-```
-
-For other systems, follow the [`uv` installation guide](https://docs.astral.sh/uv/getting-started/installation/).
-
-Then install `tox` with its extensions, and install a range of Python versions:
-
-```bash
-uv python install
-uv tool install tox --with tox-uv
-uv tool update-shell
-```
-
-To create a development environment, run:
-
-```bash
-uv sync --all-groups
-source .venv/bin/activate
+```shell
+tox devenv -e integration
+source venv/bin/activate
 ```
 
 ### Test
@@ -136,33 +120,13 @@ source .venv/bin/activate
 This project uses `tox` for managing test environments. There are some pre-configured environments
 that can be used for linting and formatting code when you're preparing contributions to the charm:
 
-* ``tox``: Executes all of the basic checks and tests (``lint``, ``unit``, ``static``, and ``coverage-report``).
-* ``tox -e fmt``: Runs formatting using ``ruff``.
+* ``tox``: Executes all of the basic checks and tests (``lint``, ``unit``, and ``format``).
+* ``tox -e format``: Updates your code according to linting rules.
 * ``tox -e lint``: Runs a range of static code analysis to check the code.
-* ``tox -e static``: Runs other checks such as ``bandit`` for security issues.
 * ``tox -e unit``: Runs the unit tests.
 * ``tox -e integration``: Runs the integration tests.
 
-### Build the rock and charm
-
-Use [Rockcraft](https://documentation.ubuntu.com/rockcraft/stable/) to create an
-OCI image for the Gateway API Integrator app, and then upload the image to a MicroK8s registry,
-which stores OCI archives so they can be downloaded and deployed.
-
-Enable the MicroK8s registry:
-
-```bash
-microk8s enable registry
-```
-
-The following commands pack the OCI image and push it into
-the MicroK8s registry:
-
-```bash
-cd <project_dir>
-rockcraft pack
-skopeo --insecure-policy copy --dest-tls-verify=false oci-archive:<rock-name>.rock docker://localhost:32000/<app-name>:latest
-```
+## Build the charm
 
 Build the charm in this git repository using:
 

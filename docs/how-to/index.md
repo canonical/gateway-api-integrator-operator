@@ -13,4 +13,5 @@ The following guides cover key processes and common tasks for managing and using
 ```{toctree}
 :maxdepth: 1
 Upgrade <upgrade.md>
+Contribute <contribute>
 ```

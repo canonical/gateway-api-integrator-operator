@@ -104,3 +104,26 @@ def test_gateway_route_no_gateway_route_relation(base_state: dict, ingress_relat
     state = testing.State(**base_state)
     state = ctx.run(ctx.on.config_changed(), state)
     assert state.unit_status == testing.BlockedStatus("Missing 'gateway-route' relation")
+
+
+def test_gateway_route_relation_created_without_endpoints(
+    base_state: dict, ingress_relation
+) -> None:
+    """
+    arrange: Charm is initialized with a gateway-route relation without endpoint data.
+    act: Run reconcile via the gateway-route-relation-created event.
+    assert: The charm goes into maintenance state instead of blocked with a missing relation msg.
+    """
+    ctx = testing.Context(GatewayRouteConfiguratorCharm)
+    gateway_route_relation_no_endpoints = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway_route",
+        remote_app_data={},
+    )
+    base_state["relations"] = [ingress_relation, gateway_route_relation_no_endpoints]
+    state = testing.State(**base_state)
+    state = ctx.run(
+        ctx.on.relation_created(gateway_route_relation_no_endpoints),
+        state,
+    )
+    assert state.unit_status == testing.MaintenanceStatus("Waiting for gateway route endpoints")

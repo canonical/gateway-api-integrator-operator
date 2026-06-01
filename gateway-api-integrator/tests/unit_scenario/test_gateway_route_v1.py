@@ -1,0 +1,380 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+"""Unit tests for gateway-route v1 interface library."""
+
+import json
+
+import pytest
+from ops import testing
+from ops.charm import CharmBase
+
+from charms.gateway_api_integrator.v1.gateway_route import (
+    GATEWAY_ROUTE_RELATION_NAME,
+    GatewayRouteInvalidRelationDataError,
+    GatewayRouteProvider,
+    GatewayRouteRequirer,
+    HttpsMode,
+    valid_fqdn,
+)
+
+
+# --- Minimal test charms ---
+
+
+class ProviderCharm(CharmBase):
+    """Minimal charm for testing the provider side."""
+
+    META = {
+        "name": "provider-charm",
+        "provides": {GATEWAY_ROUTE_RELATION_NAME: {"interface": "gateway-route"}},
+    }
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.gateway_route = GatewayRouteProvider(self)
+
+
+class RequirerCharm(CharmBase):
+    """Minimal charm for testing the requirer side."""
+
+    META = {
+        "name": "requirer-charm",
+        "requires": {GATEWAY_ROUTE_RELATION_NAME: {"interface": "gateway-route"}},
+    }
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.gateway_route = GatewayRouteRequirer(self)
+
+
+# --- valid_fqdn tests ---
+
+
+class TestValidFqdn:
+    """Tests for the valid_fqdn validator."""
+
+    def test_valid_domain(self):
+        """Test valid FQDN passes validation."""
+        assert valid_fqdn("example.com") == "example.com"
+
+    def test_valid_subdomain(self):
+        """Test valid subdomain passes validation."""
+        assert valid_fqdn("sub.example.com") == "sub.example.com"
+
+    def test_invalid_domain_raises(self):
+        """Test invalid domain raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid domain"):
+            valid_fqdn("not a domain!")
+
+    def test_tld_only_raises(self):
+        """Test TLD-only value raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid domain"):
+            valid_fqdn("com")
+
+
+# --- Provider tests ---
+
+
+class TestGatewayRouteProvider:
+    """Tests for GatewayRouteProvider."""
+
+    def test_get_requirer_data_valid(self):
+        """Test get_requirer_data returns validated data from a relation."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("app.example.com"),
+                "additional_hostnames": json.dumps(["alt.example.com"]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            data = mgr.charm.gateway_route.get_requirer_data(
+                mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            )
+            assert data.hostname == "app.example.com"
+            assert data.additional_hostnames == ["alt.example.com"]
+
+    def test_get_requirer_data_empty_returns_defaults(self):
+        """Test get_requirer_data returns defaults when databag is empty."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={},
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            data = mgr.charm.gateway_route.get_requirer_data(
+                mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            )
+            assert data.hostname is None
+            assert data.additional_hostnames == []
+
+    def test_get_requirer_data_invalid_hostname_raises(self):
+        """Test get_requirer_data raises on invalid hostname."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("not valid!"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            with pytest.raises(GatewayRouteInvalidRelationDataError):
+                mgr.charm.gateway_route.get_requirer_data(
+                    mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+                )
+
+    def test_get_all_requirer_data_multiple_relations(self):
+        """Test get_all_requirer_data returns data from all valid relations."""
+        rel_1 = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("one.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        rel_2 = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("two.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[rel_1, rel_2])
+
+        with ctx(ctx.on.relation_changed(rel_1), state) as mgr:
+            results = mgr.charm.gateway_route.get_all_requirer_data()
+            assert isinstance(results, dict)
+            assert len(results) == 2
+            for rel_id, data in results.items():
+                assert isinstance(rel_id, int)
+                assert data.hostname in {"one.example.com", "two.example.com"}
+                assert data.additional_hostnames == []
+
+    def test_get_all_requirer_data_skips_invalid(self):
+        """Test get_all_requirer_data skips relations with invalid data."""
+        valid_rel = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("valid.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        invalid_rel = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("not valid!"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[valid_rel, invalid_rel])
+
+        with ctx(ctx.on.relation_changed(valid_rel), state) as mgr:
+            results = mgr.charm.gateway_route.get_all_requirer_data()
+            assert len(results) == 1
+            assert list(results.values())[0].hostname == "valid.example.com"
+
+    def test_get_all_requirer_data_stores_valid_relations(self):
+        """Test get_all_requirer_data populates _valid_relations."""
+        rel = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("app.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[rel])
+
+        with ctx(ctx.on.relation_changed(rel), state) as mgr:
+            mgr.charm.gateway_route.get_all_requirer_data()
+            assert len(mgr.charm.gateway_route._valid_relations) == 1
+
+    def test_publish_provider_data(self):
+        """Test publish_provider_data writes to valid relations."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("app.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.get_all_requirer_data()
+            mgr.charm.gateway_route.publish_provider_data(
+                gateway_name="my-gateway",
+                model_name="my-model",
+                https_mode=HttpsMode.ENFORCED,
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            app_data = rel.data[mgr.charm.app]
+            assert json.loads(app_data["gateway_name"]) == "my-gateway"
+            assert json.loads(app_data["model_name"]) == "my-model"
+            assert json.loads(app_data["https_mode"]) == "enforced"
+
+    def test_publish_provider_data_skips_non_leader(self):
+        """Test publish_provider_data does nothing when not leader."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("app.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
+        state = testing.State(leader=False, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.publish_provider_data(
+                gateway_name="my-gateway",
+                model_name="my-model",
+                https_mode=HttpsMode.ENFORCED,
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            assert "gateway_name" not in rel.data[mgr.charm.app]
+
+
+# --- Requirer tests ---
+
+
+class TestGatewayRouteRequirer:
+    """Tests for GatewayRouteRequirer."""
+
+    def test_publish_requirer_data(self):
+        """Test publish_requirer_data writes hostname to relation."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+        )
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.publish_requirer_data(
+                hostname="myapp.example.com",
+                additional_hostnames=["alt.example.com"],
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            app_data = rel.data[mgr.charm.app]
+            assert json.loads(app_data["hostname"]) == "myapp.example.com"
+            assert json.loads(app_data["additional_hostnames"]) == ["alt.example.com"]
+
+    def test_publish_requirer_data_no_additional_hostnames(self):
+        """Test publish_requirer_data with no additional hostnames."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+        )
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.publish_requirer_data(
+                hostname="myapp.example.com",
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            app_data = rel.data[mgr.charm.app]
+            assert json.loads(app_data["hostname"]) == "myapp.example.com"
+            assert json.loads(app_data["additional_hostnames"]) == []
+
+    def test_publish_requirer_data_invalid_hostname_raises(self):
+        """Test publish_requirer_data raises on invalid hostname."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+        )
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            with pytest.raises(GatewayRouteInvalidRelationDataError):
+                mgr.charm.gateway_route.publish_requirer_data(
+                    hostname="not valid!",
+                )
+
+    def test_publish_requirer_data_skips_non_leader(self):
+        """Test publish_requirer_data does nothing when not leader."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+        )
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=False, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.publish_requirer_data(
+                hostname="myapp.example.com",
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            assert "hostname" not in rel.data[mgr.charm.app]
+
+    def test_get_provider_data_valid(self):
+        """Test get_provider_data returns validated data."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "gateway_name": json.dumps("my-gateway"),
+                "model_name": json.dumps("my-model"),
+                "https_mode": json.dumps("enforced"),
+            },
+        )
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            data = mgr.charm.gateway_route.get_provider_data()
+            assert data is not None
+            assert data.gateway_name == "my-gateway"
+            assert data.model_name == "my-model"
+            assert data.https_mode == HttpsMode.ENFORCED
+
+    def test_get_provider_data_no_relation(self):
+        """Test get_provider_data returns None without a relation."""
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=True, relations=[])
+
+        with ctx(ctx.on.start(), state) as mgr:
+            data = mgr.charm.gateway_route.get_provider_data()
+            assert data is None
+
+    def test_get_provider_data_invalid_https_mode_raises(self):
+        """Test get_provider_data raises on invalid https_mode."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "gateway_name": json.dumps("my-gateway"),
+                "model_name": json.dumps("my-model"),
+                "https_mode": json.dumps("invalid-mode"),
+            },
+        )
+        ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            with pytest.raises(GatewayRouteInvalidRelationDataError):
+                mgr.charm.gateway_route.get_provider_data()

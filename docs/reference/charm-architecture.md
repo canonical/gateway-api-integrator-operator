@@ -14,8 +14,8 @@ It relies on the `tls-certificates` relation to gather TLS certificates for
 the gateway's TLS configuration. Information about the backend application is
 collected from the `ingress` relation and combined with the TLS certificates
 from the `tls-certificates` relation. As a result, Kubernetes [`Service` resources](https://kubernetes.io/docs/concepts/services-networking/service/),
-[`Gateway` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway),
-[`HTTPRoute` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute),
+[`Gateway` resources](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway),
+[`HTTPRoute` resources](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#httproute),
 and [`Secret` resources](https://kubernetes.io/docs/concepts/configuration/secret/)
 will be created to facilitate ingress as expected by the ingress requirer.
 

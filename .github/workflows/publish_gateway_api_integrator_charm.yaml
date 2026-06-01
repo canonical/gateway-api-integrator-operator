@@ -4,13 +4,16 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - main
+    - main
     paths:
-      - 'gateway-api-integrator/**'
+    - 'gateway-api-integrator/**'
 
 jobs:
   publish-to-edge:
     uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
+    permissions:
+      actions: read
+      contents: write
     secrets: inherit
     with:
       working-directory: "./gateway-api-integrator"

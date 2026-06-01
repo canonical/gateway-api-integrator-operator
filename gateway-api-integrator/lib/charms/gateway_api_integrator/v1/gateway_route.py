@@ -51,7 +51,7 @@ class IngressConfiguratorCharm(CharmBase):
     def _on_gateway_route_changed(self, event):
         provider_data = self.gateway_route.get_provider_data()
         if provider_data:
-            # Use provider_data.gateway_name, provider_data.model_name, provider_data.https_mode
+            # Use provider_data.gateway_name, provider_data.gateway_model, provider_data.https_mode
             ...
 ```
 
@@ -85,15 +85,13 @@ class GatewayAPIIntegratorCharm(CharmBase):
         )
 
     def _on_gateway_route_changed(self, event):
-        for relation in self.model.relations[GATEWAY_ROUTE_RELATION_NAME]:
-            requirer_data = self.gateway_route.get_requirer_data(relation)
-            if requirer_data:
-                # Use requirer_data.hostname, requirer_data.additional_hostnames
-                ...
-        # Publish provider data to all relations
+        requirer_data = self.gateway_route.get_requirer_data()
+        # requirer_data is a dict[int, GatewayRouteRequirerAppData]
+        # Use data.hostname, data.additional_hostnames
+        # Publish provider data to all valid relations
         self.gateway_route.publish_provider_data(
             gateway_name=self.app.name,
-            model_name=self.model.name,
+            gateway_model=self.model.name,
             https_mode=HttpsMode.ENFORCED,
         )
 ```
@@ -191,12 +189,12 @@ class GatewayRouteProviderAppData:
 
     Attributes:
         gateway_name: The name of the Gateway resource managed by the provider.
-        model_name: The Juju model (K8s namespace) where the Gateway resource lives.
+        gateway_model: The Juju model (K8s namespace) where the Gateway resource lives.
         https_mode: The HTTPS mode indicating how the provider handles TLS.
     """
 
     gateway_name: str = Field(description="The name of the Gateway resource.")
-    model_name: str = Field(
+    gateway_model: str = Field(
         description="The Juju model (K8s namespace) where the Gateway resource lives."
     )
     https_mode: HttpsMode = Field(
@@ -235,26 +233,7 @@ class GatewayRouteProvider(Object):
         """All relations for this endpoint."""
         return self.charm.model.relations.get(self.relation_name, [])
 
-    def get_requirer_data(self, relation: Relation) -> GatewayRouteRequirerAppData:
-        """Fetch and validate requirer application data from a relation.
-
-        Args:
-            relation: The relation to read from.
-
-        Returns:
-            Validated requirer data.
-
-        Raises:
-            GatewayRouteInvalidRelationDataError: When data validation fails.
-        """
-        try:
-            return relation.load(GatewayRouteRequirerAppData, relation.app)
-        except ValidationError as exc:
-            raise GatewayRouteInvalidRelationDataError(
-                f"gateway-route data validation failed for relation {relation.id}"
-            ) from exc
-
-    def get_all_requirer_data(self) -> dict[int, GatewayRouteRequirerAppData]:
+    def get_requirer_data(self) -> dict[int, GatewayRouteRequirerAppData]:
         """Fetch requirer data from all relations.
 
         Also stores the valid relations for use by publish_provider_data.
@@ -266,8 +245,8 @@ class GatewayRouteProvider(Object):
         self._valid_relations = []
         for relation in self.relations:
             try:
-                data = self.get_requirer_data(relation)
-            except GatewayRouteInvalidRelationDataError:
+                data = relation.load(GatewayRouteRequirerAppData, relation.app)
+            except ValidationError:
                 logger.error(
                     "Skipping relation %s: invalid data", relation.id
                 )
@@ -279,16 +258,16 @@ class GatewayRouteProvider(Object):
     def publish_provider_data(
         self,
         gateway_name: str,
-        model_name: str,
+        gateway_model: str,
         https_mode: HttpsMode,
     ) -> None:
         """Publish gateway information to requirers with valid data.
 
-        Only publishes to relations previously validated by get_all_requirer_data.
+        Only publishes to relations previously validated by get_requirer_data.
 
         Args:
             gateway_name: The name of the Gateway resource.
-            model_name: The Juju model (K8s namespace) of the Gateway resource.
+            gateway_model: The Juju model (K8s namespace) of the Gateway resource.
             https_mode: The HTTPS mode for the gateway.
 
         Raises:
@@ -300,8 +279,13 @@ class GatewayRouteProvider(Object):
         failed_relations: list[int] = []
         for relation in self._valid_relations:
             try:
-                self._publish_to_relation(relation, gateway_name, model_name, https_mode)
-            except GatewayRouteInvalidRelationDataError:
+                app_data = GatewayRouteProviderAppData(
+                    gateway_name=gateway_name,
+                    gateway_model=gateway_model,
+                    https_mode=https_mode,
+                )
+                relation.save(app_data, self.charm.app)
+            except (ValidationError, RelationDataTypeError):
                 logger.error(
                     "Failed to publish provider data to relation %s", relation.id
                 )
@@ -311,36 +295,6 @@ class GatewayRouteProvider(Object):
             raise GatewayRouteInvalidRelationDataError(
                 f"Failed to publish provider data to relations: {failed_relations}"
             )
-
-    def _publish_to_relation(
-        self,
-        relation: Relation,
-        gateway_name: str,
-        model_name: str,
-        https_mode: HttpsMode,
-    ) -> None:
-        """Publish provider data to a specific relation.
-
-        Args:
-            relation: The relation to publish to.
-            gateway_name: The name of the Gateway resource.
-            model_name: The Juju model (K8s namespace) of the Gateway resource.
-            https_mode: The HTTPS mode for the gateway.
-
-        Raises:
-            GatewayRouteInvalidRelationDataError: When data fails to save.
-        """
-        try:
-            app_data = GatewayRouteProviderAppData(
-                gateway_name=gateway_name,
-                model_name=model_name,
-                https_mode=https_mode,
-            )
-            relation.save(app_data, self.charm.app)
-        except (ValidationError, RelationDataTypeError) as exc:
-            raise GatewayRouteInvalidRelationDataError(
-                "Failed to publish provider relation data."
-            ) from exc
 
 
 # --- Requirer ---
@@ -387,8 +341,7 @@ class GatewayRouteRequirer(Object):
         Raises:
             GatewayRouteInvalidRelationDataError: When data validation fails.
         """
-        relation = self.relation
-        if not relation or not self.charm.unit.is_leader():
+        if (relation := self.relation) and (not self.charm.unit.is_leader()):
             return
 
         try:
@@ -411,8 +364,7 @@ class GatewayRouteRequirer(Object):
         Raises:
             GatewayRouteInvalidRelationDataError: When data validation fails.
         """
-        relation = self.relation
-        if not relation or not relation.app:
+        if not (relation := self.relation) or not relation.app:
             return None
 
         try:

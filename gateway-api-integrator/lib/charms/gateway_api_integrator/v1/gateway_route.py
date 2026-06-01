@@ -267,12 +267,13 @@ class GatewayRouteProvider(Object):
         for relation in self.relations:
             try:
                 data = self.get_requirer_data(relation)
-                results[relation.id] = data
-                self._valid_relations.append(relation)
             except GatewayRouteInvalidRelationDataError:
                 logger.error(
                     "Skipping relation %s: invalid data", relation.id
                 )
+                continue
+            results[relation.id] = data
+            self._valid_relations.append(relation)
         return results
 
     def publish_provider_data(
@@ -291,13 +292,25 @@ class GatewayRouteProvider(Object):
             https_mode: The HTTPS mode for the gateway.
 
         Raises:
-            GatewayRouteInvalidRelationDataError: When data validation fails.
+            GatewayRouteInvalidRelationDataError: When publishing fails for any relation.
         """
         if not self.charm.unit.is_leader():
             return
 
+        failed_relations: list[int] = []
         for relation in self._valid_relations:
-            self._publish_to_relation(relation, gateway_name, model_name, https_mode)
+            try:
+                self._publish_to_relation(relation, gateway_name, model_name, https_mode)
+            except GatewayRouteInvalidRelationDataError:
+                logger.error(
+                    "Failed to publish provider data to relation %s", relation.id
+                )
+                failed_relations.append(relation.id)
+
+        if failed_relations:
+            raise GatewayRouteInvalidRelationDataError(
+                f"Failed to publish provider data to relations: {failed_relations}"
+            )
 
     def _publish_to_relation(
         self,
@@ -325,7 +338,6 @@ class GatewayRouteProvider(Object):
             )
             relation.save(app_data, self.charm.app)
         except (ValidationError, RelationDataTypeError) as exc:
-            logger.error("Failed to publish provider data to relation %s.", relation.id)
             raise GatewayRouteInvalidRelationDataError(
                 "Failed to publish provider relation data."
             ) from exc
@@ -386,7 +398,6 @@ class GatewayRouteRequirer(Object):
             )
             relation.save(app_data, self.charm.app)
         except (ValidationError, RelationDataTypeError) as exc:
-            logger.error("Failed to publish requirer data.")
             raise GatewayRouteInvalidRelationDataError(
                 "Failed to publish requirer relation data."
             ) from exc

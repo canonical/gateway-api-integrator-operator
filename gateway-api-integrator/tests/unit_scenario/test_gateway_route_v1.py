@@ -4,6 +4,7 @@
 """Unit tests for gateway-route v1 interface library."""
 
 import json
+from typing import ClassVar
 
 import pytest
 from charms.gateway_api_integrator.v1.gateway_route import (
@@ -23,7 +24,7 @@ from ops.charm import CharmBase
 class ProviderCharm(CharmBase):
     """Minimal charm for testing the provider side."""
 
-    META = {
+    META: ClassVar[dict] = {
         "name": "provider-charm",
         "provides": {GATEWAY_ROUTE_RELATION_NAME: {"interface": "gateway-route"}},
     }
@@ -36,7 +37,7 @@ class ProviderCharm(CharmBase):
 class RequirerCharm(CharmBase):
     """Minimal charm for testing the requirer side."""
 
-    META = {
+    META: ClassVar[dict] = {
         "name": "requirer-charm",
         "requires": {GATEWAY_ROUTE_RELATION_NAME: {"interface": "gateway-route"}},
     }
@@ -127,11 +128,13 @@ class TestGatewayRouteProvider:
         ctx = testing.Context(ProviderCharm, meta=ProviderCharm.META)
         state = testing.State(leader=True, relations=[relation])
 
-        with ctx(ctx.on.relation_changed(relation), state) as mgr:
-            with pytest.raises(GatewayRouteInvalidRelationDataError):
-                mgr.charm.gateway_route.get_requirer_data(
-                    mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
-                )
+        with (
+            ctx(ctx.on.relation_changed(relation), state) as mgr,
+            pytest.raises(GatewayRouteInvalidRelationDataError),
+        ):
+            mgr.charm.gateway_route.get_requirer_data(
+                mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            )
 
     def test_get_all_requirer_data_multiple_relations(self):
         """Test get_all_requirer_data returns data from all valid relations."""
@@ -187,7 +190,7 @@ class TestGatewayRouteProvider:
         with ctx(ctx.on.relation_changed(valid_rel), state) as mgr:
             results = mgr.charm.gateway_route.get_all_requirer_data()
             assert len(results) == 1
-            assert list(results.values())[0].hostname == "valid.example.com"
+            assert next(iter(results.values())).hostname == "valid.example.com"
 
     def test_get_all_requirer_data_stores_valid_relations(self):
         """Test get_all_requirer_data populates _valid_relations."""
@@ -307,11 +310,13 @@ class TestGatewayRouteRequirer:
         ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
         state = testing.State(leader=True, relations=[relation])
 
-        with ctx(ctx.on.relation_changed(relation), state) as mgr:
-            with pytest.raises(GatewayRouteInvalidRelationDataError):
-                mgr.charm.gateway_route.publish_requirer_data(
-                    hostname="not valid!",
-                )
+        with (
+            ctx(ctx.on.relation_changed(relation), state) as mgr,
+            pytest.raises(GatewayRouteInvalidRelationDataError),
+        ):
+            mgr.charm.gateway_route.publish_requirer_data(
+                hostname="not valid!",
+            )
 
     def test_publish_requirer_data_skips_non_leader(self):
         """Test publish_requirer_data does nothing when not leader."""
@@ -373,6 +378,8 @@ class TestGatewayRouteRequirer:
         ctx = testing.Context(RequirerCharm, meta=RequirerCharm.META)
         state = testing.State(leader=True, relations=[relation])
 
-        with ctx(ctx.on.relation_changed(relation), state) as mgr:
-            with pytest.raises(GatewayRouteInvalidRelationDataError):
-                mgr.charm.gateway_route.get_provider_data()
+        with (
+            ctx(ctx.on.relation_changed(relation), state) as mgr,
+            pytest.raises(GatewayRouteInvalidRelationDataError),
+        ):
+            mgr.charm.gateway_route.get_provider_data()

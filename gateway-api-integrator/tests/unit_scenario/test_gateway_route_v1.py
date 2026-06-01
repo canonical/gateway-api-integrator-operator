@@ -6,9 +6,6 @@
 import json
 
 import pytest
-from ops import testing
-from ops.charm import CharmBase
-
 from charms.gateway_api_integrator.v1.gateway_route import (
     GATEWAY_ROUTE_RELATION_NAME,
     GatewayRouteInvalidRelationDataError,
@@ -17,7 +14,8 @@ from charms.gateway_api_integrator.v1.gateway_route import (
     HttpsMode,
     valid_fqdn,
 )
-
+from ops import testing
+from ops.charm import CharmBase
 
 # --- Minimal test charms ---
 

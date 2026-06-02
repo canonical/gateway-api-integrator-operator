@@ -18,6 +18,7 @@ jobs:
     permissions:
       actions: read
       contents: write
+      pull-requests: write
     with:
       self-hosted-runner: true
       self-hosted-runner-image: "noble"

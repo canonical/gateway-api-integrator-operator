@@ -14,8 +14,8 @@ It relies on the `tls-certificates` relation to gather TLS certificates for
 the gateway's TLS configuration. Information about the backend application is
 collected from the `ingress` relation and combined with the TLS certificates
 from the `tls-certificates` relation. As a result, Kubernetes [`Service` resources](https://kubernetes.io/docs/concepts/services-networking/service/),
-[`Gateway` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#gateway),
-[`HTTPRoute` resources](https://gateway-api.sigs.k8s.io/concepts/api-overview/#httproute),
+[`Gateway` resources](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway),
+[`HTTPRoute` resources](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#httproute),
 and [`Secret` resources](https://kubernetes.io/docs/concepts/configuration/secret/)
 will be created to facilitate ingress as expected by the ingress requirer.
 
@@ -61,7 +61,7 @@ For this charm, the following Juju events are observed:
 
 The `src/charm.py` is the default entry point for a charm and has the
 `GatewayAPICharm` Python class which inherits from CharmBase. CharmBase is the
-base class from which all Charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops)
+base class from which all Charms are formed, defined by [Ops](https://documentation.ubuntu.com/ops/latest/)
 (Python framework for developing charms).
 
 ```{note}

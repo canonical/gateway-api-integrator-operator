@@ -6,7 +6,7 @@ myst:
 
 # Gateway API integrator operator
 
-A [Juju](https://juju.is/) {ref}`charm <juju:charm>` deploying and managing external access to HTTP/HTTPS services in a
+A [Juju](https://canonical.com/juju) {ref}`charm <juju:charm>` deploying and managing external access to HTTP/HTTPS services in a
 Kubernetes cluster using a Gateway and an HTTPRoute resource. This requires the Kubernetes
 cluster in question to have a [Gateway API controller](https://gateway-api.sigs.k8s.io/implementations/) already deployed into it.
 

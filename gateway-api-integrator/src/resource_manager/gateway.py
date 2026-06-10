@@ -38,16 +38,14 @@ class GatewayResourceDefinition(ResourceDefinition):
         - TLSInformation
 
     Attributes:
-        gateway_name: The gateway resource's name
-        hostname: The configured gateway hostname.
+        gateway_name: The gateway resource's name.
         gateway_class_name: The configured gateway class.
-        secret_resource_name_prefix: Prefix of the secret resource name.
-        require_https_listener: Whether the gateway resource should have an HTTPS listener.
+        tls_secret_names: List of TLS secret names for HTTPS listeners.
     """
 
     gateway_name: str
     gateway_class_name: str
-    tls_secret_name: str | None
+    tls_secret_names: list[str]
 
     def __init__(
         self,
@@ -62,18 +60,19 @@ class GatewayResourceDefinition(ResourceDefinition):
             charm_config: CharmConfig state component.
             tls_information: TLSInformation state component.
         """
-        tls_secret_name = None
+        tls_secret_names: list[str] = []
         if tls_information is not None:
-            tls_secret_name = (
-                f"{tls_information.secret_resource_name_prefix}-{tls_information.hostname}"
-            )
+            for hostname in tls_information.hostnames:
+                tls_secret_names.append(
+                    f"{tls_information.secret_resource_name_prefix}-{hostname}"
+                )
         super().__init__(gateway_resource_information, charm_config)
-        self.tls_secret_name = tls_secret_name
+        self.tls_secret_names = tls_secret_names
 
     @property
     def https_listener_required(self) -> bool:
         """Whether TLS is enabled based on the presence of TLS information."""
-        return self.tls_secret_name is not None
+        return len(self.tls_secret_names) > 0
 
     @property
     def gateway_resource_http_listener_spec(self) -> dict:
@@ -87,16 +86,22 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     @property
     def gateway_resource_spec(self) -> dict:
-        """Return the TLS configuration for the HTTPS listener."""
+        """Return the gateway resource spec with HTTP and HTTPS listeners."""
         listeners = [self.gateway_resource_http_listener_spec]
-        if self.tls_secret_name is not None:
+        if self.tls_secret_names:
+            # Use the first TLS secret for the single HTTPS listener
             listeners.append(
                 {
                     "protocol": "HTTPS",
                     "port": 443,
                     "name": f"{self.gateway_name}-https-listener",
                     "allowedRoutes": {"namespaces": {"from": "All"}},
-                    "tls": {"certificateRefs": [{"kind": "Secret", "name": self.tls_secret_name}]},
+                    "tls": {
+                        "certificateRefs": [
+                            {"kind": "Secret", "name": secret_name}
+                            for secret_name in self.tls_secret_names
+                        ]
+                    },
                 }
             )
         return {
@@ -209,7 +214,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name: name of the gateway resource.
 
         Returns:
-            Optional[str]: The addresses assigned to the gateway object, or none.
+            Optional[str]: The first address assigned to the gateway object, or none.
         """
         deadline = time.time() + 60
         delay = 5
@@ -225,7 +230,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     for addr in gateway.status["addresses"]  # type: ignore
                 ]
                 if gateway_addresses:
-                    gateway_address = ",".join(gateway_addresses)
+                    gateway_address = gateway_addresses[0]
             except (AttributeError, TypeError, KeyError):
                 logger.exception("Error retrieving the gateway address.")
             if gateway_address:

@@ -3,10 +3,16 @@
 
 """Unit tests for the charm."""
 
+import ops
 import pytest
 from ops import testing
 
 from charm import GatewayAPICharm
+from state.config import CharmConfig
+
+from .conftest import GATEWAY_CLASS_CONFIG
+
+ORIGINAL_FROM_CHARM_AND_PROVIDERS = CharmConfig.from_charm_and_providers
 
 
 def test_dns_record(
@@ -81,14 +87,30 @@ def test_dns_record_no_gateway_address(
 
 def test_gateway_route(
     base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
     gateway_route_relation: testing.Relation,
     certificates_relation: testing.Relation,
 ) -> None:
     """
     arrange: Charm is initialized with a mock state.
-    act: Run reconcile via the start event.
-    assert: The charm updates the dns-record relation with the expected DNS entries.
+    act: Run reconcile via the relation_changed event.
+    assert: The charm updates the dns-record relation with the expected DNS entries
+        and publishes provider data to gateway-route relation.
     """
+    # base_state fixture mocks CharmConfig derivation with ProxyMode.INACTIVE.
+    # Restore the real config path (and gateway class lookup) so this test can
+    # exercise real gateway-route mode behavior from relations/config.
+    monkeypatch.setattr(
+        "charm.CharmConfig.from_charm_and_providers",
+        classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
+    )
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm.available_gateway_classes",
+        lambda self: [GATEWAY_CLASS_CONFIG],
+    )
+
+    # external-hostname is ingress-only; clear it for gateway-route mode.
+    base_state["config"]["external-hostname"] = ""
     ctx = testing.Context(GatewayAPICharm)
     base_state["relations"].append(gateway_route_relation)
     base_state["relations"].append(certificates_relation)
@@ -109,3 +131,67 @@ def test_gateway_route(
     # Find the dns-record relation and check its dns_entries
     dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
     assert dns_relation.local_app_data["dns_entries"] == mock_dns_entry_str
+
+    # Verify provider data is published to gateway-route relation
+    gw_route_rel = next(rel for rel in state.relations if rel.endpoint == "gateway-route")
+    assert "gateway_name" in gw_route_rel.local_app_data
+    assert "gateway_model" in gw_route_rel.local_app_data
+    assert "https_mode" in gw_route_rel.local_app_data
+
+
+def test_blocked_when_relation_integrated_without_hostname(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
+    """Charm should block when ingress is integrated but no hostname can be derived."""
+    monkeypatch.setattr(
+        "charm.CharmConfig.from_charm_and_providers",
+        classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
+    )
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm.available_gateway_classes",
+        lambda self: [GATEWAY_CLASS_CONFIG],
+    )
+
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["config"]["external-hostname"] = ""
+    base_state["relations"].append(gateway_relation)
+    base_state["relations"].append(certificates_relation)
+    state = testing.State(**base_state)
+    state = ctx.run(ctx.on.start(), state)
+
+    assert state.unit_status.name == ops.BlockedStatus.name
+    assert "external-hostname must be set" in state.unit_status.message
+
+
+def test_gateway_route_with_invalid_data_not_blocked(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_relation: testing.Relation,
+) -> None:
+    """Charm should not block when all gateway-route relations provide invalid data."""
+    monkeypatch.setattr(
+        "charm.CharmConfig.from_charm_and_providers",
+        classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
+    )
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm.available_gateway_classes",
+        lambda self: [GATEWAY_CLASS_CONFIG],
+    )
+
+    invalid_gateway_route_relation = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway-route",
+        remote_app_data={},
+    )
+
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["config"]["external-hostname"] = ""
+    base_state["relations"].append(invalid_gateway_route_relation)
+    base_state["relations"].append(certificates_relation)
+    state = testing.State(**base_state)
+    state = ctx.run(ctx.on.start(), state)
+
+    assert state.unit_status.name != ops.BlockedStatus.name

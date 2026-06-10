@@ -66,9 +66,10 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
         MagicMock(
             return_value=CharmConfig(
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
-                hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
+                hostnames={TEST_EXTERNAL_HOSTNAME_CONFIG},
                 enforce_https=True,
                 proxy_mode=ProxyMode.INACTIVE,
+                requires_ip_certificate=False,
             )
         ),
     )
@@ -81,6 +82,8 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "charm.GatewayResourceManager.gateway_address", lambda self, name: "1.2.3.4"
     )
+    monkeypatch.setattr("charm.HTTPRouteResourceManager.cleanup_resources", MagicMock())
+    monkeypatch.setattr("charm.ServiceResourceManager.cleanup_resources", MagicMock())
 
     dns_relation = testing.Relation(
         endpoint="dns-record",
@@ -89,6 +92,10 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
 
     yield {
         "leader": True,
+        "config": {
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
         "relations": [
             dns_relation,
         ],
@@ -127,15 +134,12 @@ def gateway_relation_fixture():
 
 @pytest.fixture(scope="function", name="gateway_route_relation")
 def gateway_route_relation_fixture():
-    """Return a mock gateway-route relation data."""
+    """Return a mock gateway-route v1 relation data."""
     return testing.Relation(
         endpoint="gateway-route",
-        interface="gateway_route",
+        interface="gateway-route",
         remote_app_data={
-            "model": '"testing-model"',
-            "name": '"testing-gateway-route-app"',
-            "port": "8080",
-            "hostname": '"example.com"',
-            "paths": "[]",
+            "hostname": json.dumps("example.com"),
+            "additional_hostnames": json.dumps([]),
         },
     )

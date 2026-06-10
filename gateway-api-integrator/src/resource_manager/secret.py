@@ -43,11 +43,16 @@ class SecretResourceDefinition(ResourceDefinition):
     private_key: str
 
     @classmethod
-    def from_tls_information(cls, tls_information: TLSInformation) -> "SecretResourceDefinition":
+    def from_tls_information(
+        cls,
+        tls_information: TLSInformation,
+        hostname: str,
+    ) -> "SecretResourceDefinition":
         """Get certificate information for a given hostname.
 
         Args:
             tls_information: TLSInformation state component.
+            hostname: The hostname key to read certificate data for.
 
         Raises:
             CertificateDataNotReadyError: When the certificate data is not ready.
@@ -55,7 +60,6 @@ class SecretResourceDefinition(ResourceDefinition):
         Returns:
             SecretResourceDefinition: Information about the certificate.
         """
-        hostname = tls_information.hostname
         return SecretResourceDefinition(
             hostname=hostname,
             secret_resource_name_prefix=tls_information.secret_resource_name_prefix,

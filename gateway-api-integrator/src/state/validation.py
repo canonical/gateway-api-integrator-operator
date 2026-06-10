@@ -14,7 +14,6 @@ import client
 from resource_manager.resource_manager import InvalidResourceError
 from state.config import IngressGatewayRouteConflictError
 from state.exception import CharmStateValidationBaseError
-from state.http_route import IngressIntegrationMissingError
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,6 @@ def validate_config_and_integration(
                 return method(instance, *args)
             except (
                 CharmStateValidationBaseError,
-                IngressIntegrationMissingError,
                 IngressGatewayRouteConflictError,
             ) as exc:
                 if defer:

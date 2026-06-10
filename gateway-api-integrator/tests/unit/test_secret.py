@@ -47,11 +47,14 @@ def test_secret_gen_resource(
     )
     tls_information = TLSInformation.from_charm(
         harness.charm,
-        charm_config.hostname,
+        charm_config,
         harness.charm.certificates,
     )
     secret_resource = secret_resource_manager._gen_resource(
-        SecretResourceDefinition.from_tls_information(tls_information)
+        SecretResourceDefinition.from_tls_information(
+            tls_information,
+            TEST_EXTERNAL_HOSTNAME_CONFIG,
+        )
     )
 
     assert (

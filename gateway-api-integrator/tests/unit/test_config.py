@@ -16,11 +16,13 @@ def test_valid_config():
     assert: All fields are correctly set.
     """
     config = CharmConfig(
-        hostname="gateway.internal",
+        hostnames={"gateway.internal"},
         gateway_class_name="cilium",
         enforce_https=True,
         proxy_mode=ProxyMode.INGRESS,
+        requires_ip_certificate=False,
     )
+    assert config.hostnames == {"gateway.internal"}
     assert config.hostname == "gateway.internal"
     assert config.gateway_class_name == "cilium"
     assert config.enforce_https is True
@@ -34,14 +36,16 @@ def test_valid_config_hostname_none():
     assert: hostname is None and other fields are correctly set.
     """
     config = CharmConfig(
-        hostname=None,
+        hostnames=set(),
         gateway_class_name="cilium",
         enforce_https=False,
-        proxy_mode=ProxyMode.INACTIVE,
+        proxy_mode=ProxyMode.INGRESS,
+        requires_ip_certificate=False,
     )
+    assert config.hostnames == set()
     assert config.hostname is None
     assert config.enforce_https is False
-    assert config.proxy_mode == ProxyMode.INACTIVE
+    assert config.proxy_mode == ProxyMode.INGRESS
 
 
 def test_valid_config_enforce_https_false():
@@ -51,13 +55,41 @@ def test_valid_config_enforce_https_false():
     assert: enforce_https is correctly set to False.
     """
     config = CharmConfig(
-        hostname="example.com",
+        hostnames={"example.com"},
         gateway_class_name="cilium",
         enforce_https=False,
         proxy_mode=ProxyMode.GATEWAY_ROUTE,
+        requires_ip_certificate=False,
     )
     assert config.enforce_https is False
     assert config.proxy_mode == ProxyMode.GATEWAY_ROUTE
+
+
+def test_hostname_property_raises_for_multiple_hostnames():
+    """Hostname property should fail when multiple hostnames are configured."""
+    config = CharmConfig(
+        hostnames={"a.example.com", "b.example.com"},
+        gateway_class_name="cilium",
+        enforce_https=False,
+        proxy_mode=ProxyMode.GATEWAY_ROUTE,
+        requires_ip_certificate=False,
+    )
+
+    with pytest.raises(ValueError):
+        _ = config.hostname
+
+
+def test_hostname_property_raises_outside_ingress_mode():
+    """Hostname property should fail when proxy mode is not ingress."""
+    config = CharmConfig(
+        hostnames={"example.com"},
+        gateway_class_name="cilium",
+        enforce_https=False,
+        proxy_mode=ProxyMode.GATEWAY_ROUTE,
+        requires_ip_certificate=False,
+    )
+    with pytest.raises(ValueError):
+        _ = config.hostname
 
 
 @pytest.mark.parametrize(
@@ -75,10 +107,11 @@ def test_valid_proxy_modes(proxy_mode: ProxyMode):
     assert: proxy_mode is correctly set.
     """
     config = CharmConfig(
-        hostname="gateway.internal",
+        hostnames={"gateway.internal"},
         gateway_class_name="cilium",
         enforce_https=True,
         proxy_mode=proxy_mode,
+        requires_ip_certificate=False,
     )
     assert config.proxy_mode == proxy_mode
 
@@ -91,10 +124,11 @@ def test_invalid_gateway_class_name_empty():
     """
     with pytest.raises(ValidationError):
         CharmConfig(
-            hostname="gateway.internal",
+            hostnames={"gateway.internal"},
             gateway_class_name="",
             enforce_https=True,
             proxy_mode=ProxyMode.INGRESS,
+            requires_ip_certificate=False,
         )
 
 
@@ -106,10 +140,11 @@ def test_invalid_hostname():
     """
     with pytest.raises(ValidationError):
         CharmConfig(
-            hostname="not a valid hostname!",
+            hostnames={"not a valid hostname!"},
             gateway_class_name="cilium",
             enforce_https=True,
             proxy_mode=ProxyMode.INGRESS,
+            requires_ip_certificate=False,
         )
 
 
@@ -128,9 +163,10 @@ def test_valid_hostnames(hostname: str):
     assert: hostname is correctly set without validation errors.
     """
     config = CharmConfig(
-        hostname=hostname,
+        hostnames={hostname},
         gateway_class_name="cilium",
         enforce_https=True,
         proxy_mode=ProxyMode.INGRESS,
+        requires_ip_certificate=False,
     )
-    assert config.hostname == hostname
+    assert config.hostnames == {hostname}

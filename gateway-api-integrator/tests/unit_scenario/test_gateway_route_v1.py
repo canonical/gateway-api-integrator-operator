@@ -102,8 +102,8 @@ class TestGatewayRouteProvider:
             assert data.hostname == "app.example.com"
             assert data.additional_hostnames == ["alt.example.com"]
 
-    def test_get_requirer_data_empty_returns_defaults(self, ctx):
-        """Test get_requirer_data returns defaults when databag is empty."""
+    def test_get_requirer_data_empty_is_valid_no_hostname(self, ctx):
+        """Test get_requirer_data accepts a relation with no hostname as valid."""
         relation = testing.Relation(
             endpoint=GATEWAY_ROUTE_RELATION_NAME,
             interface="gateway-route",
@@ -117,6 +117,7 @@ class TestGatewayRouteProvider:
             data = next(iter(results.values()))
             assert data.hostname is None
             assert data.additional_hostnames == []
+            assert len(mgr.charm.gateway_route._valid_relations) == 1
 
     def test_get_requirer_data_multiple_relations(self, ctx):
         """Test get_requirer_data returns data from all valid relations."""
@@ -206,12 +207,14 @@ class TestGatewayRouteProvider:
                 gateway_name="my-gateway",
                 gateway_model="my-model",
                 https_mode=HttpsMode.ENFORCED,
+                gateway_address="10.0.0.1",
             )
             rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
             app_data = rel.data[mgr.charm.app]
             assert json.loads(app_data["gateway_name"]) == "my-gateway"
             assert json.loads(app_data["gateway_model"]) == "my-model"
             assert json.loads(app_data["https_mode"]) == "enforced"
+            assert json.loads(app_data["gateway_address"]) == "10.0.0.1"
 
     def test_publish_provider_data_skips_non_leader(self, ctx):
         """Test publish_provider_data does nothing when not leader."""

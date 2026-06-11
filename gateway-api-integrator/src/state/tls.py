@@ -102,7 +102,7 @@ class TLSInformation:
         # In the IP SAN case the certificate is requested only after the gateway IP
         # is known, so it may not be issued yet. Signal "not ready" instead of
         # raising, allowing the charm to converge once the certificate is available.
-        if not tls_certs and not hostnames:
+        if not tls_certs:
             return None
 
         try:

@@ -3,12 +3,15 @@
 
 """Unit tests for the charm."""
 
+from unittest.mock import MagicMock
+
 import ops
 import pytest
 from ops import testing
 
 from charm import GatewayAPICharm
-from state.charm_state import CharmState
+from state.charm_state import CharmState, ProxyMode
+from state.tls import TLSInformationNotReadyError
 
 from .conftest import GATEWAY_CLASS_CONFIG
 
@@ -195,3 +198,58 @@ def test_gateway_route_with_invalid_data_not_blocked(
     state = ctx.run(ctx.on.start(), state)
 
     assert state.unit_status.name != ops.BlockedStatus.name
+
+
+def test_waiting_when_tls_information_not_ready_still_runs_gateway_definition(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_relation: testing.Relation,
+) -> None:
+    """When TLS is pending, reconcile should still define gateway and end in waiting status."""
+    define_gateway_resource_mock = MagicMock()
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm._define_gateway_resource", define_gateway_resource_mock
+    )
+    monkeypatch.setattr(
+        "state.tls.TLSInformation.from_charm",
+        MagicMock(
+            side_effect=TLSInformationNotReadyError("Waiting for TLS certificates to be issued.")
+        ),
+    )
+
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].append(certificates_relation)
+    state = testing.State(**base_state)
+    state = ctx.run(ctx.on.start(), state)
+
+    define_gateway_resource_mock.assert_called_once()
+    assert state.unit_status.name == ops.WaitingStatus.name
+    assert state.unit_status.message == "Waiting for TLS certificates to be issued."
+
+
+def test_waiting_when_ip_san_certificate_missing(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_relation: testing.Relation,
+) -> None:
+    """Reconcile should wait when hostname cert exists but required IP SAN cert is missing."""
+    monkeypatch.setattr(
+        "charm.CharmState.from_charm_and_providers",
+        MagicMock(
+            return_value=CharmState(
+                gateway_class_name=GATEWAY_CLASS_CONFIG,
+                hostnames={"example.com"},
+                enforce_https=True,
+                proxy_mode=ProxyMode.INGRESS,
+                requires_ip_certificate=True,
+            )
+        ),
+    )
+
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].append(certificates_relation)
+    state = testing.State(**base_state)
+    state = ctx.run(ctx.on.start(), state)
+
+    assert state.unit_status.name == ops.WaitingStatus.name
+    assert state.unit_status.message == "Waiting for TLS certificates to be issued."

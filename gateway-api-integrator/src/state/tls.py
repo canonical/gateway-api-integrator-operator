@@ -23,6 +23,10 @@ class TLSInformationInvalidError(CharmStateValidationBaseError):
     """Exception raised when TLS information is invalid."""
 
 
+class TLSInformationNotReadyError(CharmStateValidationBaseError):
+    """Exception raised when requested TLS certificates are not yet available."""
+
+
 @dataclass(frozen=True)
 class TLSInformation:
     """A component of charm state containing information about TLS.
@@ -93,11 +97,12 @@ class TLSInformation:
                 tls_certs[cn] = "\n\n".join([str(c) for c in chain])
                 tls_keys[cn] = str(certificates.private_key)
 
-        # In the IP SAN case the certificate is requested only after the gateway IP
-        # is known, so it may not be issued yet. Signal "not ready" instead of
-        # raising, allowing the charm to converge once the certificate is available.
-        if not tls_certs:
-            return None
+        missing_targets = targets - set(tls_certs.keys())
+        if missing_targets:
+            missing_targets_str = ", ".join(sorted(missing_targets))
+            raise TLSInformationNotReadyError(
+                f"Waiting for TLS certificates to be issued for: {missing_targets_str}."
+            )
 
         try:
             return cls(

@@ -83,9 +83,9 @@ class CharmState:
     def hostname(self) -> str | None:
         """Return external-hostname config for the ingress relation."""
         if self.proxy_mode != ProxyMode.INGRESS:
-            raise ValueError("hostname property can only be accessed when proxy_mode is INGRESS")
+            raise RuntimeError("hostname property can only be accessed when proxy_mode is INGRESS")
         if len(self.hostnames) > 1:
-            raise ValueError("Expected a single hostname, but multiple were found")
+            raise RuntimeError("Expected a single hostname, but multiple were found")
         if (
             not self.hostnames
         ):  # when enforce_https if False and TLS relation is absent, hostname is not required.

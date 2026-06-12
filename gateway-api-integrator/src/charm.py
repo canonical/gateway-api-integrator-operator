@@ -66,7 +66,7 @@ from state.gateway import GatewayResourceInformation
 from state.http_route import (
     HTTPRouteResourceInformation,
 )
-from state.tls import TLSInformation
+from state.tls import TLSInformation, TLSInformationNotReadyError
 from state.validation import validate_config_and_integration
 
 logger = logging.getLogger(__name__)
@@ -276,11 +276,6 @@ class GatewayAPICharm(CharmBase):
             client=client,
         )
 
-        # NOTE: When no hostname is configured we serve the gateway with an IP SAN
-        # certificate. The gateway IP is only known once the gateway exists and the
-        # load balancer has allocated an address. So the first pass creates the
-        # gateway resource without the IP SAN certificate. Subsequent hooks will
-        # add the IP SAN certificate.
         gateway_address = None
         if config.requires_ip_certificate and gateway_resource_manager.current_gateway_resource():
             gateway_address = gateway_resource_manager.gateway_address(
@@ -288,11 +283,16 @@ class GatewayAPICharm(CharmBase):
             )
 
         tls_information = None
+        tls_not_ready = False
         if has_tls_relation:
             self._sync_certificate_requests(config, gateway_address)
-            tls_information = TLSInformation.from_charm(
-                self, config.hostnames, self.certificates, gateway_address
-            )
+            try:
+                tls_information = TLSInformation.from_charm(
+                    self, config.hostnames, self.certificates, gateway_address
+                )
+            except TLSInformationNotReadyError as exc:
+                logger.info("TLS certificates not ready yet: %s", str(exc))
+                tls_not_ready = True
 
         self._define_secret_resources(client, tls_information)
 
@@ -331,6 +331,9 @@ class GatewayAPICharm(CharmBase):
             gateway_resource_information,
             config.enforce_https,
         )
+
+        if tls_not_ready:
+            self.unit.status = WaitingStatus("Waiting for TLS certificates to be issued.")
 
     def _reconcile_gateway_route(
         self,

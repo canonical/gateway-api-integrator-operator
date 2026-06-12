@@ -75,7 +75,7 @@ def test_hostname_property_raises_for_multiple_hostnames():
         requires_ip_certificate=False,
     )
 
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         _ = config.hostname
 
 
@@ -88,7 +88,7 @@ def test_hostname_property_raises_outside_ingress_mode():
         proxy_mode=ProxyMode.GATEWAY_ROUTE,
         requires_ip_certificate=False,
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         _ = config.hostname
 
 

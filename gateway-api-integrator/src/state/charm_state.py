@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""gateway-api-integrator configuration."""
+"""gateway-api-integrator charm state."""
 
 import itertools
 import logging
@@ -61,7 +61,7 @@ GATEWAY_ROUTE_RELATION = "gateway-route"
 
 
 @dataclass(frozen=True)
-class CharmConfig:
+class CharmState:
     """A component of charm state that contains the charm's configuration.
 
     Attributes:
@@ -100,8 +100,8 @@ class CharmConfig:
         available_gateway_classes: list[str],
         ingress_provider: IngressPerAppProvider,
         gateway_route_provider: GatewayRouteProvider,
-    ) -> "CharmConfig":
-        """Create a CharmConfig class from a charm instance.
+    ) -> "CharmState":
+        """Create a CharmState class from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
@@ -115,7 +115,7 @@ class CharmConfig:
             IngressGatewayRouteConflictError: When both ingress and gateway-route is present.
 
         Returns:
-            CharmConfig: Instance of the charm config state component.
+            CharmState: Instance of the charm state component.
         """
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
         has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None

@@ -17,7 +17,7 @@ from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
-from state.config import CharmConfig
+from state.charm_state import CharmState
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
@@ -109,7 +109,7 @@ def test_gateway_gen_resource(
         labels=harness.charm._labels,
         client=client_with_mock_external,
     )
-    charm_config = CharmConfig.from_charm_and_providers(
+    charm_config = CharmState.from_charm_and_providers(
         harness.charm,
         [GATEWAY_CLASS_CONFIG],
         harness.charm._ingress_provider,
@@ -117,7 +117,7 @@ def test_gateway_gen_resource(
     )
     tls_information = TLSInformation.from_charm(
         harness.charm,
-        charm_config,
+        charm_config.hostnames,
         harness.charm.certificates,
     )
     gateway_resource = gateway_resource_manager._gen_resource(

@@ -6,16 +6,16 @@
 import pytest
 from pydantic import ValidationError
 
-from state.config import CharmConfig, ProxyMode
+from state.charm_state import CharmState, ProxyMode
 
 
 def test_valid_config():
     """
-    arrange: Provide valid values for all CharmConfig fields.
-    act: Instantiate CharmConfig.
+    arrange: Provide valid values for all CharmState fields.
+    act: Instantiate CharmState.
     assert: All fields are correctly set.
     """
-    config = CharmConfig(
+    config = CharmState(
         hostnames={"gateway.internal"},
         gateway_class_name="cilium",
         enforce_https=True,
@@ -32,10 +32,10 @@ def test_valid_config():
 def test_valid_config_hostname_none():
     """
     arrange: Provide None as hostname.
-    act: Instantiate CharmConfig.
+    act: Instantiate CharmState.
     assert: hostname is None and other fields are correctly set.
     """
-    config = CharmConfig(
+    config = CharmState(
         hostnames=set(),
         gateway_class_name="cilium",
         enforce_https=False,
@@ -51,10 +51,10 @@ def test_valid_config_hostname_none():
 def test_valid_config_enforce_https_false():
     """
     arrange: Provide enforce_https as False.
-    act: Instantiate CharmConfig.
+    act: Instantiate CharmState.
     assert: enforce_https is correctly set to False.
     """
-    config = CharmConfig(
+    config = CharmState(
         hostnames={"example.com"},
         gateway_class_name="cilium",
         enforce_https=False,
@@ -67,7 +67,7 @@ def test_valid_config_enforce_https_false():
 
 def test_hostname_property_raises_for_multiple_hostnames():
     """Hostname property should fail when multiple hostnames are configured."""
-    config = CharmConfig(
+    config = CharmState(
         hostnames={"a.example.com", "b.example.com"},
         gateway_class_name="cilium",
         enforce_https=False,
@@ -81,7 +81,7 @@ def test_hostname_property_raises_for_multiple_hostnames():
 
 def test_hostname_property_raises_outside_ingress_mode():
     """Hostname property should fail when proxy mode is not ingress."""
-    config = CharmConfig(
+    config = CharmState(
         hostnames={"example.com"},
         gateway_class_name="cilium",
         enforce_https=False,
@@ -103,10 +103,10 @@ def test_hostname_property_raises_outside_ingress_mode():
 def test_valid_proxy_modes(proxy_mode: ProxyMode):
     """
     arrange: Provide each valid ProxyMode value.
-    act: Instantiate CharmConfig.
+    act: Instantiate CharmState.
     assert: proxy_mode is correctly set.
     """
-    config = CharmConfig(
+    config = CharmState(
         hostnames={"gateway.internal"},
         gateway_class_name="cilium",
         enforce_https=True,
@@ -119,11 +119,11 @@ def test_valid_proxy_modes(proxy_mode: ProxyMode):
 def test_invalid_gateway_class_name_empty():
     """
     arrange: Provide an empty string as gateway_class_name.
-    act: Instantiate CharmConfig.
+    act: Instantiate CharmState.
     assert: ValidationError is raised due to min_length=1 constraint.
     """
     with pytest.raises(ValidationError):
-        CharmConfig(
+        CharmState(
             hostnames={"gateway.internal"},
             gateway_class_name="",
             enforce_https=True,
@@ -135,11 +135,11 @@ def test_invalid_gateway_class_name_empty():
 def test_invalid_hostname():
     """
     arrange: Provide an invalid hostname string (not a valid FQDN).
-    act: Instantiate CharmConfig.
+    act: Instantiate CharmState.
     assert: ValidationError is raised by the valid_fqdn BeforeValidator.
     """
     with pytest.raises(ValidationError):
-        CharmConfig(
+        CharmState(
             hostnames={"not a valid hostname!"},
             gateway_class_name="cilium",
             enforce_https=True,
@@ -159,10 +159,10 @@ def test_invalid_hostname():
 def test_valid_hostnames(hostname: str):
     """
     arrange: Provide various valid FQDN hostnames.
-    act: Instantiate CharmConfig.
+    act: Instantiate CharmState.
     assert: hostname is correctly set without validation errors.
     """
-    config = CharmConfig(
+    config = CharmState(
         hostnames={hostname},
         gateway_class_name="cilium",
         enforce_https=True,

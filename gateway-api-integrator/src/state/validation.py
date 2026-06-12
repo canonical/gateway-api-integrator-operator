@@ -12,8 +12,8 @@ from ops.model import SecretNotFoundError
 
 import client
 from resource_manager.resource_manager import InvalidResourceError
-from state.config import IngressGatewayRouteConflictError
-from state.exception import CharmStateValidationBaseError
+from state.charm_state import IngressGatewayRouteConflictError
+from state.exception import CharmStateValidationBaseError, NonIPv4GatewayAddressError
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +79,10 @@ def validate_config_and_integration(
                 logger.exception("Error setting up charm state component: %s", str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 _clean_up_resources_in_blocked_state(instance)
+                return None
+            except NonIPv4GatewayAddressError as exc:
+                logger.exception("Gateway reported unsupported non-IPv4 address: %s", str(exc))
+                instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
             except InvalidResourceError:
                 logger.exception("Error creating kubernetes resource")

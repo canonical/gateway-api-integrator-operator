@@ -3,6 +3,7 @@
 """Gateway resource manager."""
 
 import dataclasses
+import ipaddress
 import logging
 import time
 import typing
@@ -14,7 +15,8 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
-from state.config import CharmConfig
+from state.charm_state import CharmState
+from state.exception import NonIPv4GatewayAddressError
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
@@ -34,7 +36,7 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     It consists of 3 components:
         - GatewayResourceInformation
-        - CharmConfig
+        - CharmState
         - TLSInformation
 
     Attributes:
@@ -50,14 +52,14 @@ class GatewayResourceDefinition(ResourceDefinition):
     def __init__(
         self,
         gateway_resource_information: GatewayResourceInformation,
-        charm_config: CharmConfig,
+        charm_config: CharmState,
         tls_information: TLSInformation | None,
     ):
         """Create the state object with state components.
 
         Args:
             gateway_resource_information: GatewayResourceInformation state component.
-            charm_config: CharmConfig state component.
+            charm_config: CharmState state component.
             tls_information: TLSInformation state component.
         """
         tls_secret_names: list[str] = []
@@ -89,7 +91,6 @@ class GatewayResourceDefinition(ResourceDefinition):
         """Return the gateway resource spec with HTTP and HTTPS listeners."""
         listeners = [self.gateway_resource_http_listener_spec]
         if self.tls_secret_names:
-            # Use the first TLS secret for the single HTTPS listener
             listeners.append(
                 {
                     "protocol": "HTTPS",
@@ -229,8 +230,32 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     addr["value"]  # type: ignore
                     for addr in gateway.status["addresses"]  # type: ignore
                 ]
-                if gateway_addresses:
-                    gateway_address = gateway_addresses[0]
+
+                ipv4_addresses = []
+                for address in gateway_addresses:
+                    try:
+                        parsed_address = ipaddress.ip_address(address)
+                    except ValueError as exc:
+                        raise NonIPv4GatewayAddressError(
+                            f"Unsupported gateway address: {address!r}. "
+                            "Only IPv4 addresses are supported for now."
+                        ) from exc
+
+                    if parsed_address.version != 4:
+                        raise NonIPv4GatewayAddressError(
+                            f"Unsupported gateway address: {address!r}. "
+                            "Only IPv4 addresses are supported for now."
+                        )
+
+                    ipv4_addresses.append(address)
+
+                if len(ipv4_addresses) > 1:
+                    raise RuntimeError(
+                        f"Multiple IPv4 addresses found for gateway {name}: {ipv4_addresses}"
+                    )
+
+                if ipv4_addresses:
+                    gateway_address = ipv4_addresses[0]
             except (AttributeError, TypeError, KeyError):
                 logger.exception("Error retrieving the gateway address.")
             if gateway_address:

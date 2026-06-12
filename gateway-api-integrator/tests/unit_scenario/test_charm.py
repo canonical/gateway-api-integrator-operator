@@ -8,11 +8,11 @@ import pytest
 from ops import testing
 
 from charm import GatewayAPICharm
-from state.config import CharmConfig
+from state.charm_state import CharmState
 
 from .conftest import GATEWAY_CLASS_CONFIG
 
-ORIGINAL_FROM_CHARM_AND_PROVIDERS = CharmConfig.from_charm_and_providers
+ORIGINAL_FROM_CHARM_AND_PROVIDERS = CharmState.from_charm_and_providers
 
 
 def test_dns_record(
@@ -97,11 +97,11 @@ def test_gateway_route(
     assert: The charm updates the dns-record relation with the expected DNS entries
         and publishes provider data to gateway-route relation.
     """
-    # base_state fixture mocks CharmConfig derivation with ProxyMode.INACTIVE.
+    # base_state fixture mocks CharmState derivation with ProxyMode.INACTIVE.
     # Restore the real config path (and gateway class lookup) so this test can
     # exercise real gateway-route mode behavior from relations/config.
     monkeypatch.setattr(
-        "charm.CharmConfig.from_charm_and_providers",
+        "charm.CharmState.from_charm_and_providers",
         classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
     )
     monkeypatch.setattr(
@@ -147,7 +147,7 @@ def test_blocked_when_relation_integrated_without_hostname(
 ) -> None:
     """Charm should block when ingress is integrated but no hostname can be derived."""
     monkeypatch.setattr(
-        "charm.CharmConfig.from_charm_and_providers",
+        "charm.CharmState.from_charm_and_providers",
         classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
     )
     monkeypatch.setattr(
@@ -173,7 +173,7 @@ def test_gateway_route_with_invalid_data_not_blocked(
 ) -> None:
     """Charm should not block when all gateway-route relations provide invalid data."""
     monkeypatch.setattr(
-        "charm.CharmConfig.from_charm_and_providers",
+        "charm.CharmState.from_charm_and_providers",
         classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
     )
     monkeypatch.setattr(

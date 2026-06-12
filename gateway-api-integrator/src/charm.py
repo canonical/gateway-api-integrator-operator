@@ -56,10 +56,10 @@ from resource_manager.http_route import (
 from resource_manager.permission import map_k8s_auth_exception
 from resource_manager.secret import SecretResourceDefinition, TLSSecretResourceManager
 from resource_manager.service import ServiceResourceDefinition, ServiceResourceManager
-from state.config import (
+from state.charm_state import (
     GATEWAY_ROUTE_RELATION,
     INGRESS_RELATION,
-    CharmConfig,
+    CharmState,
     ProxyMode,
 )
 from state.gateway import GatewayResourceInformation
@@ -219,7 +219,7 @@ class GatewayAPICharm(CharmBase):
 
     def _sync_certificate_requests(
         self,
-        config: CharmConfig,
+        config: CharmState,
         gateway_address: str | None,
     ) -> None:
         """Sync certificate requests to the desired state."""
@@ -236,7 +236,7 @@ class GatewayAPICharm(CharmBase):
         self.certificates.certificate_requests = csrs
         self.certificates.sync()
 
-    def _determine_https_mode(self, config: CharmConfig, has_tls_relation: bool) -> HttpsMode:
+    def _determine_https_mode(self, config: CharmState, has_tls_relation: bool) -> HttpsMode:
         """Determine the HTTPS mode based on config and TLS relation presence."""
         if config.enforce_https:
             return HttpsMode.ENFORCED
@@ -263,7 +263,7 @@ class GatewayAPICharm(CharmBase):
 
         # Validate/parse TLS information and create TLS secret resources.
         client = get_client(field_manager=self.app.name, namespace=self.model.name)
-        config = CharmConfig.from_charm_and_providers(
+        config = CharmState.from_charm_and_providers(
             self,
             self.available_gateway_classes(),
             self._ingress_provider,
@@ -293,7 +293,7 @@ class GatewayAPICharm(CharmBase):
         if has_tls_relation:
             self._sync_certificate_requests(config, gateway_address)
             tls_information = TLSInformation.from_charm(
-                self, config, self.certificates, gateway_address
+                self, config.hostnames, self.certificates, gateway_address
             )
 
         self._define_secret_resources(client, tls_information)
@@ -327,6 +327,7 @@ class GatewayAPICharm(CharmBase):
             gateway_resource_information,
             config.hostnames,
         )
+
         self._set_status_gateway_address(
             gateway_resource_manager,
             gateway_resource_information,
@@ -336,7 +337,7 @@ class GatewayAPICharm(CharmBase):
     def _reconcile_gateway_route(
         self,
         client: Client,
-        config: CharmConfig,
+        config: CharmState,
         has_tls_relation: bool,
         gateway_resource_information: GatewayResourceInformation,
         gateway_resource_manager: GatewayResourceManager,
@@ -424,7 +425,7 @@ class GatewayAPICharm(CharmBase):
         self,
         resource_manager: GatewayResourceManager,
         gateway_resource_information: GatewayResourceInformation,
-        config: CharmConfig,
+        config: CharmState,
         tls_information: TLSInformation | None,
     ) -> None:
         """Define the charm's gateway resource.
@@ -475,7 +476,7 @@ class GatewayAPICharm(CharmBase):
     def _define_ingress_resources_and_publish_url(
         self,
         client: Client,
-        config: CharmConfig,
+        config: CharmState,
         tls_information: TLSInformation | None,
         gateway_resource_information: GatewayResourceInformation,
         gateway_resource_manager: GatewayResourceManager,

@@ -3,9 +3,7 @@
 
 """gateway-api-integrator resource definition."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from typing import Self
 
 import ops
 from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
@@ -13,9 +11,6 @@ from pydantic import ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
-
-if TYPE_CHECKING:
-    from .config import CharmConfig
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 
@@ -43,7 +38,7 @@ class TLSInformation:
     tls_keys: dict[str, str]
 
     @model_validator(mode="after")
-    def validate_tls_certs_and_tls_keys(self) -> TLSInformation:
+    def validate_tls_certs_and_tls_keys(self) -> Self:
         """Validate tls_certs and tls_keys."""
         if len(self.tls_certs) < 1 or len(self.tls_keys) < 1:
             raise ValueError("At least 1 pair of cert/key is required.")
@@ -60,15 +55,15 @@ class TLSInformation:
     def from_charm(
         cls,
         charm: ops.CharmBase,
-        config: CharmConfig,
+        hostnames: set[str],
         certificates: TLSCertificatesRequiresV4,
         gateway_address: str | None = None,
-    ) -> TLSInformation | None:
+    ) -> Self | None:
         """Get TLS information from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
-            config: The charm configuration.
+            hostnames: Hostnames for which TLS certs are expected.
             certificates: TLS certificates requirer library.
             gateway_address: The gateway LB address. When provided, the certificate
                 issued for this IP (IP SAN) is consumed in addition to any
@@ -79,7 +74,6 @@ class TLSInformation:
         """
         cls.validate(charm)
 
-        hostnames = sorted(config.hostnames)
         targets = set(hostnames)
         if gateway_address:
             targets.add(gateway_address)

@@ -33,10 +33,11 @@ def _wait_for_response(
     *,
     expected_status: int,
     body_contains: str | None = None,
+    timeout: int | float = 30,
     **kwargs,
 ) -> requests.Response:
     """Retry HTTP GET until expected status/body is observed."""
-    response = requests.get(url, **kwargs)
+    response = requests.get(url, timeout=timeout, **kwargs)
 
     assert response.status_code == expected_status, (
         f"Unexpected status from {url}. "

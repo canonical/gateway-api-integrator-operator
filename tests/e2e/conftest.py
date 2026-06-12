@@ -5,23 +5,14 @@
 
 import logging
 import os
-from typing import NamedTuple
 
 import jubilant
 import pytest
 
 logger = logging.getLogger(__name__)
 
-
-class App(NamedTuple):
-    """Holds deployed application information for app_fixture.
-
-    Attributes:
-        name (str): The name of the deployed application.
-    """
-
-    name: str
-
+GATEWAY_API_INTEGRATOR_APP_NAME = "gateway-api-integrator"
+INGRESS_CONFIGURATOR_APP_NAME = "ingress-configurator"
 
 @pytest.fixture(scope="module", name="gateway_class")
 def gateway_class_fixture(pytestconfig: pytest.Config):
@@ -71,7 +62,7 @@ def gateway_api_integrator(
     """Deploy the gateway-api-integrator charm and necessary charms for it."""
     juju.deploy(
         charm,
-        "gateway-api-integrator",
+        GATEWAY_API_INTEGRATOR_APP_NAME,
         base="ubuntu@24.04",
         trust=True,
         config={
@@ -80,31 +71,28 @@ def gateway_api_integrator(
     )
     juju.deploy("self-signed-certificates")
     juju.integrate(
-        "gateway-api-integrator",
+        GATEWAY_API_INTEGRATOR_APP_NAME,
         "self-signed-certificates",
     )
 
-    return App("gateway-api-integrator")
+    return GATEWAY_API_INTEGRATOR_APP_NAME
 
 
 @pytest.fixture(scope="module")
-def gateway_route_configurator(
-    juju: jubilant.Juju, external_hostname: str, pytestconfig: pytest.Config
+def ingress_configurator(
+    juju: jubilant.Juju, external_hostname: str
 ):
-    """Deploy the gateway-api-integrator charm and necessary charms for it."""
-    configured_charm_path = next(
-        (f for f in pytestconfig.getoption("--charm-file") if "/gateway-route-configurator" in f),
-        None,
-    )
+    """Deploy the ingress-configurator charm and necessary charms for it."""
     juju.deploy(
-        str(configured_charm_path),
-        "gateway-route-configurator",
+        "ingress-configurator",
+        app=INGRESS_CONFIGURATOR_APP_NAME,
+        channel="latest/edge",
         base="ubuntu@24.04",
         trust=True,
         config={"hostname": external_hostname, "paths": "/app1,/app2"},
     )
 
-    return App("gateway-route-configurator")
+    return INGRESS_CONFIGURATOR_APP_NAME
 
 
 @pytest.fixture(scope="module")

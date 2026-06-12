@@ -9,8 +9,6 @@ import urllib3
 import yaml
 from urllib3.exceptions import InsecureRequestWarning
 
-from .conftest import App  # pylint: disable=no-name-in-module
-
 # Disable SSL warnings when using verify=False
 urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -34,18 +32,18 @@ def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
     return ""
 
 
-def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: App) -> str:
+def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: str) -> str:
     """Get the gateway IP from the charm status message.
 
     Args:
         juju (jubilant.Juju): The jubilant Juju instance.
-        gateway_api_integrator (App): The gateway-api-integrator app.
+        gateway_api_integrator (str): The gateway-api-integrator app name.
 
     Returns:
         str: The gateway IP address.
     """
     status = juju.status()
-    app_status = status.apps[gateway_api_integrator.name]
+    app_status = status.apps[gateway_api_integrator]
     message = app_status.app_status.message
     if "gateway address" in message.lower():
         # Extract IP from message
@@ -57,18 +55,18 @@ def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: App) -> str:
 
 def test_configurator(
     juju: jubilant.Juju,
-    gateway_route_configurator: App,
-    gateway_api_integrator: App,
+    ingress_configurator: str,
+    gateway_api_integrator: str,
     external_hostname: str,
 ):
     """
     Test that the charms correctly set up the gateway route relation.
-    Deploy gateway-route-configurator and integrate it on gateway-route relation.
+    Deploy ingress-configurator and integrate it on gateway-route relation.
     Assert that a request to the external hostname is correctly routed to the flask-k8s app
     """
     additional_hostnames = ["gateway-alt.internal", "gateway-alt2.internal"]
     juju.config(
-        gateway_route_configurator.name,
+        ingress_configurator,
         {"additional-hostnames": ",".join(additional_hostnames)},
     )
 
@@ -78,16 +76,16 @@ def test_configurator(
     )
 
     juju.integrate(
-        f"{gateway_route_configurator.name}:ingress",
+        f"{ingress_configurator}:ingress",
         "flask-k8s:ingress",
     )
     juju.integrate(
-        f"{gateway_api_integrator.name}:gateway-route",
-        f"{gateway_route_configurator.name}:gateway-route",
+        f"{gateway_api_integrator}:gateway-route",
+        f"{ingress_configurator}:gateway-route",
     )
     juju.wait(
         lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
+            status, ingress_configurator, "flask-k8s", gateway_api_integrator
         ),
         timeout=600,
     )
@@ -107,10 +105,10 @@ def test_configurator(
     assert get_url_from_relation(juju, "flask-k8s/0") == f"https://{external_hostname}/app1"
 
     # HTTP with hostname
-    juju.config(gateway_api_integrator.name, {"enforce-https": False})
+    juju.config(gateway_api_integrator, {"enforce-https": False})
     juju.wait(
         lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
+            status, ingress_configurator, "flask-k8s", gateway_api_integrator
         ),
         timeout=600,
     )

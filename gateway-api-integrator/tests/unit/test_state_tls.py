@@ -25,18 +25,18 @@ def test_valid_tls_information():
     assert info.tls_keys == {"gateway.internal": "key-data"}
 
 
-def test_hostname_property():
+def test_hostnames_property():
     """
     arrange: Provide valid TLSInformation with a single cert/key pair.
-    act: Access the hostname property.
-    assert: The hostname matches the key in tls_certs.
+    act: Access the hostnames property.
+    assert: The hostname list matches the keys in tls_certs.
     """
     info = TLSInformation(
         secret_resource_name_prefix="secret-resource-prefix",  # nosec
         tls_certs={"gateway.internal": "cert-data"},
         tls_keys={"gateway.internal": "key-data"},
     )
-    assert info.hostname == "gateway.internal"
+    assert info.hostnames == ["gateway.internal"]
 
 
 def test_invalid_hostname_key_in_tls_certs():
@@ -67,25 +67,25 @@ def test_invalid_hostname_key_in_tls_keys():
         )
 
 
-def test_multiple_cert_key_pairs_rejected():
+def test_multiple_cert_key_pairs_accepted():
     """
     arrange: Provide two cert/key pairs.
     act: Instantiate TLSInformation.
-    assert: ValidationError is raised because only 1 pair is supported.
+    assert: Both pairs are stored (per-relation certificate support).
     """
-    with pytest.raises(ValidationError):
-        TLSInformation(
-            secret_resource_name_prefix="secret-resource-prefix",  # nosec
-            tls_certs={"a.example.com": "cert-a", "b.example.com": "cert-b"},
-            tls_keys={"a.example.com": "key-a", "b.example.com": "key-b"},
-        )
+    info = TLSInformation(
+        secret_resource_name_prefix="secret-resource-prefix",  # nosec
+        tls_certs={"a.example.com": "cert-a", "b.example.com": "cert-b"},
+        tls_keys={"a.example.com": "key-a", "b.example.com": "key-b"},
+    )
+    assert info.hostnames == ["a.example.com", "b.example.com"]
 
 
 def test_empty_certs_and_keys_rejected():
     """
     arrange: Provide empty tls_certs and tls_keys dicts.
     act: Instantiate TLSInformation.
-    assert: ValidationError is raised because exactly 1 pair is required.
+    assert: ValidationError is raised because at least 1 pair is required.
     """
     with pytest.raises(ValidationError):
         TLSInformation(

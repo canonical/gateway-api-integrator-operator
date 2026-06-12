@@ -3,12 +3,11 @@
 
 """gateway-api-integrator resource definition."""
 
-from typing import Annotated
+from typing import Self
 
 import ops
 from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
-from charms.gateway_api_integrator.v0.gateway_route import valid_fqdn
-from pydantic import BeforeValidator, ValidationError, model_validator
+from pydantic import ValidationError, model_validator
 from pydantic.dataclasses import dataclass
 
 from .exception import CharmStateValidationBaseError
@@ -20,15 +19,12 @@ class TlsIntegrationMissingError(CharmStateValidationBaseError):
     """Exception raised when certificates relation is missing."""
 
 
-class HostnameMissingError(CharmStateValidationBaseError):
-    """Exception raised when hostname not configured in enforce_https mode.
-
-    Hostname is configured either via the gateway-route relation or by setting external-hostname.
-    """
-
-
 class TLSInformationInvalidError(CharmStateValidationBaseError):
     """Exception raised when TLS information is invalid."""
+
+
+class TLSInformationNotReadyError(CharmStateValidationBaseError):
+    """Exception raised when requested TLS certificates are not yet available."""
 
 
 @dataclass(frozen=True)
@@ -42,55 +38,72 @@ class TLSInformation:
     """
 
     secret_resource_name_prefix: str
-    tls_certs: dict[Annotated[str, BeforeValidator(valid_fqdn)], str]
-    tls_keys: dict[Annotated[str, BeforeValidator(valid_fqdn)], str]
+    tls_certs: dict[str, str]
+    tls_keys: dict[str, str]
 
     @model_validator(mode="after")
-    def validate_tls_certs_and_tls_keys(self) -> "TLSInformation":
+    def validate_tls_certs_and_tls_keys(self) -> Self:
         """Validate tls_certs and tls_keys."""
-        if len(self.tls_certs) != 1 or len(self.tls_keys) != 1:
-            raise ValueError("Only 1 pair of cert/key is supported.")
+        if len(self.tls_certs) < 1 or len(self.tls_keys) < 1:
+            raise ValueError("At least 1 pair of cert/key is required.")
         if set(self.tls_certs.keys()) != set(self.tls_keys.keys()):
-            raise ValueError("parsed tls_certs and tls_keys must belong to the same hostname.")
+            raise ValueError("parsed tls_certs and tls_keys must belong to the same hostnames.")
         return self
 
-    # The pydantic validation above ensures that there is exactly one hostname.
     @property
-    def hostname(self) -> str:
-        """Get the hostname for the TLS information."""
-        return next(iter(self.tls_certs.keys()))
+    def hostnames(self) -> list[str]:
+        """Get the list of hostnames for the TLS information."""
+        return list(self.tls_certs.keys())
 
     @classmethod
     def from_charm(
         cls,
         charm: ops.CharmBase,
-        hostname: str | None,
+        hostnames: set[str],
         certificates: TLSCertificatesRequiresV4,
-    ) -> "TLSInformation":
+        gateway_address: str | None = None,
+    ) -> Self | None:
         """Get TLS information from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
-            hostname: The configured hostname.
+            hostnames: Hostnames for which TLS certs are expected.
             certificates: TLS certificates requirer library.
+            gateway_address: The gateway LB address. When provided, the certificate
+                issued for this IP (IP SAN) is consumed in addition to any
+                per-hostname certificates.
 
         Returns:
-            TLSInformation: Information about configured TLS certs.
+            TLSInformation if certificates are available, None otherwise.
         """
         cls.validate(charm)
-        if hostname is None:
-            raise HostnameMissingError("Hostname must be configured to use TLS.")
 
-        tls_certs = {}
-        tls_keys = {}
+        targets = set(hostnames)
+        if gateway_address:
+            targets.add(gateway_address)
+
+        if not targets:
+            return None
+
+        tls_certs: dict[str, str] = {}
+        tls_keys: dict[str, str] = {}
         secret_resource_name_prefix = f"{charm.app.name}-secret"
         for cert in certificates.get_provider_certificates():
-            if hostname == cert.certificate.common_name:
+            cn = cert.certificate.common_name
+            if cn in targets:
                 chain = cert.chain
                 if chain[0] != cert.certificate:
                     chain.reverse()
-                tls_certs[hostname] = "\n\n".join([str(cert) for cert in chain])
-                tls_keys[hostname] = str(certificates.private_key)
+                tls_certs[cn] = "\n\n".join([str(c) for c in chain])
+                tls_keys[cn] = str(certificates.private_key)
+
+        missing_targets = targets - set(tls_certs.keys())
+        if missing_targets:
+            missing_targets_str = ", ".join(sorted(missing_targets))
+            raise TLSInformationNotReadyError(
+                f"Waiting for TLS certificates to be issued for: {missing_targets_str}."
+            )
+
         try:
             return cls(
                 secret_resource_name_prefix=secret_resource_name_prefix,
@@ -109,7 +122,6 @@ class TLSInformation:
             enforce_https: Whether to enforce HTTPS.
 
         Raises:
-            HostnameMissingError: When hostname is not configured.
             TlsIntegrationMissingError: When integration is not ready.
         """
         tls_requirer_integration = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION)

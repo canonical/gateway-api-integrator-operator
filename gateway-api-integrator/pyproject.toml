@@ -47,6 +47,7 @@ integration = [
   "pytest",
   "pytest-asyncio",
   "pytest-operator",
+  "tenacity",
 ]
 
 [tool.uv]

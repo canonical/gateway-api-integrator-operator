@@ -9,3 +9,7 @@ class CharmStateValidationBaseError(Exception):
 
 class ResourceManagementBaseError(Exception):
     """Exception raised when managing k8s resources."""
+
+
+class NonIPv4GatewayAddressError(ResourceManagementBaseError):
+    """Exception raised when gateway address contains non-IPv4 values."""

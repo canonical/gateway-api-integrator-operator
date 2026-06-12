@@ -240,9 +240,7 @@ class GatewayAPICharm(CharmBase):
         """Determine the HTTPS mode based on config and TLS relation presence."""
         if config.enforce_https:
             return HttpsMode.ENFORCED
-        if has_tls_relation:
-            return HttpsMode.ENABLED
-        return HttpsMode.DISABLED
+        return HttpsMode.ENABLED if has_tls_relation else HttpsMode.DISABLED
 
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.

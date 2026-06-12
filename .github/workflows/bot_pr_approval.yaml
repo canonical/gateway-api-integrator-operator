@@ -9,4 +9,6 @@ jobs:
     permissions:
       pull-requests: write
     secrets: inherit
+    permissions:
+      pull-requests: write
 

@@ -32,6 +32,8 @@ class GatewayRouteConfiguratorCharm(ops.CharmBase):
         self.framework.observe(self.on.config_changed, self._on_update)
         self.framework.observe(self.ingress.on.data_provided, self._on_update)
         self.framework.observe(self.ingress.on.data_removed, self._on_update)
+        self.framework.observe(self.on["gateway-route"].relation_created, self._on_update)
+        self.framework.observe(self.on["gateway-route"].relation_changed, self._on_update)
         self.framework.observe(self.gateway_route.on.ready, self._on_update)
         self.framework.observe(self.gateway_route.on.removed, self._on_update)
 

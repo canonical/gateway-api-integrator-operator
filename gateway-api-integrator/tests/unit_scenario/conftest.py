@@ -16,7 +16,7 @@ from charmlibs.interfaces.tls_certificates import (
 )
 from ops import testing
 
-from state.charm_state import CharmState, ProxyMode
+from state.charm_state import IngressCharmState
 
 TEST_EXTERNAL_HOSTNAME_CONFIG = "example.com"
 GATEWAY_CLASS_CONFIG = "cilium"
@@ -64,12 +64,11 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(
         "charm.CharmState.from_charm_and_providers",
         MagicMock(
-            return_value=CharmState(
+            return_value=IngressCharmState(
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
-                hostnames={TEST_EXTERNAL_HOSTNAME_CONFIG},
                 enforce_https=True,
-                proxy_mode=ProxyMode.INACTIVE,
                 requires_ip_certificate=False,
+                hostname=TEST_EXTERNAL_HOSTNAME_CONFIG,
             )
         ),
     )

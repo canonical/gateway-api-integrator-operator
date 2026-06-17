@@ -53,7 +53,7 @@ class TLSInformation:
     @property
     def hostnames(self) -> list[str]:
         """Get the list of hostnames for the TLS information."""
-        return list(self.tls_certs.keys())
+        return sorted(self.tls_certs.keys())
 
     @classmethod
     def from_charm(

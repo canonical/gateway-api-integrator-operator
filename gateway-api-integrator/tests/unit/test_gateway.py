@@ -109,7 +109,7 @@ def test_gateway_gen_resource(
         labels=harness.charm._labels,
         client=client_with_mock_external,
     )
-    charm_config = CharmState.from_charm_and_providers(
+    charm_state = CharmState.from_charm_and_providers(
         harness.charm,
         [GATEWAY_CLASS_CONFIG],
         harness.charm._ingress_provider,
@@ -117,11 +117,11 @@ def test_gateway_gen_resource(
     )
     tls_information = TLSInformation.from_charm(
         harness.charm,
-        charm_config.hostnames,
+        set(),
         harness.charm.certificates,
     )
     gateway_resource = gateway_resource_manager._gen_resource(
-        GatewayResourceDefinition(gateway_resource_information, charm_config, tls_information)
+        GatewayResourceDefinition(gateway_resource_information, charm_state, tls_information)
     )
 
     assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG

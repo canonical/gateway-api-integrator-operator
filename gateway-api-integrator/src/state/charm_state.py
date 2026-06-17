@@ -62,11 +62,10 @@ GATEWAY_ROUTE_RELATION = "gateway-route"
 
 @dataclass(frozen=True)
 class CharmState:
-    """A component of charm state that contains the charm's configuration.
+    """Base charm state shared by all proxy modes.
 
     Attributes:
         gateway_class_name: The configured gateway class.
-        hostnames: The configured gateway hostnames.
         enforce_https: Whether to enforce HTTPS by redirecting HTTP to HTTPS.
         requires_ip_certificate: Whether an IP SAN certificate is required. This
             is true only when certificates are integrated, proxy mode is
@@ -75,22 +74,7 @@ class CharmState:
 
     gateway_class_name: str = Field(min_length=1)
     enforce_https: bool = Field()
-    proxy_mode: ProxyMode = Field()
     requires_ip_certificate: bool = Field()
-    hostnames: set[typing.Annotated[str, BeforeValidator(valid_fqdn)]] = Field(default_factory=set)
-
-    @property
-    def hostname(self) -> str | None:
-        """Return external-hostname config for the ingress relation."""
-        if self.proxy_mode != ProxyMode.INGRESS:
-            raise RuntimeError("hostname property can only be accessed when proxy_mode is INGRESS")
-        if len(self.hostnames) > 1:
-            raise RuntimeError("Expected a single hostname, but multiple were found")
-        if (
-            not self.hostnames
-        ):  # when enforce_https if False and TLS relation is absent, hostname is not required.
-            return None
-        return next(iter(self.hostnames))
 
     @classmethod
     @map_k8s_auth_exception
@@ -101,7 +85,7 @@ class CharmState:
         ingress_provider: IngressPerAppProvider,
         gateway_route_provider: GatewayRouteProvider,
     ) -> "CharmState":
-        """Create a CharmState class from a charm instance.
+        """Create a mode-specific charm state from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
@@ -115,7 +99,7 @@ class CharmState:
             IngressGatewayRouteConflictError: When both ingress and gateway-route is present.
 
         Returns:
-            CharmState: Instance of the charm state component.
+            CharmState for inactive mode, or a mode-specific subclass for active integrations.
         """
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
         has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
@@ -128,13 +112,14 @@ class CharmState:
             ingress_provider.relations, gateway_route_provider.relations
         )
         gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
+        config_external_hostname = cls.get_ingress_hostname(charm)
+        gateway_route_hostnames = cls.get_gateway_route_hostnames(gateway_route_provider)
 
         # external-hostname is an ingress-mode-only config option. In gateway-route
         # mode hostnames come from the relation data, so setting it is a misconfiguration.
-        config_external_hostname = typing.cast(str | None, charm.config.get("external-hostname"))
         if proxy_mode == ProxyMode.GATEWAY_ROUTE and config_external_hostname:
             raise InvalidCharmConfigError(
-                "external-hostname must only be used in ingress mode, "
+                "external-hostname must only be set when related via ingress, "
                 "not when integrating via gateway-route."
             )
 
@@ -149,62 +134,68 @@ class CharmState:
                 f"Gateway class must be one of: [{available_gateway_classes_str}]"
             )
 
-        hostnames = cls.get_certificate_hostnames(
-            charm=charm,
-            gateway_route_provider=gateway_route_provider,
-        )
-
-        if proxy_mode == ProxyMode.INGRESS and has_tls and not hostnames:
+        if proxy_mode == ProxyMode.INGRESS and has_tls and not config_external_hostname:
             raise HostnameMissingError(
                 "external-hostname must be set in ingress mode "
                 "when the certificates relation is integrated."
             )
 
+        requires_ip_certificate = cls._requires_ip_certificate(
+            proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls, gateway_route_provider
+        )
+
         try:
-            return cls(
+            if proxy_mode == ProxyMode.INGRESS:
+                return IngressCharmState(
+                    gateway_class_name=gateway_class_name,
+                    enforce_https=enforce_https,
+                    requires_ip_certificate=requires_ip_certificate,
+                    hostname=config_external_hostname,
+                )
+            if proxy_mode == ProxyMode.GATEWAY_ROUTE:
+                return GatewayRouteCharmState(
+                    gateway_class_name=gateway_class_name,
+                    enforce_https=enforce_https,
+                    requires_ip_certificate=requires_ip_certificate,
+                    hostnames=gateway_route_hostnames,
+                )
+            return CharmState(
                 gateway_class_name=gateway_class_name,
-                hostnames=hostnames,
                 enforce_https=enforce_https,
-                proxy_mode=proxy_mode,
-                requires_ip_certificate=cls._requires_ip_certificate(
-                    proxy_mode, has_tls, gateway_route_provider
-                ),
+                requires_ip_certificate=requires_ip_certificate,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
             raise InvalidCharmConfigError(f"invalid configuration: {error_field_str}") from exc
 
     @staticmethod
-    def get_certificate_hostnames(
-        charm: ops.CharmBase,
-        gateway_route_provider: GatewayRouteProvider,
-    ) -> set[str]:
-        """Return hostname set used for certificate requests."""
-        has_gateway_route = bool(gateway_route_provider.relations)
-
-        if has_gateway_route:
-            hostnames: set[str] = set()
-            requirer_data = gateway_route_provider.get_requirer_data()
-            for data in requirer_data.values():
-                if data.hostname:
-                    hostnames.add(data.hostname)
-                hostnames.update(data.additional_hostnames)
-            return hostnames
-
+    def get_ingress_hostname(charm: ops.CharmBase) -> str | None:
+        """Return the ingress hostname from config if present."""
         config_hostname = typing.cast(str | None, charm.config.get("external-hostname"))
         if config_hostname:
-            return {typing.cast(str, valid_fqdn(config_hostname))}
+            return typing.cast(str, valid_fqdn(config_hostname))
 
-        return set()
+        return None
+
+    @staticmethod
+    def get_gateway_route_hostnames(gateway_route_provider: GatewayRouteProvider) -> set[str]:
+        """Return hostname set used for gateway-route mode certificate requests."""
+        hostnames: set[str] = set()
+        requirer_data = gateway_route_provider.get_requirer_data()
+        for data in requirer_data.values():
+            if data.hostname:
+                hostnames.add(data.hostname)
+            hostnames.update(data.additional_hostnames)
+        return hostnames
 
     @staticmethod
     def _requires_ip_certificate(
-        proxy_mode: ProxyMode,
+        gateway_route_active: bool,
         has_tls: bool,
         gateway_route_provider: GatewayRouteProvider,
     ) -> bool:
         """Whether any gateway-route relation provides no hostname / additional hostnames."""
-        if not has_tls or proxy_mode != ProxyMode.GATEWAY_ROUTE:
+        if not has_tls or not gateway_route_active:
             return False
         requirer_data = gateway_route_provider.get_requirer_data()
         return any(
@@ -232,6 +223,20 @@ class CharmState:
         if is_gateway_route_related:
             return ProxyMode.GATEWAY_ROUTE
         return ProxyMode.INACTIVE
+
+
+@dataclass(frozen=True)
+class IngressCharmState(CharmState):
+    """Charm state for ingress mode."""
+
+    hostname: typing.Annotated[str, BeforeValidator(valid_fqdn)] | None = Field(default=None)
+
+
+@dataclass(frozen=True)
+class GatewayRouteCharmState(CharmState):
+    """Charm state for gateway-route mode."""
+
+    hostnames: set[typing.Annotated[str, BeforeValidator(valid_fqdn)]] = Field(default_factory=set)
 
 
 def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:

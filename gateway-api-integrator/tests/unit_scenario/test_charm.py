@@ -10,7 +10,7 @@ import pytest
 from ops import testing
 
 from charm import GatewayAPICharm
-from state.charm_state import CharmState, ProxyMode
+from state.charm_state import CharmState, IngressCharmState
 from state.tls import TLSInformationNotReadyError
 
 from .conftest import GATEWAY_CLASS_CONFIG
@@ -100,12 +100,12 @@ def test_gateway_route(
     assert: The charm updates the dns-record relation with the expected DNS entries
         and publishes provider data to gateway-route relation.
     """
-    # base_state fixture mocks CharmState derivation with ProxyMode.INACTIVE.
+    # base_state fixture mocks CharmState derivation with ingress state.
     # Restore the real config path (and gateway class lookup) so this test can
     # exercise real gateway-route mode behavior from relations/config.
     monkeypatch.setattr(
         "charm.CharmState.from_charm_and_providers",
-        classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
+        ORIGINAL_FROM_CHARM_AND_PROVIDERS,
     )
     monkeypatch.setattr(
         "charm.GatewayAPICharm.available_gateway_classes",
@@ -151,7 +151,7 @@ def test_blocked_when_relation_integrated_without_hostname(
     """Charm should block when ingress is integrated but no hostname can be derived."""
     monkeypatch.setattr(
         "charm.CharmState.from_charm_and_providers",
-        classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
+        ORIGINAL_FROM_CHARM_AND_PROVIDERS,
     )
     monkeypatch.setattr(
         "charm.GatewayAPICharm.available_gateway_classes",
@@ -177,7 +177,7 @@ def test_gateway_route_with_invalid_data_not_blocked(
     """Charm should not block when all gateway-route relations provide invalid data."""
     monkeypatch.setattr(
         "charm.CharmState.from_charm_and_providers",
-        classmethod(ORIGINAL_FROM_CHARM_AND_PROVIDERS.__func__),
+        ORIGINAL_FROM_CHARM_AND_PROVIDERS,
     )
     monkeypatch.setattr(
         "charm.GatewayAPICharm.available_gateway_classes",
@@ -236,12 +236,11 @@ def test_waiting_when_ip_san_certificate_missing(
     monkeypatch.setattr(
         "charm.CharmState.from_charm_and_providers",
         MagicMock(
-            return_value=CharmState(
+            return_value=IngressCharmState(
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
-                hostnames={"example.com"},
                 enforce_https=True,
-                proxy_mode=ProxyMode.INGRESS,
                 requires_ip_certificate=True,
+                hostname="example.com",
             )
         ),
     )

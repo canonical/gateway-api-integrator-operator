@@ -52,14 +52,14 @@ class GatewayResourceDefinition(ResourceDefinition):
     def __init__(
         self,
         gateway_resource_information: GatewayResourceInformation,
-        charm_config: CharmState,
+        charm_state: CharmState,
         tls_information: TLSInformation | None,
     ):
         """Create the state object with state components.
 
         Args:
             gateway_resource_information: GatewayResourceInformation state component.
-            charm_config: CharmState state component.
+            charm_state: CharmState state component.
             tls_information: TLSInformation state component.
         """
         tls_secret_names: list[str] = []
@@ -68,7 +68,7 @@ class GatewayResourceDefinition(ResourceDefinition):
                 tls_secret_names.append(
                     f"{tls_information.secret_resource_name_prefix}-{hostname}"
                 )
-        super().__init__(gateway_resource_information, charm_config)
+        super().__init__(gateway_resource_information, charm_state)
         self.tls_secret_names = tls_secret_names
 
     @property

@@ -279,7 +279,6 @@ class GatewayAPICharm(CharmBase):
             self._ingress_provider,
             self._gateway_route_provider,
         )
-        logger.info(f"Hostnames: {charm_state.hostnames}")
 
         has_tls_relation = self.model.get_relation(TLS_CERT_RELATION) is not None
 

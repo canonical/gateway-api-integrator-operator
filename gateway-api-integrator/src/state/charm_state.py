@@ -238,6 +238,7 @@ class CharmState:
             return ProxyMode.GATEWAY_ROUTE
         return ProxyMode.INACTIVE
 
+
 def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:
     """Return a list on invalid config from pydantic validation error.
 

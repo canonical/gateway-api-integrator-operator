@@ -104,6 +104,8 @@ class GatewayAPICharm(CharmBase):
                 self.on.config_changed,
                 self._ingress_provider.on.data_provided,
                 self._ingress_provider.on.data_removed,
+                self.on[GATEWAY_ROUTE_RELATION].relation_joined,
+                self.on[GATEWAY_ROUTE_RELATION].relation_changed,
             ],
         )
 

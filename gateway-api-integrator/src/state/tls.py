@@ -9,7 +9,8 @@ import ops
 from charmlibs.interfaces.tls_certificates import TLSCertificatesRequiresV4
 from pydantic import ValidationError, model_validator
 from pydantic.dataclasses import dataclass
-
+import logging
+logger = logging.getLogger(__name__)
 from .exception import CharmStateValidationBaseError
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
@@ -84,11 +85,12 @@ class TLSInformation:
 
         if not targets:
             return None
-
+        logger.info(f"Targets: {', '.join(sorted(targets))}")
         tls_certs: dict[str, str] = {}
         tls_keys: dict[str, str] = {}
         secret_resource_name_prefix = f"{charm.app.name}-secret"
         for cert in certificates.get_provider_certificates():
+            logger.info(f"cert: {cert.certificate}")
             cn = cert.certificate.common_name
             if cn in targets:
                 chain = cert.chain

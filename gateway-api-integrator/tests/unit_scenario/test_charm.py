@@ -10,7 +10,7 @@ import pytest
 from ops import testing
 
 from charm import GatewayAPICharm
-from state.charm_state import CharmState, IngressCharmState
+from state.charm_state import CharmState, ProxyMode
 from state.tls import TLSInformationNotReadyError
 
 from .conftest import GATEWAY_CLASS_CONFIG
@@ -236,11 +236,12 @@ def test_waiting_when_ip_san_certificate_missing(
     monkeypatch.setattr(
         "charm.CharmState.from_charm_and_providers",
         MagicMock(
-            return_value=IngressCharmState(
+            return_value=CharmState(
                 gateway_class_name=GATEWAY_CLASS_CONFIG,
                 enforce_https=True,
+                proxy_mode=ProxyMode.INGRESS,
                 requires_ip_certificate=True,
-                hostname="example.com",
+                hostnames={"example.com"},
             )
         ),
     )

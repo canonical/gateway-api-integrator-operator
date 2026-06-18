@@ -14,7 +14,7 @@ from charms.gateway_api_integrator.v1.gateway_route import (
     valid_fqdn,
 )
 from charms.traefik_k8s.v2.ingress import IngressPerAppProvider
-from pydantic import BeforeValidator, Field, ValidationError
+from pydantic import BeforeValidator, Field, ValidationError, ValidationInfo, field_validator
 from pydantic.dataclasses import dataclass
 
 from resource_manager.permission import map_k8s_auth_exception
@@ -67,14 +67,34 @@ class CharmState:
     Attributes:
         gateway_class_name: The configured gateway class.
         enforce_https: Whether to enforce HTTPS by redirecting HTTP to HTTPS.
+        proxy_mode: Current proxy mode selected from active relations.
         requires_ip_certificate: Whether an IP SAN certificate is required. This
             is true only when certificates are integrated, proxy mode is
             gateway-route, and at least one relation provides no hostname.
+        hostnames: Set of hostnames managed in the active mode. In ingress mode,
+            at most one hostname is allowed.
     """
 
     gateway_class_name: str = Field(min_length=1)
     enforce_https: bool = Field()
+    proxy_mode: ProxyMode = Field()
     requires_ip_certificate: bool = Field()
+    hostnames: set[
+        typing.Annotated[
+            str,
+            BeforeValidator(valid_fqdn),
+        ]
+    ] = Field(default_factory=set)
+
+    @field_validator("hostnames", mode="after")
+    @classmethod
+    def validate_ingress_hostnames_count(
+        cls, hostnames: set[str], info: ValidationInfo
+    ) -> set[str]:
+        """Ingress mode supports at most one hostname."""
+        if info.data.get("proxy_mode") == ProxyMode.INGRESS and len(hostnames) > 1:
+            raise ValueError("ingress mode supports at most one hostname")
+        return hostnames
 
     @classmethod
     @map_k8s_auth_exception
@@ -113,7 +133,6 @@ class CharmState:
         )
         gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
         config_external_hostname = cls.get_ingress_hostname(charm)
-        gateway_route_hostnames = cls.get_gateway_route_hostnames(gateway_route_provider)
 
         # external-hostname is an ingress-mode-only config option. In gateway-route
         # mode hostnames come from the relation data, so setting it is a misconfiguration.
@@ -144,25 +163,20 @@ class CharmState:
             proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls, gateway_route_provider
         )
 
+        if proxy_mode == ProxyMode.INGRESS:
+            hostnames = {config_external_hostname} if config_external_hostname else set()
+        elif proxy_mode == ProxyMode.GATEWAY_ROUTE:
+            hostnames = cls.get_gateway_route_hostnames(gateway_route_provider)
+        else:
+            hostnames = set()
+
         try:
-            if proxy_mode == ProxyMode.INGRESS:
-                return IngressCharmState(
-                    gateway_class_name=gateway_class_name,
-                    enforce_https=enforce_https,
-                    requires_ip_certificate=requires_ip_certificate,
-                    hostname=config_external_hostname,
-                )
-            if proxy_mode == ProxyMode.GATEWAY_ROUTE:
-                return GatewayRouteCharmState(
-                    gateway_class_name=gateway_class_name,
-                    enforce_https=enforce_https,
-                    requires_ip_certificate=requires_ip_certificate,
-                    hostnames=gateway_route_hostnames,
-                )
             return CharmState(
                 gateway_class_name=gateway_class_name,
                 enforce_https=enforce_https,
+                proxy_mode=proxy_mode,
                 requires_ip_certificate=requires_ip_certificate,
+                hostnames=hostnames,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
@@ -223,21 +237,6 @@ class CharmState:
         if is_gateway_route_related:
             return ProxyMode.GATEWAY_ROUTE
         return ProxyMode.INACTIVE
-
-
-@dataclass(frozen=True)
-class IngressCharmState(CharmState):
-    """Charm state for ingress mode."""
-
-    hostname: typing.Annotated[str, BeforeValidator(valid_fqdn)] | None = Field(default=None)
-
-
-@dataclass(frozen=True)
-class GatewayRouteCharmState(CharmState):
-    """Charm state for gateway-route mode."""
-
-    hostnames: set[typing.Annotated[str, BeforeValidator(valid_fqdn)]] = Field(default_factory=set)
-
 
 def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:
     """Return a list on invalid config from pydantic validation error.

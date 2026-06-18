@@ -8,55 +8,58 @@ from pydantic import ValidationError
 
 from state.charm_state import (
     CharmState,
-    GatewayRouteCharmState,
-    IngressCharmState,
+    ProxyMode,
 )
 
 
 def test_valid_ingress_config():
     """
     arrange: Provide valid values for ingress fields.
-    act: Instantiate IngressCharmState.
+    act: Instantiate CharmState for ingress mode.
     assert: All fields are correctly set.
     """
-    charm_state = IngressCharmState(
+    charm_state = CharmState(
         gateway_class_name="cilium",
         enforce_https=True,
+        proxy_mode=ProxyMode.INGRESS,
         requires_ip_certificate=False,
-        hostname="gateway.internal",
+        hostnames={"gateway.internal"},
     )
-    assert charm_state.hostname == "gateway.internal"
+    assert charm_state.hostnames == {"gateway.internal"}
+    assert charm_state.proxy_mode == ProxyMode.INGRESS
     assert charm_state.gateway_class_name == "cilium"
     assert charm_state.enforce_https is True
 
 
-def test_valid_ingress_config_hostname_none():
+def test_valid_ingress_config_no_hostnames():
     """
-    arrange: Provide None as ingress hostname.
-    act: Instantiate IngressCharmState.
-    assert: hostname is None and other fields are correctly set.
+    arrange: Provide no ingress hostnames.
+    act: Instantiate CharmState for ingress mode.
+    assert: hostnames is empty and other fields are correctly set.
     """
-    charm_state = IngressCharmState(
+    charm_state = CharmState(
         gateway_class_name="cilium",
         enforce_https=False,
+        proxy_mode=ProxyMode.INGRESS,
         requires_ip_certificate=False,
-        hostname=None,
+        hostnames=set(),
     )
-    assert charm_state.hostname is None
+    assert charm_state.hostnames == set()
     assert charm_state.enforce_https is False
 
 
 def test_valid_gateway_route_config_enforce_https_false():
     """
     arrange: Provide enforce_https as False.
-    act: Instantiate GatewayRouteCharmState.
+    act: Instantiate CharmState for gateway-route mode.
     assert: enforce_https is correctly set to False.
     """
-    charm_state = GatewayRouteCharmState(
-        hostnames={"example.com"},
+    charm_state = CharmState(
         gateway_class_name="cilium",
         enforce_https=False,
+        proxy_mode=ProxyMode.GATEWAY_ROUTE,
         requires_ip_certificate=False,
+        hostnames={"example.com"},
     )
     assert charm_state.hostnames == {"example.com"}
     assert charm_state.enforce_https is False
@@ -67,7 +70,9 @@ def test_valid_inactive_config():
     charm_state = CharmState(
         gateway_class_name="cilium",
         enforce_https=False,
+        proxy_mode=ProxyMode.INACTIVE,
         requires_ip_certificate=False,
+        hostnames=set(),
     )
     assert type(charm_state) is CharmState
 
@@ -79,37 +84,52 @@ def test_invalid_gateway_class_name_empty():
     assert: ValidationError is raised due to min_length=1 constraint.
     """
     with pytest.raises(ValidationError):
-        IngressCharmState(
+        CharmState(
             gateway_class_name="",
             enforce_https=True,
+            proxy_mode=ProxyMode.INGRESS,
             requires_ip_certificate=False,
-            hostname="gateway.internal",
+            hostnames={"gateway.internal"},
         )
 
 
 def test_invalid_ingress_hostname():
     """
     arrange: Provide an invalid hostname string (not a valid FQDN).
-    act: Instantiate IngressCharmState.
+    act: Instantiate CharmState for ingress mode.
     assert: ValidationError is raised by the valid_fqdn BeforeValidator.
     """
     with pytest.raises(ValidationError):
-        IngressCharmState(
+        CharmState(
             gateway_class_name="cilium",
             enforce_https=True,
+            proxy_mode=ProxyMode.INGRESS,
             requires_ip_certificate=False,
-            hostname="not a valid hostname!",
+            hostnames={"not a valid hostname!"},
         )
 
 
 def test_invalid_gateway_route_hostname():
     """Gateway-route state should validate each hostname as a FQDN."""
     with pytest.raises(ValidationError):
-        GatewayRouteCharmState(
-            hostnames={"not a valid hostname!"},
+        CharmState(
             gateway_class_name="cilium",
             enforce_https=True,
+            proxy_mode=ProxyMode.GATEWAY_ROUTE,
             requires_ip_certificate=False,
+            hostnames={"not a valid hostname!"},
+        )
+
+
+def test_invalid_ingress_multiple_hostnames():
+    """Ingress mode should reject multiple hostnames."""
+    with pytest.raises(ValidationError):
+        CharmState(
+            gateway_class_name="cilium",
+            enforce_https=True,
+            proxy_mode=ProxyMode.INGRESS,
+            requires_ip_certificate=False,
+            hostnames={"one.example.com", "two.example.com"},
         )
 
 
@@ -124,13 +144,14 @@ def test_invalid_gateway_route_hostname():
 def test_valid_hostnames(hostname: str):
     """
     arrange: Provide various valid FQDN hostnames.
-    act: Instantiate IngressCharmState.
-    assert: hostname is correctly set without validation errors.
+    act: Instantiate CharmState for ingress mode.
+    assert: hostnames is correctly set without validation errors.
     """
-    charm_state = IngressCharmState(
+    charm_state = CharmState(
         gateway_class_name="cilium",
         enforce_https=True,
+        proxy_mode=ProxyMode.INGRESS,
         requires_ip_certificate=False,
-        hostname=hostname,
+        hostnames={hostname},
     )
-    assert charm_state.hostname == hostname
+    assert charm_state.hostnames == {hostname}

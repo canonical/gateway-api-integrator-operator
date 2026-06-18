@@ -60,9 +60,9 @@ from state.charm_state import (
     GATEWAY_ROUTE_RELATION,
     INGRESS_RELATION,
     CharmState,
-    GatewayRouteCharmState,
-    IngressCharmState,
+    ProxyMode,
 )
+from state.exception import CharmStateValidationBaseError
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
     HTTPRouteResourceInformation,
@@ -98,8 +98,13 @@ class GatewayAPICharm(CharmBase):
         self.certificates = TLSCertificatesRequiresV4(
             charm=self,
             relationship_name=TLS_CERT_RELATION,
-            certificate_requests=[],
+            certificate_requests=self._get_certificate_requests(),
             mode=Mode.APP,
+            refresh_events=[
+                self.on.config_changed,
+                self._ingress_provider.on.data_provided,
+                self._ingress_provider.on.data_removed,
+            ],
         )
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -132,6 +137,31 @@ class GatewayAPICharm(CharmBase):
         self.framework.observe(
             self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
         )
+
+    def _get_certificate_requests(self) -> list[CertificateRequestAttributes]:
+        """Get certificate requests from charm state hostnames.
+
+        Returns:
+            List of certificate request attributes for hostnames in charm state,
+            or empty list if charm state initialization fails.
+        """
+        try:
+            charm_state = CharmState.from_charm_and_providers(
+                self,
+                self.available_gateway_classes(),
+                self._ingress_provider,
+                self._gateway_route_provider,
+            )
+            csrs = [
+                CertificateRequestAttributes(common_name=hostname, sans_dns=[hostname])
+                for hostname in sorted(charm_state.hostnames)
+            ]
+            return csrs
+        except CharmStateValidationBaseError as e:
+            logger.warning(
+                "Failed to initialize charm state, skipping certificate requests: %s", str(e)
+            )
+            return []
 
     @property
     def _labels(self) -> LabelSelector:
@@ -218,40 +248,11 @@ class GatewayAPICharm(CharmBase):
         """Handle the DNS record relation joined event."""
         self._reconcile()
 
-    def _sync_certificate_requests(
-        self,
-        hostnames: Collection[str],
-        requires_ip_certificate: bool,
-        gateway_address: str | None,
-    ) -> None:
-        """Sync certificate requests to the desired state."""
-        csrs = [
-            CertificateRequestAttributes(common_name=hostname, sans_dns=[hostname])
-            for hostname in sorted(hostnames)
-        ]
-        if requires_ip_certificate and gateway_address:
-            csrs.append(
-                CertificateRequestAttributes(
-                    common_name=gateway_address, sans_ip={gateway_address}
-                )
-            )
-        self.certificates.certificate_requests = csrs
-        self.certificates.sync()
-
     def _determine_https_mode(self, enforce_https: bool, has_tls_relation: bool) -> HttpsMode:
         """Determine the HTTPS mode based on config and TLS relation presence."""
         if enforce_https:
             return HttpsMode.ENFORCED
         return HttpsMode.ENABLED if has_tls_relation else HttpsMode.DISABLED
-
-    @staticmethod
-    def _certificate_hostnames(charm_state: CharmState) -> set[str]:
-        """Return hostnames used for certificate requests and DNS publication."""
-        if isinstance(charm_state, IngressCharmState):
-            return {charm_state.hostname} if charm_state.hostname else set()
-        if isinstance(charm_state, GatewayRouteCharmState):
-            return set(charm_state.hostnames)
-        return set()
 
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
@@ -278,7 +279,7 @@ class GatewayAPICharm(CharmBase):
             self._ingress_provider,
             self._gateway_route_provider,
         )
-        certificate_hostnames = self._certificate_hostnames(charm_state)
+        logger.info(f"Hostnames: {charm_state.hostnames}")
 
         has_tls_relation = self.model.get_relation(TLS_CERT_RELATION) is not None
 
@@ -300,12 +301,9 @@ class GatewayAPICharm(CharmBase):
         tls_information = None
         tls_not_ready = False
         if has_tls_relation:
-            self._sync_certificate_requests(
-                certificate_hostnames, charm_state.requires_ip_certificate, gateway_address
-            )
             try:
                 tls_information = TLSInformation.from_charm(
-                    self, certificate_hostnames, self.certificates, gateway_address
+                    self, charm_state.hostnames, self.certificates, gateway_address
                 )
             except TLSInformationNotReadyError as exc:
                 logger.info("TLS certificates not ready yet: %s", str(exc))
@@ -322,7 +320,7 @@ class GatewayAPICharm(CharmBase):
         )
 
         # Handle mode-specific logic
-        if isinstance(charm_state, IngressCharmState):
+        if charm_state.proxy_mode == ProxyMode.INGRESS:
             self._define_ingress_resources_and_publish_url(
                 client,
                 charm_state,
@@ -330,7 +328,7 @@ class GatewayAPICharm(CharmBase):
                 gateway_resource_information,
                 gateway_resource_manager,
             )
-        elif isinstance(charm_state, GatewayRouteCharmState):
+        elif charm_state.proxy_mode == ProxyMode.GATEWAY_ROUTE:
             self._reconcile_gateway_route(
                 client,
                 charm_state,
@@ -343,7 +341,7 @@ class GatewayAPICharm(CharmBase):
         self._update_dns_record_relation(
             gateway_resource_manager,
             gateway_resource_information,
-            certificate_hostnames,
+            charm_state.hostnames,
         )
 
         self._set_status_gateway_address(
@@ -358,7 +356,7 @@ class GatewayAPICharm(CharmBase):
     def _reconcile_gateway_route(
         self,
         client: Client,
-        charm_state: GatewayRouteCharmState,
+        charm_state: CharmState,
         has_tls_relation: bool,
         gateway_resource_information: GatewayResourceInformation,
         gateway_resource_manager: GatewayResourceManager,
@@ -497,7 +495,7 @@ class GatewayAPICharm(CharmBase):
     def _define_ingress_resources_and_publish_url(
         self,
         client: Client,
-        charm_state: IngressCharmState,
+        charm_state: CharmState,
         tls_information: TLSInformation | None,
         gateway_resource_information: GatewayResourceInformation,
         gateway_resource_manager: GatewayResourceManager,
@@ -511,8 +509,9 @@ class GatewayAPICharm(CharmBase):
             gateway_resource_information: Information needed to attach http_route resources.
             gateway_resource_manager: Gateway resource manager.
         """
+        hostname = next(iter(charm_state.hostnames), None)
         http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
-            self._ingress_provider, charm_state.hostname
+            self._ingress_provider, hostname
         )
 
         http_route_resource_manager = HTTPRouteResourceManager(self._labels, client)
@@ -522,8 +521,8 @@ class GatewayAPICharm(CharmBase):
         http_route_resources = []
         ingress_base_url = None
         if charm_state.enforce_https:
-            if charm_state.hostname:
-                ingress_base_url = f"https://{charm_state.hostname}"
+            if hostname:
+                ingress_base_url = f"https://{hostname}"
             # When HTTPS is enforced, create both redirect and HTTPS routes
             http_route_resources = [
                 HTTPRouteResourceDefinition(
@@ -539,8 +538,8 @@ class GatewayAPICharm(CharmBase):
                 ),
             ]
         else:
-            if tls_information is not None and charm_state.hostname:
-                ingress_base_url = f"https://{charm_state.hostname}"
+            if tls_information is not None and hostname:
+                ingress_base_url = f"https://{hostname}"
             elif gateway_address := gateway_resource_manager.gateway_address(
                 gateway_resource_information.gateway_name
             ):

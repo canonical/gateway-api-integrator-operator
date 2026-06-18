@@ -246,6 +246,8 @@ linkcheck_ignore = [
     "https://example.com",
     # SourceForge domains often block linkcheck
     r"https://.*\.sourceforge\.(net|io)/.*",
+    # gateway-api.sigs.k8s.io is often unreachable in CI environments
+    r"https://gateway-api\.sigs\.k8s\.io/.*",
     ]
 
 

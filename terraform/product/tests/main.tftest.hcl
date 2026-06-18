@@ -13,12 +13,12 @@ run "basic_deploy" {
     gateway_api_integrator = {
       channel = "latest/edge"
       # renovate: depName="gateway-api-integrator"
-      revision = 151
+      revision = 157
     }
     gateway_route_configurator = {
       channel = "latest/edge"
       # renovate: depName="gateway-route-configurator"
-      revision = 15
+      revision = 22
     }
   }
 

@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-06-18
+
+- Migrated the RTD documentation URL under the Canonical domain.
+
 ## 2026-06-01
 
 - Added v1 `gateway-route` interface library.

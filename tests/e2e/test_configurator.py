@@ -3,6 +3,8 @@
 
 """Integration tests for testing both charms."""
 
+import ipaddress
+
 import jubilant
 import requests
 import urllib3
@@ -47,10 +49,13 @@ def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: str) -> str:
     app_status = status.apps[gateway_api_integrator]
     message = app_status.app_status.message
     if "gateway address" in message.lower():
-        # Extract IP from message
-        parts = message.split(":")
-        ip = parts[1].strip()
-        return ip
+        parts = message.split()
+        try:
+            candidate = parts[2]
+            ipaddress.IPv4Address(candidate)
+            return candidate
+        except (IndexError, ipaddress.AddressValueError):
+            return ""
     return ""
 
 

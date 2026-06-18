@@ -78,7 +78,7 @@ def test_http_route_gen_resource(
     )
     assert (
         https_route_resource.spec["parentRefs"][0]["sectionName"]
-        == f"{harness.model.app.name}-https-listener"
+        == f"{harness.model.app.name}-https"
     )
 
 

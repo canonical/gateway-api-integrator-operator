@@ -119,7 +119,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         Returns:
             The listener id.
         """
-        return f"{self.gateway_name}-{self.http_route_type}-listener"
+        return f"{self.gateway_name}-{self.http_route_type}"
 
     @property
     def http_route_resource_name(self) -> str:

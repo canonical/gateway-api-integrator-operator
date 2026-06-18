@@ -82,7 +82,7 @@ class GatewayResourceDefinition(ResourceDefinition):
         return {
             "protocol": "HTTP",
             "port": 80,
-            "name": f"{self.gateway_name}-http-listener",
+            "name": f"{self.gateway_name}-http",
             "allowedRoutes": {"namespaces": {"from": "All"}},
         }
 
@@ -95,7 +95,7 @@ class GatewayResourceDefinition(ResourceDefinition):
                 {
                     "protocol": "HTTPS",
                     "port": 443,
-                    "name": f"{self.gateway_name}-https-listener",
+                    "name": f"{self.gateway_name}-https",
                     "allowedRoutes": {"namespaces": {"from": "All"}},
                     "tls": {
                         "certificateRefs": [

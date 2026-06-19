@@ -105,7 +105,7 @@ class CharmState:
         ingress_provider: IngressPerAppProvider,
         gateway_route_provider: GatewayRouteProvider,
     ) -> "CharmState":
-        """Create a mode-specific charm state from a charm instance.
+        """Create a CharmState class from a charm instance.
 
         Args:
             charm: The gateway-api-integrator charm.
@@ -119,7 +119,7 @@ class CharmState:
             IngressGatewayRouteConflictError: When both ingress and gateway-route is present.
 
         Returns:
-            CharmState for inactive mode, or a mode-specific subclass for active integrations.
+            CharmState: Instance of the charm state component.
         """
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
         has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None

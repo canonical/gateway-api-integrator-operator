@@ -6,7 +6,7 @@
 import pathlib
 import subprocess
 
-import apt
+from charmlibs import apt
 import ops
 from any_charm_base import AnyCharmBase
 from ingress import IngressPerAppRequirer

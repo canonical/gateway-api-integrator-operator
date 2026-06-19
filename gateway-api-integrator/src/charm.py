@@ -46,7 +46,7 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
-from client import get_client
+from client import LightKubeInitializationError, get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
@@ -62,7 +62,7 @@ from state.charm_state import (
     CharmState,
     ProxyMode,
 )
-from state.exception import CharmStateValidationBaseError
+from state.exception import CharmStateValidationBaseError, InvalidGatewayAddressError
 from state.gateway import GatewayResourceInformation
 from state.http_route import (
     HTTPRouteResourceInformation,
@@ -158,12 +158,43 @@ class GatewayAPICharm(CharmBase):
                 CertificateRequestAttributes(common_name=hostname, sans_dns=[hostname])
                 for hostname in sorted(charm_state.hostnames)
             ]
+            if charm_state.requires_ip_certificate:
+                gateway_address = self._current_gateway_address()
+                if gateway_address:
+                    csrs.append(
+                        CertificateRequestAttributes(
+                            common_name=gateway_address, sans_ip=[gateway_address]
+                        )
+                    )
             return csrs
         except CharmStateValidationBaseError as e:
             logger.warning(
                 "Failed to initialize charm state, skipping certificate requests: %s", str(e)
             )
             return []
+
+    def _current_gateway_address(self) -> str | None:
+        """Get the current gateway IPv4 address.
+
+        This is used when calculating certificate requests to include an IP SAN
+        target only when an address is already known.
+        """
+        try:
+            client = get_client(field_manager=self.app.name, namespace=self.model.name)
+        except LightKubeInitializationError:
+            return None
+
+        gateway_resource_manager = GatewayResourceManager(self._labels, client)
+        if not gateway_resource_manager.current_gateway_resource():
+            return None
+
+        gateway_resource_information = GatewayResourceInformation.from_charm(self)
+        try:
+            return gateway_resource_manager.gateway_address(
+                gateway_resource_information.gateway_name
+            )
+        except InvalidGatewayAddressError:
+            return None
 
     @property
     def _labels(self) -> LabelSelector:

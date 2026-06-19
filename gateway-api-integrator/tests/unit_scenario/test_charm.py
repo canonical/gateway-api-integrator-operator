@@ -10,6 +10,8 @@ import pytest
 from ops import testing
 
 from charm import GatewayAPICharm
+from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
+from charms.gateway_api_integrator.v1.gateway_route import HttpsMode
 from state.charm_state import CharmState, ProxyMode
 from state.tls import TLSInformationNotReadyError
 
@@ -167,6 +169,48 @@ def test_blocked_when_relation_integrated_without_hostname(
 
     assert state.unit_status.name == ops.BlockedStatus.name
     assert "external-hostname must be set" in state.unit_status.message
+
+
+def test_get_certificate_requests_includes_gateway_ip_when_required(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    gateway_route_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Charm state requires an IP certificate and gateway address is known.
+    act: Run start event.
+    assert: Certificate requests include an IP SAN CSR for the gateway address.
+    """
+    monkeypatch.setattr(
+        "charm.CharmState.from_charm_and_providers",
+        MagicMock(
+            return_value=CharmState(
+                gateway_class_name=GATEWAY_CLASS_CONFIG,
+                enforce_https=True,
+                proxy_mode=ProxyMode.GATEWAY_ROUTE,
+                requires_ip_certificate=True,
+                hostnames=set(),
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm._current_gateway_address",
+        lambda self: "1.2.3.4",
+    )
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["config"]["external-hostname"] = ""
+    base_state["relations"].append(gateway_route_relation)
+    state = testing.State(**base_state)
+    state = ctx.run(ctx.on.start(), state)
+
+    assert ctx.requested_certificates
+    ip_csrs = [
+        c for c in ctx.requested_certificates
+        if isinstance(c, CertificateRequestAttributes) and c.sans_ip
+    ]
+    assert len(ip_csrs) == 1
+    assert ip_csrs[0].common_name == "1.2.3.4"
+    assert "1.2.3.4" in ip_csrs[0].sans_ip
 
 
 def test_gateway_route_with_invalid_data_not_blocked(

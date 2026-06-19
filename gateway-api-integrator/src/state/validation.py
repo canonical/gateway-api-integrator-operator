@@ -13,7 +13,7 @@ from ops.model import SecretNotFoundError
 import client
 from resource_manager.resource_manager import InvalidResourceError
 from state.charm_state import IngressGatewayRouteConflictError
-from state.exception import CharmStateValidationBaseError, NonIPv4GatewayAddressError
+from state.exception import CharmStateValidationBaseError, InvalidGatewayAddressError
 
 logger = logging.getLogger(__name__)
 
@@ -80,8 +80,8 @@ def validate_config_and_integration(
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 _clean_up_resources_in_blocked_state(instance)
                 return None
-            except NonIPv4GatewayAddressError as exc:
-                logger.exception("Gateway reported unsupported non-IPv4 address: %s", str(exc))
+            except InvalidGatewayAddressError as exc:
+                logger.exception("Gateway reported unsupported address: %s", str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 return None
             except InvalidResourceError:

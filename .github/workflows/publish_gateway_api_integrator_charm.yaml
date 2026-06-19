@@ -17,5 +17,5 @@ jobs:
     secrets: inherit
     with:
       working-directory: "./gateway-api-integrator"
-      channel: "latest/edge"
+      channel: "1/edge"
       tag-prefix: "gateway-api-integrator"

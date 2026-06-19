@@ -17,7 +17,6 @@ GATEWAY_API_INTEGRATOR_APP_NAME = "gateway-api-integrator"
 INGRESS_CONFIGURATOR_APP_NAME = "ingress-configurator"
 ANY_CHARM_INGRESS_REQUIRER_APP_NAME = "any-charm"
 ANY_CHARM_INGRESS_REQUIRER_SRC = "ingress_requirer.py"
-APT_LIB_SRC = "gateway-api-integrator/lib/charms/operator_libs_linux/v0/apt.py"
 
 @pytest.fixture(scope="module", name="gateway_class")
 def gateway_class_fixture(pytestconfig: pytest.Config):
@@ -128,12 +127,10 @@ def gateway_route_backend_application(
     """Deploy any-charm as a backend HTTP service with ingress requirer."""
     here = Path(__file__).parent
     ingress_lib_path = here.parent.parent / "gateway-api-integrator/lib/charms/traefik_k8s/v2/ingress.py"
-    apt_lib_path = here.parent.parent / APT_LIB_SRC
 
     any_charm_src_overwrite = {
         "any_charm.py": (here / ANY_CHARM_INGRESS_REQUIRER_SRC).read_text(encoding="utf-8"),
         "ingress.py": ingress_lib_path.read_text(encoding="utf-8"),
-        "apt.py": apt_lib_path.read_text(encoding="utf-8"),
     }
 
     juju.deploy(
@@ -142,7 +139,7 @@ def gateway_route_backend_application(
         channel="latest/edge",
         config={
             "src-overwrite": json.dumps(any_charm_src_overwrite),
-            "python-packages": "pydantic<2.0",
+            "python-packages": "\n".join(["charmlibs-apt", "pydantic<2.0"]),
         },
     )
     return ANY_CHARM_INGRESS_REQUIRER_APP_NAME

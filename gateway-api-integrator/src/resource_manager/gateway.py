@@ -16,7 +16,7 @@ from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
 from state.charm_state import CharmState
-from state.exception import NonIPv4GatewayAddressError
+from state.exception import InvalidGatewayAddressError
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
@@ -236,13 +236,13 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     try:
                         parsed_address = ipaddress.ip_address(address)
                     except ValueError as exc:
-                        raise NonIPv4GatewayAddressError(
+                        raise InvalidGatewayAddressError(
                             f"Unsupported gateway address: {address!r}. "
                             "Only IPv4 addresses are supported for now."
                         ) from exc
 
                     if parsed_address.version != 4:
-                        raise NonIPv4GatewayAddressError(
+                        raise InvalidGatewayAddressError(
                             f"Unsupported gateway address: {address!r}. "
                             "Only IPv4 addresses are supported for now."
                         )
@@ -250,7 +250,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     ipv4_addresses.append(address)
 
                 if len(ipv4_addresses) > 1:
-                    raise RuntimeError(
+                    raise InvalidGatewayAddressError(
                         f"Multiple IPv4 addresses found for gateway {name}: {ipv4_addresses}"
                     )
 

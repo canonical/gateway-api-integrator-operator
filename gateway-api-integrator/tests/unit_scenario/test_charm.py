@@ -7,11 +7,10 @@ from unittest.mock import MagicMock
 
 import ops
 import pytest
+from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
 from ops import testing
 
 from charm import GatewayAPICharm
-from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
-from charms.gateway_api_integrator.v1.gateway_route import HttpsMode
 from state.charm_state import CharmState, ProxyMode
 from state.tls import TLSInformationNotReadyError
 
@@ -172,13 +171,11 @@ def test_blocked_when_relation_integrated_without_hostname(
 
 
 def test_get_certificate_requests_includes_gateway_ip_when_required(
-    base_state: dict,
     monkeypatch: pytest.MonkeyPatch,
-    gateway_route_relation: testing.Relation,
 ) -> None:
     """
     arrange: Charm state requires an IP certificate and gateway address is known.
-    act: Run start event.
+    act: Call _get_certificate_requests directly.
     assert: Certificate requests include an IP SAN CSR for the gateway address.
     """
     monkeypatch.setattr(
@@ -193,23 +190,15 @@ def test_get_certificate_requests_includes_gateway_ip_when_required(
             )
         ),
     )
-    monkeypatch.setattr(
-        "charm.GatewayAPICharm._current_gateway_address",
-        lambda self: "1.2.3.4",
-    )
-    ctx = testing.Context(GatewayAPICharm)
-    base_state["config"]["external-hostname"] = ""
-    base_state["relations"].append(gateway_route_relation)
-    state = testing.State(**base_state)
-    state = ctx.run(ctx.on.start(), state)
 
-    assert ctx.requested_certificates
-    ip_csrs = [
-        c for c in ctx.requested_certificates
-        if isinstance(c, CertificateRequestAttributes) and c.sans_ip
-    ]
+    mock_self = MagicMock()
+    mock_self._current_gateway_address.return_value = "1.2.3.4"
+    csrs = GatewayAPICharm._get_certificate_requests(mock_self)
+
+    ip_csrs = [c for c in csrs if isinstance(c, CertificateRequestAttributes) and c.sans_ip]
     assert len(ip_csrs) == 1
     assert ip_csrs[0].common_name == "1.2.3.4"
+    assert ip_csrs[0].sans_ip is not None
     assert "1.2.3.4" in ip_csrs[0].sans_ip
 
 

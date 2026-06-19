@@ -82,7 +82,7 @@ def validate_config_and_integration(
                 return None
             except InvalidGatewayAddressError as exc:
                 logger.exception("Gateway reported unsupported address: %s", str(exc))
-                instance.unit.status = ops.BlockedStatus(str(exc))
+                instance.unit.status = ops.BlockedStatus("Gateway reported unsupported address")
                 return None
             except InvalidResourceError:
                 logger.exception("Error creating kubernetes resource")

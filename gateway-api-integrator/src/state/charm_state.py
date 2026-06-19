@@ -93,7 +93,7 @@ class CharmState:
     ) -> set[str]:
         """Ingress mode supports at most one hostname."""
         if info.data.get("proxy_mode") == ProxyMode.INGRESS and len(hostnames) > 1:
-            raise ValueError("ingress mode supports at most one hostname")
+            raise ValueError("The charm supports at most one hostname when related via ingress.")
         return hostnames
 
     @classmethod
@@ -123,7 +123,7 @@ class CharmState:
         """
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
         has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
-        if not has_tls and enforce_https:
+        if enforce_https and not has_tls:
             raise InvalidCharmConfigError(
                 "Certificates relation is needed if enforce-https is enabled."
             )
@@ -155,8 +155,7 @@ class CharmState:
 
         if proxy_mode == ProxyMode.INGRESS and has_tls and not config_external_hostname:
             raise HostnameMissingError(
-                "external-hostname must be set in ingress mode "
-                "when the certificates relation is integrated."
+                "external-hostname must be set in when related to ingress and certificates"
             )
 
         requires_ip_certificate = cls._requires_ip_certificate(

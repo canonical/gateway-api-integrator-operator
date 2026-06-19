@@ -62,13 +62,13 @@ class GatewayResourceDefinition(ResourceDefinition):
             charm_state: CharmState state component.
             tls_information: TLSInformation state component.
         """
+        super().__init__(gateway_resource_information, charm_state)
         tls_secret_names: list[str] = []
         if tls_information is not None:
             for hostname in tls_information.hostnames:
                 tls_secret_names.append(
                     f"{tls_information.secret_resource_name_prefix}-{hostname}"
                 )
-        super().__init__(gateway_resource_information, charm_state)
         self.tls_secret_names = tls_secret_names
 
     @property

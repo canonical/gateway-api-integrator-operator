@@ -438,9 +438,9 @@ class GatewayAPICharm(CharmBase):
         if not relation:
             return
 
-        sorted_hostnames = sorted(hostnames)
-        if not sorted_hostnames:
+        if not hostnames:
             return
+        sorted_hostnames = sorted(hostnames)
 
         if not resource_manager.current_gateway_resource():
             logger.warning(

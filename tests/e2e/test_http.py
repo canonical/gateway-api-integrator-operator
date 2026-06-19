@@ -86,12 +86,12 @@ def test_http(
     # send a request to verify routing
     gateway_address = get_gateway_ip(juju, gateway_api_integrator_no_tls)
     response = requests.get(
-        f"http://{gateway_address}/app1",
+        f"http://{gateway_address}/app1/",
         timeout=10,
         headers={"Host": "www.gateway.internal"},
     )
     assert response.status_code == 200
-    assert "Welcome to flask-k8s Charm" in response.text
+    assert "Hello from any_charm" in response.text
 
     juju.config(ingress_configurator, reset="hostname")
     juju.wait(
@@ -104,8 +104,8 @@ def test_http(
         timeout=600,
     )
     response = requests.get(
-        f"http://{gateway_address}/app1",
+        f"http://{gateway_address}/app1/",
         timeout=10,
     )
     assert response.status_code == 200
-    assert "Welcome to flask-k8s Charm" in response.text
+    assert "Hello from any_charm" in response.text

@@ -97,27 +97,18 @@ def test_configurator(
     juju: jubilant.Juju,
     ingress_configurator: str,
     gateway_api_integrator: str,
+    gateway_route_backend_application: str,
     external_hostname: str,
 ):
     """
     Test that the charms correctly set up the gateway route relation.
     Deploy ingress-configurator and integrate it on gateway-route relation.
-    Assert that a request to the external hostname is correctly routed to the flask-k8s app
+    Assert that a request to the external hostname is correctly routed to the any-charm app
     """
-    additional_hostnames = ["gateway-alt.internal", "gateway-alt2.internal"]
-    juju.config(
-        ingress_configurator,
-        {"additional-hostnames": ",".join(additional_hostnames)},
-    )
-
-    juju.deploy(
-        "flask-k8s",
-        channel="latest/edge",
-    )
 
     juju.integrate(
         f"{ingress_configurator}:ingress",
-        "flask-k8s:ingress",
+        f"{gateway_route_backend_application}:ingress",
     )
     juju.integrate(
         f"{gateway_api_integrator}:gateway-route",
@@ -125,7 +116,7 @@ def test_configurator(
     )
     juju.wait(
         lambda status: jubilant.all_active(
-            status, ingress_configurator, "flask-k8s", gateway_api_integrator
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,
     )
@@ -137,24 +128,23 @@ def test_configurator(
     assert_gateway_route_response(
         gateway_address,
         external_hostname,
-        "/app1",
-        body_contains="Welcome to flask-k8s Charm",
+        "/app1/",
+        body_contains="Hello from any_charm",
     )
-    assert get_url_from_relation(juju, "flask-k8s/0") == f"https://{external_hostname}/app1"
+    assert get_url_from_relation(juju, f"{gateway_route_backend_application}/0") == f"https://{external_hostname}/app1"
 
     # HTTP with hostname
     juju.config(gateway_api_integrator, {"enforce-https": False})
     juju.wait(
         lambda status: jubilant.all_active(
-            status, ingress_configurator, "flask-k8s", gateway_api_integrator
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,
     )
 
-    for additional_hostname in [external_hostname] + additional_hostnames:
-        assert_gateway_route_response(
-            gateway_address,
-            additional_hostname,
-            "/app1",
-            body_contains="Welcome to flask-k8s Charm",
-        )
+    assert_gateway_route_response(
+        gateway_address,
+        external_hostname,
+        "/app1/",
+        body_contains="Hello from any_charm",
+    )

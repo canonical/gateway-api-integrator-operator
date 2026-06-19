@@ -320,6 +320,11 @@ class GatewayAPICharm(CharmBase):
             tls_information,
         )
 
+        # Remove ingress resources when operating in any non-ingress mode.
+        if charm_state.proxy_mode != ProxyMode.INGRESS:
+            HTTPRouteResourceManager(self._labels, client).cleanup_resources(exclude=[])
+            ServiceResourceManager(self._labels, client).cleanup_resources(exclude=[])
+
         # Handle mode-specific logic
         if charm_state.proxy_mode == ProxyMode.INGRESS:
             self._define_ingress_resources_and_publish_url(
@@ -365,10 +370,6 @@ class GatewayAPICharm(CharmBase):
         """Publish provider data for gateway-route relations when gateway address is ready."""
         # Refresh the set of valid relations to publish to.
         self._gateway_route_provider.get_requirer_data()
-
-        # Clean up unused resources
-        HTTPRouteResourceManager(self._labels, client).cleanup_resources(exclude=[])
-        ServiceResourceManager(self._labels, client).cleanup_resources(exclude=[])
 
         https_mode = self._determine_https_mode(charm_state.enforce_https, has_tls_relation)
 

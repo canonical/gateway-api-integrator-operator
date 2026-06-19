@@ -13,10 +13,9 @@ from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,
 )
-from state.config import CharmConfig
 from state.tls import TLSInformation
 
-from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 def test_secret_gen_resource(
@@ -24,6 +23,7 @@ def test_secret_gen_resource(
     certificates_relation_data: dict[str, str],
     client_with_mock_external: MagicMock,
     config: dict[str, str],
+    gateway_relation: dict[str, dict[str, str]],
 ):
     """
     arrange: Given a charm with valid config and mocked client.
@@ -31,27 +31,32 @@ def test_secret_gen_resource(
     assert: The k8s resource is correctly generated.
     """
     harness.update_config(config)
+    harness.add_relation(
+        "gateway",
+        "requirer-charm",
+        app_data=gateway_relation["app_data"],
+        unit_data=gateway_relation["unit_data"],
+    )
     relation_id = harness.add_relation("certificates", "self-signed-certificates")
     harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
 
+    harness.set_leader()
     harness.begin()
+    harness.charm.certificates.get_private_key = MagicMock(return_value="key-data")
     secret_resource_manager = TLSSecretResourceManager(
         labels=harness.charm._labels,
         client=client_with_mock_external,
     )
-    charm_config = CharmConfig.from_charm_and_providers(
-        harness.charm,
-        [GATEWAY_CLASS_CONFIG],
-        harness.charm._ingress_provider,
-        harness.charm._gateway_route_provider,
-    )
     tls_information = TLSInformation.from_charm(
         harness.charm,
-        charm_config.hostname,
+        {TEST_EXTERNAL_HOSTNAME_CONFIG},
         harness.charm.certificates,
     )
     secret_resource = secret_resource_manager._gen_resource(
-        SecretResourceDefinition.from_tls_information(tls_information)
+        SecretResourceDefinition.from_tls_information(
+            tls_information,
+            TEST_EXTERNAL_HOSTNAME_CONFIG,
+        )
     )
 
     assert (

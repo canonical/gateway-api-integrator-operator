@@ -47,7 +47,6 @@ provides:
     limit: 1
   gateway-route:
     interface: gateway-route
-    limit: 1
 
 config:
   options:

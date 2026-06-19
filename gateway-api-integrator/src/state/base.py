@@ -8,13 +8,13 @@ import typing
 
 from state.http_route import HTTPRouteResourceInformation
 
-from .config import CharmConfig
+from .charm_state import CharmState
 from .gateway import GatewayResourceInformation
 from .tls import TLSInformation
 
 Component = typing.Union[
     GatewayResourceInformation,
-    CharmConfig,
+    CharmState,
     TLSInformation,
     HTTPRouteResourceInformation,
 ]

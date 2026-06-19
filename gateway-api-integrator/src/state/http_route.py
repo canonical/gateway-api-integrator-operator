@@ -5,29 +5,13 @@
 
 import dataclasses
 
-from charms.gateway_api_integrator.v0.gateway_route import (
-    GatewayRouteInvalidRelationDataError,
-    GatewayRouteProvider,
-    GatewayRouteRelationMissingError,
-)
 from charms.traefik_k8s.v2.ingress import DataValidationError, IngressPerAppProvider
 
 from .exception import CharmStateValidationBaseError
 
-INGRESS_RELATION = "gateway"
-GATEWAY_ROUTE_RELATION = "gateway-route"
-
-
-class IngressIntegrationMissingError(CharmStateValidationBaseError):
-    """Exception raised when ingress relation is not established."""
-
 
 class IngressIntegrationDataValidationError(CharmStateValidationBaseError):
     """Exception raised when ingress relation data validation fails."""
-
-
-class GatewayRouteRelationNotReadyError(CharmStateValidationBaseError):
-    """Exception raised when gateway route relation data is not ready."""
 
 
 @dataclasses.dataclass(frozen=True)
@@ -43,7 +27,6 @@ class HTTPRouteResourceInformation:
         filters: The list of filters to be applied to the HTTPRoute resource.
         paths: The list of paths to be added to the HTTPRoute resource.
         hostname: The hostname to be used in the HTTPRoute resource.
-        additional_hostnames: Additional hostnames to be used in the HTTPRoute resource.
     """
 
     application_name: str
@@ -54,7 +37,6 @@ class HTTPRouteResourceInformation:
     filters: list[dict]
     paths: list[str]
     hostname: str | None
-    additional_hostnames: list[str]
 
     @classmethod
     def from_ingress(
@@ -65,7 +47,6 @@ class HTTPRouteResourceInformation:
         """Populate fields from ingress integration.
 
         Args:
-            charm (ops.CharmBase): The gateway-api-integrator charm.
             ingress_provider (IngressPerAppProvider): The ingress provider class.
             hostname: The hostname to be used in the HTTPRoute resource.
         """
@@ -97,46 +78,8 @@ class HTTPRouteResourceInformation:
                 ),
                 paths=[f"/{integration_data.app.model}-{application_name}"],
                 hostname=hostname,
-                additional_hostnames=[],
             )
         except DataValidationError as exc:
             raise IngressIntegrationDataValidationError(
                 "Validation of ingress relation data failed."
-            ) from exc
-
-    @classmethod
-    def from_gateway_route(
-        cls,
-        gateway_route_provider: GatewayRouteProvider,
-        hostname: str | None,
-    ) -> "HTTPRouteResourceInformation":
-        """Populate fields from ingress integration.
-
-        Args:
-            gateway_route_provider: The gateway route provider library.
-            hostname: The hostname to be used in the HTTPRoute resource.
-            additional_hostnames: Additional hostnames to be used in the HTTPRoute resource.
-
-        Raises:
-            GatewayRouteRelationNotReadyError: When data validation failed.
-        """
-        try:
-            relation_data = gateway_route_provider.get_data()
-            application_name = relation_data.application_data.name
-            service_port = relation_data.application_data.port
-
-            return cls(
-                application_name=application_name,
-                requirer_model_name=relation_data.application_data.model,
-                service_name=f"{gateway_route_provider.charm.app.name}-{application_name}-service",
-                service_port=service_port,
-                service_port_name=f"tcp-{service_port}",
-                filters=[],
-                paths=relation_data.application_data.paths,
-                hostname=hostname,
-                additional_hostnames=relation_data.application_data.additional_hostnames,
-            )
-        except (GatewayRouteInvalidRelationDataError, GatewayRouteRelationMissingError) as exc:
-            raise GatewayRouteRelationNotReadyError(
-                "gateway-route relation is missing or has incomplete data."
             ) from exc

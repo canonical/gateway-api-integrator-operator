@@ -12,9 +12,8 @@ from ops.model import SecretNotFoundError
 
 import client
 from resource_manager.resource_manager import InvalidResourceError
-from state.config import IngressGatewayRouteConflictError
-from state.exception import CharmStateValidationBaseError
-from state.http_route import IngressIntegrationMissingError
+from state.charm_state import IngressGatewayRouteConflictError
+from state.exception import CharmStateValidationBaseError, InvalidGatewayAddressError
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +70,6 @@ def validate_config_and_integration(
                 return method(instance, *args)
             except (
                 CharmStateValidationBaseError,
-                IngressIntegrationMissingError,
                 IngressGatewayRouteConflictError,
             ) as exc:
                 if defer:
@@ -81,6 +79,10 @@ def validate_config_and_integration(
                 logger.exception("Error setting up charm state component: %s", str(exc))
                 instance.unit.status = ops.BlockedStatus(str(exc))
                 _clean_up_resources_in_blocked_state(instance)
+                return None
+            except InvalidGatewayAddressError as exc:
+                logger.exception("Gateway reported unsupported address: %s", str(exc))
+                instance.unit.status = ops.BlockedStatus("Gateway reported unsupported address")
                 return None
             except InvalidResourceError:
                 logger.exception("Error creating kubernetes resource")

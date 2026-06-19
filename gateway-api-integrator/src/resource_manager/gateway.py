@@ -3,6 +3,7 @@
 """Gateway resource manager."""
 
 import dataclasses
+import ipaddress
 import logging
 import time
 import typing
@@ -14,7 +15,8 @@ from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
 from state.base import ResourceDefinition
-from state.config import CharmConfig
+from state.charm_state import CharmState
+from state.exception import InvalidGatewayAddressError
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
@@ -34,46 +36,45 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     It consists of 3 components:
         - GatewayResourceInformation
-        - CharmConfig
+        - CharmState
         - TLSInformation
 
     Attributes:
-        gateway_name: The gateway resource's name
-        hostname: The configured gateway hostname.
+        gateway_name: The gateway resource's name.
         gateway_class_name: The configured gateway class.
-        secret_resource_name_prefix: Prefix of the secret resource name.
-        require_https_listener: Whether the gateway resource should have an HTTPS listener.
+        tls_secret_names: List of TLS secret names for HTTPS listeners.
     """
 
     gateway_name: str
     gateway_class_name: str
-    tls_secret_name: str | None
+    tls_secret_names: list[str]
 
     def __init__(
         self,
         gateway_resource_information: GatewayResourceInformation,
-        charm_config: CharmConfig,
+        charm_state: CharmState,
         tls_information: TLSInformation | None,
     ):
         """Create the state object with state components.
 
         Args:
             gateway_resource_information: GatewayResourceInformation state component.
-            charm_config: CharmConfig state component.
+            charm_state: CharmState state component.
             tls_information: TLSInformation state component.
         """
-        tls_secret_name = None
+        super().__init__(gateway_resource_information, charm_state)
+        tls_secret_names: list[str] = []
         if tls_information is not None:
-            tls_secret_name = (
-                f"{tls_information.secret_resource_name_prefix}-{tls_information.hostname}"
-            )
-        super().__init__(gateway_resource_information, charm_config)
-        self.tls_secret_name = tls_secret_name
+            for hostname in tls_information.hostnames:
+                tls_secret_names.append(
+                    f"{tls_information.secret_resource_name_prefix}-{hostname}"
+                )
+        self.tls_secret_names = tls_secret_names
 
     @property
     def https_listener_required(self) -> bool:
         """Whether TLS is enabled based on the presence of TLS information."""
-        return self.tls_secret_name is not None
+        return len(self.tls_secret_names) > 0
 
     @property
     def gateway_resource_http_listener_spec(self) -> dict:
@@ -81,22 +82,27 @@ class GatewayResourceDefinition(ResourceDefinition):
         return {
             "protocol": "HTTP",
             "port": 80,
-            "name": f"{self.gateway_name}-http-listener",
+            "name": f"{self.gateway_name}-http",
             "allowedRoutes": {"namespaces": {"from": "All"}},
         }
 
     @property
     def gateway_resource_spec(self) -> dict:
-        """Return the TLS configuration for the HTTPS listener."""
+        """Return the gateway resource spec with HTTP and HTTPS listeners."""
         listeners = [self.gateway_resource_http_listener_spec]
-        if self.tls_secret_name is not None:
+        if self.tls_secret_names:
             listeners.append(
                 {
                     "protocol": "HTTPS",
                     "port": 443,
-                    "name": f"{self.gateway_name}-https-listener",
+                    "name": f"{self.gateway_name}-https",
                     "allowedRoutes": {"namespaces": {"from": "All"}},
-                    "tls": {"certificateRefs": [{"kind": "Secret", "name": self.tls_secret_name}]},
+                    "tls": {
+                        "certificateRefs": [
+                            {"kind": "Secret", "name": secret_name}
+                            for secret_name in self.tls_secret_names
+                        ]
+                    },
                 }
             )
         return {
@@ -209,7 +215,7 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
             name: name of the gateway resource.
 
         Returns:
-            Optional[str]: The addresses assigned to the gateway object, or none.
+            Optional[str]: The first address assigned to the gateway object, or none.
         """
         deadline = time.time() + 60
         delay = 5
@@ -224,8 +230,32 @@ class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):
                     addr["value"]  # type: ignore
                     for addr in gateway.status["addresses"]  # type: ignore
                 ]
-                if gateway_addresses:
-                    gateway_address = ",".join(gateway_addresses)
+
+                ipv4_addresses = []
+                for address in gateway_addresses:
+                    try:
+                        parsed_address = ipaddress.ip_address(address)
+                    except ValueError as exc:
+                        raise InvalidGatewayAddressError(
+                            f"Unsupported gateway address: {address!r}. "
+                            "Only IPv4 addresses are supported for now."
+                        ) from exc
+
+                    if parsed_address.version != 4:
+                        raise InvalidGatewayAddressError(
+                            f"Unsupported gateway address: {address!r}. "
+                            "Only IPv4 addresses are supported for now."
+                        )
+
+                    ipv4_addresses.append(address)
+
+                if len(ipv4_addresses) > 1:
+                    raise InvalidGatewayAddressError(
+                        f"Multiple IPv4 addresses found for gateway {name}: {ipv4_addresses}"
+                    )
+
+                if ipv4_addresses:
+                    gateway_address = ipv4_addresses[0]
             except (AttributeError, TypeError, KeyError):
                 logger.exception("Error retrieving the gateway address.")
             if gateway_address:

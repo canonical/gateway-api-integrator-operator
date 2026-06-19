@@ -84,7 +84,7 @@ commands = [
   [
     "coverage",
     "run",
-    "--source={[vars]src_path},{toxinidir}/lib/charms/gateway_api_integrator/v0/",
+    "--source={[vars]src_path},{toxinidir}/lib/charms/gateway_api_integrator/v1/",
     "-m",
     "pytest",
     "--ignore={[vars]tst_path}integration",
@@ -153,5 +153,5 @@ tst_path = "{toxinidir}/tests/"
 all_path = [
   "{toxinidir}/src/",
   "{toxinidir}/tests/",
-  "{toxinidir}/lib/charms/gateway_api_integrator/v0",
+  "{toxinidir}/lib/charms/gateway_api_integrator/v1",
 ]

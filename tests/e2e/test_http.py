@@ -6,13 +6,8 @@
 import ipaddress
 
 import jubilant
-import requests
-import urllib3
 import yaml
-from urllib3.exceptions import InsecureRequestWarning
-
-# Disable SSL warnings when using verify=False
-urllib3.disable_warnings(InsecureRequestWarning)
+from .helper import assert_gateway_route_response
 
 
 def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
@@ -85,13 +80,13 @@ def test_http(
 
     # send a request to verify routing
     gateway_address = get_gateway_ip(juju, gateway_api_integrator_no_tls)
-    response = requests.get(
-        f"http://{gateway_address}/app1/",
-        timeout=10,
-        headers={"Host": "www.gateway.internal"},
+    assert_gateway_route_response(
+        gateway_address,
+        "www.gateway.internal",
+        "/app1/",
+        scheme="http",
+        body_contains="Hello from any_charm",
     )
-    assert response.status_code == 200
-    assert "Hello from any_charm" in response.text
 
     juju.config(ingress_configurator, reset="hostname")
     juju.wait(
@@ -103,9 +98,10 @@ def test_http(
         ),
         timeout=600,
     )
-    response = requests.get(
-        f"http://{gateway_address}/app1/",
-        timeout=10,
+    assert_gateway_route_response(
+        gateway_address,
+        None,
+        "/app1/",
+        scheme="http",
+        body_contains="Hello from any_charm",
     )
-    assert response.status_code == 200
-    assert "Hello from any_charm" in response.text

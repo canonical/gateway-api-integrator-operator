@@ -6,14 +6,8 @@
 import ipaddress
 
 import jubilant
-import requests
-import urllib3
 import yaml
-from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
-from urllib3.exceptions import InsecureRequestWarning
-
-# Disable SSL warnings when using verify=False
-urllib3.disable_warnings(InsecureRequestWarning)
+from .helper import assert_gateway_route_response
 
 
 def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
@@ -57,40 +51,6 @@ def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: str) -> str:
         except (IndexError, ipaddress.AddressValueError):
             return ""
     return ""
-
-
-@retry(
-    stop=stop_after_delay(180),
-    wait=wait_fixed(5),
-    retry=retry_if_exception_type((AssertionError, requests.exceptions.RequestException)),
-    reraise=True,
-)
-def assert_gateway_route_response(
-    gateway_address: str,
-    hostname: str,
-    path: str,
-    expected_status: int = 200,
-    body_contains: str | None = None,
-) -> requests.Response:
-    """Get a gateway route and assert expected response, retrying while dataplane converges."""
-    response = requests.get(
-        f"https://{gateway_address}{path}",
-        verify=False,
-        timeout=10,
-        headers={"Host": hostname},
-    )
-
-    assert response.status_code == expected_status, (
-        f"Failed to route to {hostname}: status={response.status_code}, "
-        f"expected={expected_status}, body={response.text!r}"
-    )
-    if body_contains is not None:
-        assert body_contains in response.text, (
-            f"Expected response body for {hostname} to contain {body_contains!r}, "
-            f"body={response.text!r}"
-        )
-
-    return response
 
 
 def test_configurator(

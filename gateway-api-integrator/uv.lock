@@ -242,16 +242,16 @@ wheels = [
 
 [[package]]
 name = "charmlibs-interfaces-tls-certificates"
-version = "1.8.1"
+version = "1.8.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "ops" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/78/7e/166af1e71f2bf96482845a1806dc345cbc5507134a99ccbbae297f174e4b/charmlibs_interfaces_tls_certificates-1.8.1.tar.gz", hash = "sha256:f2bfabf3a3b4c18034941771733177b30e4742c06d7742d4bb30da6ead953f43", size = 148059, upload-time = "2026-02-27T13:46:50.086Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/48/b0/24342009af662f52f83d163852d43d53e9e0c3fb629feeeda5eeb739c03e/charmlibs_interfaces_tls_certificates-1.8.3.tar.gz", hash = "sha256:6bc35ee330681f2e0c58cf67e41133b144f3281f73d27293714c9ca918ee7cbc", size = 110247, upload-time = "2026-06-05T10:08:01.55Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/95/17/1d1b0083800f4cc20f42e5d2763521d93975376499565c62da5276a80629/charmlibs_interfaces_tls_certificates-1.8.1-py3-none-any.whl", hash = "sha256:8e8fe047e02515d76f57a1d019056d72ce8c859c2ffb39a1e379cfc11fc048e6", size = 28208, upload-time = "2026-02-27T13:46:48.959Z" },
+    { url = "https://files.pythonhosted.org/packages/72/3f/168d8416060557dca7ada03d160b3efbecb21cdda89ce262524ee5b3518e/charmlibs_interfaces_tls_certificates-1.8.3-py3-none-any.whl", hash = "sha256:fa0aa150b4e4513d439c7afb7eb0ceaf00363671143b27b09382758deea8a0cc", size = 28293, upload-time = "2026-06-05T10:08:00.383Z" },
 ]
 
 [[package]]
@@ -515,6 +515,7 @@ integration = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-operator" },
+    { name = "tenacity" },
 ]
 lint = [
     { name = "codespell" },
@@ -538,7 +539,7 @@ unit = [
 
 [package.metadata]
 requires-dist = [
-    { name = "charmlibs-interfaces-tls-certificates", specifier = "==1.8.1" },
+    { name = "charmlibs-interfaces-tls-certificates", specifier = "==1.8.3" },
     { name = "cryptography", specifier = "==49.0.0" },
     { name = "jsonschema", specifier = "==4.26.0" },
     { name = "lightkube", specifier = "==0.21.0" },
@@ -561,6 +562,7 @@ integration = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-operator" },
+    { name = "tenacity" },
 ]
 lint = [
     { name = "codespell" },
@@ -1824,6 +1826,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/96/5b/496f8abebd10c3301129abba7ddafd46c71d799a70c44ab080323987c4c9/stevedore-5.6.0.tar.gz", hash = "sha256:f22d15c6ead40c5bbfa9ca54aa7e7b4a07d59b36ae03ed12ced1a54cf0b51945", size = 516074, upload-time = "2025-11-20T10:06:07.264Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/40/8561ce06dc46fd17242c7724ab25b257a2ac1b35f4ebf551b40ce6105cfa/stevedore-5.6.0-py3-none-any.whl", hash = "sha256:4a36dccefd7aeea0c70135526cecb7766c4c84c473b1af68db23d541b6dc1820", size = 54428, upload-time = "2025-11-20T10:06:05.946Z" },
+]
+
+[[package]]
+name = "tenacity"
+version = "9.1.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/47/c6/ee486fd809e357697ee8a44d3d69222b344920433d3b6666ccd9b374630c/tenacity-9.1.4.tar.gz", hash = "sha256:adb31d4c263f2bd041081ab33b498309a57c77f9acf2db65aadf0898179cf93a", size = 49413, upload-time = "2026-02-07T10:45:33.841Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d7/c1/eb8f9debc45d3b7918a32ab756658a0904732f75e555402972246b0b8e71/tenacity-9.1.4-py3-none-any.whl", hash = "sha256:6095a360c919085f28c6527de529e76a06ad89b23659fa881ae0649b867a9d55", size = 28926, upload-time = "2026-02-07T10:45:32.24Z" },
 ]
 
 [[package]]

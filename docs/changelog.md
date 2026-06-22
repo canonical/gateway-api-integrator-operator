@@ -11,6 +11,13 @@ Each revision is versioned by the date of the revision.
 
 - Migrated the RTD documentation URL under the Canonical domain.
 
+## 2026-06-11
+
+- Removed support for `gateway-route` v0 library.
+- Added support for `gateway-route` v1 library.
+- Removed resource creation for `gateway-route` relations.
+- Added support for multiple `gateway-route` relations.
+
 ## 2026-06-01
 
 - Added v1 `gateway-route` interface library.

@@ -3,16 +3,11 @@
 
 """Integration tests for testing both charms."""
 
+import ipaddress
+
 import jubilant
-import requests
-import urllib3
 import yaml
-from urllib3.exceptions import InsecureRequestWarning
-
-from .conftest import App  # pylint: disable=no-name-in-module
-
-# Disable SSL warnings when using verify=False
-urllib3.disable_warnings(InsecureRequestWarning)
+from .helper import assert_gateway_route_response
 
 
 def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
@@ -34,60 +29,54 @@ def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
     return ""
 
 
-def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: App) -> str:
+def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: str) -> str:
     """Get the gateway IP from the charm status message.
 
     Args:
         juju (jubilant.Juju): The jubilant Juju instance.
-        gateway_api_integrator (App): The gateway-api-integrator app.
+        gateway_api_integrator (str): The gateway-api-integrator app name.
 
     Returns:
         str: The gateway IP address.
     """
     status = juju.status()
-    app_status = status.apps[gateway_api_integrator.name]
+    app_status = status.apps[gateway_api_integrator]
     message = app_status.app_status.message
     if "gateway address" in message.lower():
-        # Extract IP from message
-        parts = message.split(":")
-        ip = parts[1].strip()
-        return ip
+        parts = message.split()
+        try:
+            candidate = parts[2]
+            ipaddress.IPv4Address(candidate)
+            return candidate
+        except (IndexError, ipaddress.AddressValueError):
+            return ""
     return ""
 
 
 def test_configurator(
     juju: jubilant.Juju,
-    gateway_route_configurator: App,
-    gateway_api_integrator: App,
+    ingress_configurator: str,
+    gateway_api_integrator: str,
+    gateway_route_backend_application: str,
     external_hostname: str,
 ):
     """
     Test that the charms correctly set up the gateway route relation.
-    Deploy gateway-route-configurator and integrate it on gateway-route relation.
-    Assert that a request to the external hostname is correctly routed to the flask-k8s app
+    Deploy ingress-configurator and integrate it on gateway-route relation.
+    Assert that a request to the external hostname is correctly routed to the any-charm app
     """
-    additional_hostnames = ["gateway-alt.internal", "gateway-alt2.internal"]
-    juju.config(
-        gateway_route_configurator.name,
-        {"additional-hostnames": ",".join(additional_hostnames)},
-    )
-
-    juju.deploy(
-        "flask-k8s",
-        channel="latest/edge",
-    )
 
     juju.integrate(
-        f"{gateway_route_configurator.name}:ingress",
-        "flask-k8s:ingress",
+        f"{ingress_configurator}:ingress",
+        f"{gateway_route_backend_application}:ingress",
     )
     juju.integrate(
-        f"{gateway_api_integrator.name}:gateway-route",
-        f"{gateway_route_configurator.name}:gateway-route",
+        f"{gateway_api_integrator}:gateway-route",
+        f"{ingress_configurator}:gateway-route",
     )
     juju.wait(
         lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,
     )
@@ -96,34 +85,26 @@ def test_configurator(
     gateway_address = get_gateway_ip(juju, gateway_api_integrator)
 
     # HTTPS
-    response = requests.get(
-        f"https://{gateway_address}/app1",
-        verify=False,
-        timeout=10,
-        headers={"Host": external_hostname},
+    assert_gateway_route_response(
+        gateway_address,
+        external_hostname,
+        "/app1/",
+        body_contains="Hello from any_charm",
     )
-    assert response.status_code == 200
-    assert "Welcome to flask-k8s Charm" in response.text
-    assert get_url_from_relation(juju, "flask-k8s/0") == f"https://{external_hostname}/app1"
+    assert get_url_from_relation(juju, f"{gateway_route_backend_application}/0") == f"https://{external_hostname}/app1"
 
     # HTTP with hostname
-    juju.config(gateway_api_integrator.name, {"enforce-https": False})
+    juju.config(gateway_api_integrator, {"enforce-https": False})
     juju.wait(
         lambda status: jubilant.all_active(
-            status, gateway_route_configurator.name, "flask-k8s", gateway_api_integrator.name
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,
     )
 
-    for additional_hostname in [external_hostname] + additional_hostnames:
-        response = requests.get(
-            f"https://{gateway_address}/app1",
-            verify=False,
-            timeout=10,
-            headers={"Host": additional_hostname},
-        )
-        assert response.status_code == 200, (
-            f"Failed to route to {additional_hostname}: "
-            f"status={response.status_code}"
-        )
-        assert "Welcome to flask-k8s Charm" in response.text
+    assert_gateway_route_response(
+        gateway_address,
+        external_hostname,
+        "/app1/",
+        body_contains="Hello from any_charm",
+    )

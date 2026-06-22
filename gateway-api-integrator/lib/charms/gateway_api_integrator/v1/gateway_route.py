@@ -119,7 +119,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 0
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -191,14 +191,18 @@ class GatewayRouteProviderAppData:
         gateway_name: The name of the Gateway resource managed by the provider.
         gateway_model: The Juju model (K8s namespace) where the Gateway resource lives.
         https_mode: The HTTPS mode indicating how the provider handles TLS.
+        gateway_address: The gateway LB address. Provided so requirers without a
+            configured hostname can reference the gateway by IP.
     """
 
     gateway_name: str = Field(description="The name of the Gateway resource.")
     gateway_model: str = Field(
         description="The Juju model (K8s namespace) where the Gateway resource lives."
     )
-    https_mode: HttpsMode = Field(
-        description="The HTTPS mode: disabled, enabled, or enforced."
+    https_mode: HttpsMode = Field(description="The HTTPS mode: disabled, enabled, or enforced.")
+    gateway_address: str | None = Field(
+        description="The gateway LB address, used when no hostname is configured.",
+        default=None,
     )
 
 
@@ -246,10 +250,8 @@ class GatewayRouteProvider(Object):
         for relation in self.relations:
             try:
                 data = relation.load(GatewayRouteRequirerAppData, relation.app)
-            except ValidationError:
-                logger.error(
-                    "Skipping relation %s: invalid data", relation.id
-                )
+            except ValidationError as exc:
+                logger.error("Skipping relation %s: invalid data (%s)", relation.id, exc)
                 continue
             results[relation.id] = data
             self._valid_relations.append(relation)
@@ -260,6 +262,7 @@ class GatewayRouteProvider(Object):
         gateway_name: str,
         gateway_model: str,
         https_mode: HttpsMode,
+        gateway_address: str | None = None,
     ) -> None:
         """Publish gateway information to requirers with valid data.
 
@@ -269,6 +272,7 @@ class GatewayRouteProvider(Object):
             gateway_name: The name of the Gateway resource.
             gateway_model: The Juju model (K8s namespace) of the Gateway resource.
             https_mode: The HTTPS mode for the gateway.
+            gateway_address: The gateway LB address, used when no hostname is configured.
 
         Raises:
             GatewayRouteInvalidRelationDataError: When publishing fails for any relation.
@@ -283,12 +287,11 @@ class GatewayRouteProvider(Object):
                     gateway_name=gateway_name,
                     gateway_model=gateway_model,
                     https_mode=https_mode,
+                    gateway_address=gateway_address,
                 )
                 relation.save(app_data, self.charm.app)
             except (ValidationError, RelationDataTypeError):
-                logger.error(
-                    "Failed to publish provider data to relation %s", relation.id
-                )
+                logger.error("Failed to publish provider data to relation %s", relation.id)
                 failed_relations.append(relation.id)
 
         if failed_relations:
@@ -341,7 +344,7 @@ class GatewayRouteRequirer(Object):
         Raises:
             GatewayRouteInvalidRelationDataError: When data validation fails.
         """
-        if (relation := self.relation) and (not self.charm.unit.is_leader()):
+        if not (relation := self.relation) or (not self.charm.unit.is_leader()):
             return
 
         try:

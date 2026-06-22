@@ -24,6 +24,7 @@ header:
     - 'pyproject.toml'
     - 'zap_rules.tsv'
     - 'gateway-api-integrator/lib/charms/bind/v0/dns_record.py'
+    - 'gateway-api-integrator/lib/charms/operator_libs_linux/v0/apt.py'
     - '**/uv.lock'
     - '.readthedocs.yaml'
     - 'docs/**'

@@ -21,7 +21,7 @@ dependencies = [
   "pydantic==2.13.4",
   "rpds-py==0.30.0",
   "validators==0.35.0",
-  "charmlibs-interfaces-tls-certificates==1.8.1",
+  "charmlibs-interfaces-tls-certificates==1.8.3",
 ]
 
 [dependency-groups]
@@ -47,6 +47,7 @@ integration = [
   "pytest",
   "pytest-asyncio",
   "pytest-operator",
+  "tenacity",
 ]
 
 [tool.uv]

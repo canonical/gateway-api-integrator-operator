@@ -221,8 +221,8 @@ async def test_ingress_disabled_mode(
     and HTTPS is no longer accessible.
     """
     application = configured_application_with_tls
-    await application.model.remove_relation(
-        f"{application.name}:certificates",
+    await application.destroy_relation(
+        "certificates",
         f"{certificate_provider_application.name}:certificates",
     )
     await application.model.wait_for_idle(

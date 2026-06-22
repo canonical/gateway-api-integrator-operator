@@ -6,9 +6,17 @@
 import json
 from urllib.parse import ParseResult, urlparse
 
+import lightkube
 from juju.application import Application
+from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
 from pytest_operator.plugin import OpsTest
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
+
+GATEWAY_API_GROUP = "gateway.networking.k8s.io"
+GATEWAY_RESOURCE_NAME = "Gateway"
+GATEWAY_PLURAL = "gateways"
+HTTP_ROUTE_RESOURCE_NAME = "HTTPRoute"
+HTTP_ROUTE_PLURAL = "httproutes"
 
 
 class DNSResolverHTTPSAdapter(HTTPAdapter):
@@ -67,6 +75,46 @@ class DNSResolverHTTPSAdapter(HTTPAdapter):
                 connection_pool_kwargs.pop("assert_hostname", None)
 
         return super().send(request, stream, timeout, verify, cert, proxies)
+
+
+def get_gateway_resource(
+    lightkube_client: lightkube.Client,
+    application_name: str,
+) -> GenericNamespacedResource:
+    """Get the Gateway custom resource for a gateway-api-integrator application.
+
+    Args:
+        lightkube_client: Initialized lightkube client.
+        application_name: Name of the gateway-api-integrator application.
+
+    Returns:
+        The Gateway custom resource.
+    """
+    gateway_class = create_namespaced_resource(
+        GATEWAY_API_GROUP, "v1", GATEWAY_RESOURCE_NAME, GATEWAY_PLURAL
+    )
+    return lightkube_client.get(gateway_class, name=application_name)
+
+
+def get_http_route_resource(
+    lightkube_client: lightkube.Client,
+    application_name: str,
+    route_type: str = "http",
+) -> GenericNamespacedResource:
+    """Get an HTTPRoute custom resource for a gateway-api-integrator application.
+
+    Args:
+        lightkube_client: Initialized lightkube client.
+        application_name: Name of the gateway-api-integrator application.
+        route_type: The route type suffix, either 'http' or 'https'.
+
+    Returns:
+        The HTTPRoute custom resource.
+    """
+    http_route_class = create_namespaced_resource(
+        GATEWAY_API_GROUP, "v1", HTTP_ROUTE_RESOURCE_NAME, HTTP_ROUTE_PLURAL
+    )
+    return lightkube_client.get(http_route_class, name=f"{application_name}-{route_type}")
 
 
 async def get_ingress_url_for_application(

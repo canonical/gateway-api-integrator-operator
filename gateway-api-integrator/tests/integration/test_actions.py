@@ -31,4 +31,9 @@ async def test_get_certificate_action(
         "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
     )
     await action.wait()
-    assert action.results
+    assert "certificate" in action.results
+    assert "ca" in action.results
+    assert "chain" in action.results
+    assert action.results["certificate"].startswith("-----BEGIN CERTIFICATE-----")
+    assert action.results["ca"].startswith("-----BEGIN CERTIFICATE-----")
+    assert action.results["chain"].startswith("-----BEGIN CERTIFICATE-----")

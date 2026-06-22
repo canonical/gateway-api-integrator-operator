@@ -9,7 +9,12 @@ import lightkube
 import pytest
 import requests
 from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from helper import get_gateway_resource, get_http_route_resource, get_ingress_url_for_application
+from helper import (
+    DNSResolverHTTPSAdapter,
+    get_gateway_resource,
+    get_http_route_resource,
+    get_ingress_url_for_application,
+)
 from juju.application import Application
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
@@ -27,13 +32,19 @@ CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 def _wait_for_response(
     url: str,
     *,
+    hostname: str,
+    ip: str,
     expected_status: int,
     body_contains: str | None = None,
     timeout: int | float = 30,
     **kwargs,
 ) -> requests.Response:
     """Retry HTTP GET until expected status/body is observed."""
-    response = requests.get(url, timeout=timeout, **kwargs)
+    session = requests.Session()
+    session.mount("https://", DNSResolverHTTPSAdapter(hostname=hostname, ip=ip))
+    headers = kwargs.pop("headers", {})
+    headers.setdefault("Host", hostname)
+    response = session.get(url, timeout=timeout, headers=headers, **kwargs)
 
     assert response.status_code == expected_status, (
         f"Unexpected status from {url}. "
@@ -96,8 +107,9 @@ async def test_ingress_enforced_mode(
 
     res = _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=301,
-        headers={"Host": ingress_url.netloc},
         allow_redirects=False,
         timeout=10,
     )
@@ -105,17 +117,19 @@ async def test_ingress_enforced_mode(
 
     _wait_for_response(
         f"https://{gateway_lb_ip}/invalid",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=404,
-        headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=10,
     )
 
     _wait_for_response(
         f"https://{gateway_lb_ip}{ingress_url.path}",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=200,
         body_contains="Welcome to flask-k8s Charm",
-        headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - calling charm ingress URL
         timeout=10,
     )
@@ -123,9 +137,10 @@ async def test_ingress_enforced_mode(
     # Test HTTP redirect to HTTPS
     _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=200,
         body_contains="Welcome to flask-k8s Charm",
-        headers={"Host": ingress_url.netloc},
         allow_redirects=True,
         verify=False,  # nosec - self-signed cert after redirect to HTTPS
         timeout=10,
@@ -175,16 +190,18 @@ async def test_ingress_enabled_mode(
 
     _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=200,
         body_contains="Welcome to flask-k8s Charm",
-        headers={"Host": ingress_url.netloc},
         timeout=10,
     )
     _wait_for_response(
         f"https://{gateway_lb_ip}{ingress_url.path}",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=200,
         body_contains="Welcome to flask-k8s Charm",
-        headers={"Host": ingress_url.netloc},
         verify=False,  # nosec - self-signed certificate
         timeout=10,
     )
@@ -228,9 +245,10 @@ async def test_ingress_disabled_mode(
 
     _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
+        hostname=ingress_url.netloc,
+        ip=gateway_lb_ip,
         expected_status=200,
         body_contains="Welcome to flask-k8s Charm",
-        headers={"Host": ingress_url.netloc},
         timeout=10,
     )
     with pytest.raises(requests.exceptions.ConnectionError):

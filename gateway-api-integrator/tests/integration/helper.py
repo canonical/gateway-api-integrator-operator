@@ -8,72 +8,15 @@ from urllib.parse import ParseResult, urlparse
 
 import jubilant
 import lightkube
+import requests
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
-from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
+from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
 
 GATEWAY_API_GROUP = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 HTTP_ROUTE_RESOURCE_NAME = "HTTPRoute"
 HTTP_ROUTE_PLURAL = "httproutes"
-
-
-class DNSResolverHTTPSAdapter(HTTPAdapter):
-    """A simple mounted DNS resolver for HTTP requests."""
-
-    def __init__(
-        self,
-        hostname,
-        ip,
-    ):
-        """Initialize the dns resolver.
-
-        Args:
-            hostname: DNS entry to resolve.
-            ip: Target IP address.
-        """
-        self.hostname = hostname
-        self.ip = ip
-        super().__init__(
-            pool_connections=DEFAULT_POOLSIZE,
-            pool_maxsize=DEFAULT_POOLSIZE,
-            max_retries=DEFAULT_RETRIES,
-            pool_block=DEFAULT_POOLBLOCK,
-        )
-
-    # Ignore pylint rule as this is the parent method signature
-    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):  # pylint: disable=too-many-arguments, too-many-positional-arguments
-        """Wrap HTTPAdapter send to modify the outbound request.
-
-        Args:
-            request: Outbound HTTP request.
-            stream: argument used by parent method.
-            timeout: argument used by parent method.
-            verify: argument used by parent method.
-            cert: argument used by parent method.
-            proxies: argument used by parent method.
-
-        Returns:
-            Response: HTTP response after modification.
-        """
-        connection_pool_kwargs = self.poolmanager.connection_pool_kw
-
-        result = urlparse(request.url)
-        if result.hostname == self.hostname:
-            ip = self.ip
-            if result.scheme == "https" and ip:
-                request.url = request.url.replace(
-                    "https://" + result.hostname,
-                    "https://" + ip,
-                )
-                connection_pool_kwargs["server_hostname"] = result.hostname
-                connection_pool_kwargs["assert_hostname"] = result.hostname
-                request.headers["Host"] = result.hostname
-            else:
-                connection_pool_kwargs.pop("server_hostname", None)
-                connection_pool_kwargs.pop("assert_hostname", None)
-
-        return super().send(request, stream, timeout, verify, cert, proxies)
 
 
 def get_gateway_resource(
@@ -135,3 +78,38 @@ def get_ingress_url_for_application(
         unit_information["relation-info"][0]["application-data"]["ingress"]
     )
     return urlparse(ingress_integration_data["url"])
+
+
+@retry(
+    stop=stop_after_delay(180),
+    wait=wait_fixed(5),
+    retry=retry_if_exception_type((AssertionError, requests.exceptions.RequestException)),
+    reraise=True,
+)
+def wait_for_response(
+    url: str,
+    *,
+    hostname: str,
+    ip: str,
+    expected_status: int,
+    body_contains: str | None = None,
+    timeout: int | float = 30,
+    **kwargs,
+) -> requests.Response:
+    """Retry HTTP GET until expected status/body is observed."""
+    headers = kwargs.pop("headers", {})
+    headers.setdefault("Host", hostname)
+    response = requests.get(url, timeout=timeout, headers=headers, **kwargs)
+
+    assert response.status_code == expected_status, (
+        f"Unexpected status from {url}. "
+        f"got={response.status_code}, expected={expected_status}, body={response.text!r}"
+    )
+
+    if body_contains:
+        assert body_contains in response.text, (
+            f"Expected response body from {url} to contain {body_contains!r}. "
+            f"body={response.text!r}"
+        )
+
+    return response

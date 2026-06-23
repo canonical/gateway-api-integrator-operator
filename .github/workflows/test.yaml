@@ -23,4 +23,4 @@ jobs:
       self-hosted-runner: false
       working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
-      runs-on: ubuntu-24.04
+      runs-on-base: ubuntu-24.04

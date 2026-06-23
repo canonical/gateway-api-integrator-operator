@@ -3,6 +3,9 @@
 
 """Shared helpers for e2e tests."""
 
+import ipaddress
+
+import jubilant
 import requests
 import urllib3
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
@@ -26,6 +29,7 @@ def assert_gateway_route_response(
     scheme: str = "https",
     expected_status: int = 200,
     body_contains: str | None = None,
+    allow_redirects: bool = True,
 ) -> requests.Response:
     """Get a gateway route and assert expected response, retrying while dataplane converges."""
     headers = {"Host": hostname} if hostname is not None else None
@@ -34,6 +38,7 @@ def assert_gateway_route_response(
         verify=False,
         timeout=10,
         headers=headers,
+        allow_redirects=allow_redirects,
     )
 
     assert response.status_code == expected_status, (
@@ -47,3 +52,27 @@ def assert_gateway_route_response(
         )
 
     return response
+
+
+def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: str) -> str:
+    """Get the gateway IP from the charm status message.
+
+    Args:
+        juju: The jubilant Juju instance.
+        gateway_api_integrator: The gateway-api-integrator app name.
+
+    Returns:
+        The gateway IP address.
+    """
+    status = juju.status()
+    app_status = status.apps[gateway_api_integrator]
+    message = app_status.app_status.message
+    if "gateway address" in message.lower():
+        parts = message.split()
+        try:
+            candidate = parts[2]
+            ipaddress.IPv4Address(candidate)
+            return candidate
+        except (IndexError, ipaddress.AddressValueError):
+            return ""
+    return ""

@@ -573,6 +573,8 @@ class GatewayAPICharm(CharmBase):
         else:
             if tls_information is not None and hostname:
                 ingress_base_url = f"https://{hostname}"
+            elif hostname:
+                ingress_base_url = f"http://{hostname}"
             elif gateway_address := gateway_resource_manager.gateway_address(
                 gateway_resource_information.gateway_name
             ):

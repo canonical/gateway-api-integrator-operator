@@ -20,7 +20,5 @@ jobs:
       contents: write
       pull-requests: write
     with:
-      self-hosted-runner: false
       working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
-      runs-on-base: ubuntu-24.04

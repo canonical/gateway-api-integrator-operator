@@ -4,7 +4,6 @@
 """Shared helpers for e2e tests."""
 
 import ipaddress
-import json
 
 import jubilant
 import requests
@@ -30,6 +29,7 @@ def assert_gateway_route_response(
     scheme: str = "https",
     expected_status: int = 200,
     body_contains: str | None = None,
+    allow_redirects: bool = True,
 ) -> requests.Response:
     """Get a gateway route and assert expected response, retrying while dataplane converges."""
     headers = {"Host": hostname} if hostname is not None else None
@@ -38,6 +38,7 @@ def assert_gateway_route_response(
         verify=False,
         timeout=10,
         headers=headers,
+        allow_redirects=allow_redirects,
     )
 
     assert response.status_code == expected_status, (

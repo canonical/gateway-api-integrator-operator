@@ -55,6 +55,7 @@ def test_enforced_mode(
         "/app1/",
         scheme="http",
         expected_status=301,
+        allow_redirects=False,
     )
 
 
@@ -152,7 +153,6 @@ def test_disabled_mode_without_hostname(
     Assert that:
     - HTTP traffic is routed correctly to the backend by IP.
     """
-    juju.remove_relation(gateway_api_integrator, "self-signed-certificates")
     juju.config(ingress_configurator, reset="hostname")
     juju.wait(
         lambda status: jubilant.all_active(

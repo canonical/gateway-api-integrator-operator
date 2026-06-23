@@ -47,4 +47,4 @@ jobs:
       charmcraft-channel: latest/edge
       tmate-debug: false
       with-uv: true
-      modules: '["test_configurator.py", "test_http.py"]'
+      modules: '["test_configurator.py"]'

@@ -3,8 +3,12 @@
 
 """Shared helpers for e2e tests."""
 
+import ipaddress
+
+import jubilant
 import requests
 import urllib3
+import yaml
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
 from urllib3.exceptions import InsecureRequestWarning
 
@@ -47,3 +51,66 @@ def assert_gateway_route_response(
         )
 
     return response
+
+
+def get_url_from_relation(juju: jubilant.Juju, unit_name: str) -> str:
+    """Get the ingress url from the units relation data.
+
+    Args:
+        juju: The jubilant Juju instance.
+        unit_name: The target unit's name.
+
+    Returns:
+        The ingress URL.
+    """
+    unit_data = yaml.safe_load(juju.cli("show-unit", unit_name))
+
+    for relation in unit_data[unit_name]["relation-info"]:
+        if relation["endpoint"] == "ingress":
+            # app data is encoded as a string so we have to load it as yaml again :(
+            return yaml.safe_load(relation["application-data"]["ingress"])["url"]
+    return ""
+
+
+def get_gateway_ip(juju: jubilant.Juju, gateway_api_integrator: str) -> str:
+    """Get the gateway IP from the charm status message.
+
+    Args:
+        juju: The jubilant Juju instance.
+        gateway_api_integrator: The gateway-api-integrator app name.
+
+    Returns:
+        The gateway IP address.
+    """
+    status = juju.status()
+    app_status = status.apps[gateway_api_integrator]
+    message = app_status.app_status.message
+    if "gateway address" in message.lower():
+        parts = message.split()
+        try:
+            candidate = parts[2]
+            ipaddress.IPv4Address(candidate)
+            return candidate
+        except (IndexError, ipaddress.AddressValueError):
+            return ""
+    return ""
+
+
+def get_gateway_route_provider_data(
+    juju: jubilant.Juju, unit_name: str
+) -> dict:
+    """Get the gateway-route provider application data from the relation.
+
+    Args:
+        juju: The jubilant Juju instance.
+        unit_name: The target unit's name.
+
+    Returns:
+        The provider application data dictionary.
+    """
+    unit_data = yaml.safe_load(juju.cli("show-unit", unit_name))
+
+    for relation in unit_data[unit_name]["relation-info"]:
+        if relation["endpoint"] == "gateway-route":
+            return relation["application-data"]
+    return {}

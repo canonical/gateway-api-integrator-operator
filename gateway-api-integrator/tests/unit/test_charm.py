@@ -37,17 +37,20 @@ def test_deploy_invalid_config(harness: Harness, certificates_relation_data: dic
 @pytest.mark.usefixtures("patch_lightkube_client")
 def test_deploy_missing_tls(harness: Harness):
     """
-    arrange: given a stock gateway-api-integrator charm.
+    arrange: given a stock gateway-api-integrator charm with the unit as leader.
     act: Change the charm's config while tls is not ready.
-    assert: the charm stays in blocked state.
+    assert: the charm stays in blocked state with the appropriate message.
     """
+    harness.set_leader()
     harness.begin()
 
     harness.update_config(
         {"external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG, "gateway-class": GATEWAY_CLASS_CONFIG}
     )
 
-    assert harness.charm.unit.status.name == ops.BlockedStatus.name
+    assert harness.charm.unit.status == ops.BlockedStatus(
+        "Certificates relation is needed if enforce-https is enabled."
+    )
 
 
 @pytest.mark.parametrize(

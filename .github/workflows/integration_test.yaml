@@ -15,13 +15,12 @@ jobs:
       extra-arguments: |
         --kube-config=~/.kube/config
       use-canonical-k8s: true
-      self-hosted-runner: true
-      self-hosted-runner-label: large
-      self-hosted-runner-image: noble
+      self-hosted-runner: false
+      runs-on: ubuntu-24.04
       juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
-      modules: '["test_actions.py", "test_charm.py", "test_charm_jubilant.py"]'
+      modules: '["test_actions.py", "test_charm_ingress_interface.py", "test_charm_dns.py"]'
       tmate-debug: false
       working-directory: ./gateway-api-integrator
       with-uv: true
@@ -39,12 +38,11 @@ jobs:
       extra-arguments: |
         --kube-config=~/.kube/config
       use-canonical-k8s: true
-      self-hosted-runner: true
-      self-hosted-runner-label: large
-      self-hosted-runner-image: noble
+      self-hosted-runner: false
+      runs-on: ubuntu-24.04
       juju-channel: 3.6/stable
       channel: edge
       charmcraft-channel: latest/edge
       tmate-debug: false
       with-uv: true
-      modules: '["test_configurator.py", "test_http.py"]'
+      modules: '["test_configurator.py"]'

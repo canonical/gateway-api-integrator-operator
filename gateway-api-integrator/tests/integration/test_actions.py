@@ -3,32 +3,40 @@
 
 """Integration test for actions."""
 
+import jubilant
 import pytest
 from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from juju.application import Application
 
 
 @pytest.mark.abort_on_fail
-async def test_get_certificate_action(
-    configured_application_with_tls: Application,
-    ingress_requirer_application: Application,
+def test_get_certificate_action(
+    juju: jubilant.Juju,
+    configured_application_with_tls: str,
+    ingress_requirer_application: str,
 ):
     """Deploy the charm with valid config and tls integration.
 
     Assert on valid output of get-certificate.
     """
-    await configured_application_with_tls.model.add_relation(
-        configured_application_with_tls.name,
-        f"{ingress_requirer_application.name}:ingress",
+    juju.integrate(
+        configured_application_with_tls,
+        f"{ingress_requirer_application}:ingress",
     )
-    await configured_application_with_tls.model.wait_for_idle(
-        apps=[configured_application_with_tls.name, ingress_requirer_application.name],
-        idle_period=30,
-        status="active",
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, ingress_requirer_application
+        ),
+        timeout=600,
     )
 
-    action = await configured_application_with_tls.units[0].run_action(
-        "get-certificate", hostname=TEST_EXTERNAL_HOSTNAME_CONFIG
+    result = juju.run(
+        f"{configured_application_with_tls}/leader",
+        "get-certificate",
+        {"hostname": TEST_EXTERNAL_HOSTNAME_CONFIG},
     )
-    await action.wait()
-    assert action.results
+    assert "certificate" in result.results
+    assert "ca" in result.results
+    assert "chain" in result.results
+    assert result.results["certificate"].startswith("-----BEGIN CERTIFICATE-----")
+    assert result.results["ca"].startswith("-----BEGIN CERTIFICATE-----")
+    assert result.results["chain"].startswith("-----BEGIN CERTIFICATE-----")

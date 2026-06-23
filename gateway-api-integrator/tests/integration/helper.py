@@ -6,10 +6,9 @@
 import json
 from urllib.parse import ParseResult, urlparse
 
+import jubilant
 import lightkube
-from juju.application import Application
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
-from pytest_operator.plugin import OpsTest
 from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 
 GATEWAY_API_GROUP = "gateway.networking.k8s.io"
@@ -117,20 +116,20 @@ def get_http_route_resource(
     return lightkube_client.get(http_route_class, name=f"{application_name}-{route_type}")
 
 
-async def get_ingress_url_for_application(
-    ingress_requirer_application: Application, ops_test: OpsTest
+def get_ingress_url_for_application(
+    ingress_requirer_application: str, juju: jubilant.Juju
 ) -> ParseResult:
     """Get the ingress url from the requirer's unit data.
 
     Args:
-        ingress_requirer_application: Requirer application.
-        ops_test: OpsTest framework to run juju show-unit.
+        ingress_requirer_application: Name of the requirer application.
+        juju: Jubilant Juju instance.
 
     Returns:
         ParseResult: The parsed ingress url.
     """
-    unit_name = ingress_requirer_application.units[0].name
-    _, stdout, _ = await ops_test.juju("show-unit", unit_name, "--format", "json")
+    unit_name = f"{ingress_requirer_application}/0"
+    stdout = juju.cli("show-unit", unit_name, "--format", "json")
     unit_information = json.loads(stdout)[unit_name]
     ingress_integration_data = json.loads(
         unit_information["relation-info"][0]["application-data"]["ingress"]

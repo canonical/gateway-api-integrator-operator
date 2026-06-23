@@ -5,6 +5,7 @@
 
 import logging
 
+import jubilant
 import lightkube
 import pytest
 import requests
@@ -15,8 +16,6 @@ from helper import (
     get_http_route_resource,
     get_ingress_url_for_application,
 )
-from juju.application import Application
-from pytest_operator.plugin import OpsTest
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
 
 logger = logging.getLogger(__name__)
@@ -61,27 +60,24 @@ def _wait_for_response(
 
 
 @pytest.mark.abort_on_fail
-async def test_ingress_enforced_mode(
-    configured_application_with_tls: Application,
-    ingress_requirer_application: Application,
+def test_ingress_enforced_mode(
+    juju: jubilant.Juju,
+    configured_application_with_tls: str,
+    ingress_requirer_application: str,
     lightkube_client: lightkube.Client,
-    ops_test: OpsTest,
 ):
     """Deploy the charm together with related charms.
 
     Assert on the unit status before any relations/configurations take place.
     """
     application = configured_application_with_tls
-    await application.model.add_relation(
-        application.name, f"{ingress_requirer_application.name}:ingress"
-    )
-    await application.model.wait_for_idle(
-        apps=[ingress_requirer_application.name, application.name],
-        idle_period=30,
-        status="active",
+    juju.integrate(application, f"{ingress_requirer_application}:ingress")
+    juju.wait(
+        lambda status: jubilant.all_active(status, ingress_requirer_application, application),
+        timeout=600,
     )
 
-    gateway = get_gateway_resource(lightkube_client, application.name)
+    gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
     assert gateway_lb_ip, "LB address not assigned to gateway"
 
@@ -90,7 +86,7 @@ async def test_ingress_enforced_mode(
     assert ("HTTP", 80) in listener_protocols, "HTTP listener on port 80 not found"
     assert ("HTTPS", 443) in listener_protocols, "HTTPS listener on port 443 not found"
 
-    http_route = get_http_route_resource(lightkube_client, application.name)
+    http_route = get_http_route_resource(lightkube_client, application)
     redirect_filters = [
         f
         for rule in http_route.spec["rules"]  # type: ignore
@@ -101,9 +97,10 @@ async def test_ingress_enforced_mode(
     assert redirect_filters[0]["requestRedirect"]["scheme"] == "https"
     assert redirect_filters[0]["requestRedirect"]["statusCode"] == 301
 
-    ingress_url = await get_ingress_url_for_application(ingress_requirer_application, ops_test)
+    ingress_url = get_ingress_url_for_application(ingress_requirer_application, juju)
+    model_name = juju.show_model().short_name
     assert ingress_url.netloc == TEST_EXTERNAL_HOSTNAME_CONFIG
-    assert ingress_url.path == f"/{application.model.name}-{ingress_requirer_application.name}"
+    assert ingress_url.path == f"/{model_name}-{ingress_requirer_application}"
 
     res = _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
@@ -148,11 +145,11 @@ async def test_ingress_enforced_mode(
 
 
 @pytest.mark.abort_on_fail
-async def test_ingress_enabled_mode(
-    configured_application_with_tls: Application,
-    ingress_requirer_application: Application,
+def test_ingress_enabled_mode(
+    juju: jubilant.Juju,
+    configured_application_with_tls: str,
+    ingress_requirer_application: str,
     lightkube_client: lightkube.Client,
-    ops_test: OpsTest,
 ):
     """Test ingress mode with enforce_https=False.
 
@@ -160,14 +157,13 @@ async def test_ingress_enabled_mode(
     and that no RequestRedirect filter is present on the HTTP HTTPRoute.
     """
     application = configured_application_with_tls
-    await application.set_config({"enforce-https": "false"})
-    await application.model.wait_for_idle(
-        apps=[application.name, ingress_requirer_application.name],
-        idle_period=30,
-        status="active",
+    juju.config(application, {"enforce-https": "false"})
+    juju.wait(
+        lambda status: jubilant.all_active(status, application, ingress_requirer_application),
+        timeout=600,
     )
 
-    gateway = get_gateway_resource(lightkube_client, application.name)
+    gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
 
     listeners = gateway.spec["listeners"]  # type: ignore
@@ -175,7 +171,7 @@ async def test_ingress_enabled_mode(
     assert ("HTTP", 80) in listener_protocols, "HTTP listener on port 80 not found"
     assert ("HTTPS", 443) in listener_protocols, "HTTPS listener on port 443 not found"
 
-    http_route = get_http_route_resource(lightkube_client, application.name)
+    http_route = get_http_route_resource(lightkube_client, application)
     redirect_filters = [
         f
         for rule in http_route.spec["rules"]  # type: ignore
@@ -186,7 +182,7 @@ async def test_ingress_enabled_mode(
         "RequestRedirect filter should not be present when enforce-https is False"
     )
 
-    ingress_url = await get_ingress_url_for_application(ingress_requirer_application, ops_test)
+    ingress_url = get_ingress_url_for_application(ingress_requirer_application, juju)
 
     _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
@@ -208,12 +204,12 @@ async def test_ingress_enabled_mode(
 
 
 @pytest.mark.abort_on_fail
-async def test_ingress_disabled_mode(
-    configured_application_with_tls: Application,
-    certificate_provider_application: Application,
-    ingress_requirer_application: Application,
+def test_ingress_disabled_mode(
+    juju: jubilant.Juju,
+    configured_application_with_tls: str,
+    certificate_provider_application: str,
+    ingress_requirer_application: str,
     lightkube_client: lightkube.Client,
-    ops_test: OpsTest,
 ):
     """Test ingress mode with TLS relation removed.
 
@@ -221,17 +217,16 @@ async def test_ingress_disabled_mode(
     and HTTPS is no longer accessible.
     """
     application = configured_application_with_tls
-    await application.destroy_relation(
-        "certificates",
-        f"{certificate_provider_application.name}:certificates",
+    juju.remove_relation(
+        f"{application}:certificates",
+        f"{certificate_provider_application}:certificates",
     )
-    await application.model.wait_for_idle(
-        apps=[application.name, ingress_requirer_application.name],
-        idle_period=30,
-        status="active",
+    juju.wait(
+        lambda status: jubilant.all_active(status, application, ingress_requirer_application),
+        timeout=600,
     )
 
-    gateway = get_gateway_resource(lightkube_client, application.name)
+    gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
 
     listeners = gateway.spec["listeners"]  # type: ignore
@@ -241,7 +236,7 @@ async def test_ingress_disabled_mode(
         "HTTPS listener should not be present without TLS relation"
     )
 
-    ingress_url = await get_ingress_url_for_application(ingress_requirer_application, ops_test)
+    ingress_url = get_ingress_url_for_application(ingress_requirer_application, juju)
 
     _wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",

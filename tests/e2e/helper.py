@@ -4,6 +4,7 @@
 """Shared helpers for e2e tests."""
 
 import ipaddress
+import json
 
 import jubilant
 import requests
@@ -112,5 +113,7 @@ def get_gateway_route_provider_data(
 
     for relation in unit_data[unit_name]["relation-info"]:
         if relation["endpoint"] == "gateway-route":
-            return relation["application-data"]
+            return {
+                k: json.loads(v) for k, v in relation["application-data"].items()
+            }
     return {}

@@ -30,7 +30,6 @@ CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 
-_GATEWAY_API_SECTION_NAME_MAX_LENGTH = 253
 _K8S_RESOURCE_NAME_MAX_LENGTH = 63
 
 
@@ -38,18 +37,16 @@ def https_listener_name(gateway_name: str, hostname: str) -> str:
     """Build the per-hostname HTTPS listener name / sectionName.
 
     The name follows the convention ``{gateway_name}-https-{sanitized_hostname}``
-    where dots in the hostname are replaced with hyphens. The result is capped at
-    253 characters (Gateway API SectionName limit).
+    where dots in the hostname are replaced with hyphens.
 
     Args:
         gateway_name: The name of the Gateway K8s resource.
         hostname: The hostname for this listener.
 
     Returns:
-        A listener name of at most 253 characters.
+        The listener name.
     """
-    name = f"{gateway_name}-https-{hostname.replace('.', '-')}"
-    return name[:_GATEWAY_API_SECTION_NAME_MAX_LENGTH]
+    return f"{gateway_name}-https-{hostname.replace('.', '-')}"
 
 
 def truncate_k8s_resource_name(name: str) -> str:
@@ -105,17 +102,11 @@ class GatewayResourceDefinition(ResourceDefinition):
             tls_information: TLSInformation state component.
         """
         super().__init__(gateway_resource_information, charm_state)
-        tls_hostname_secrets: list[tuple[str, str]] = []
-        if tls_information is not None:
-            for hostname in tls_information.hostnames:
-                secret_name = f"{tls_information.secret_resource_name_prefix}-{hostname}"
-                tls_hostname_secrets.append((hostname, secret_name))
+        tls_hostname_secrets = [
+            (hostname, f"{tls_information.secret_resource_name_prefix}-{hostname}")
+            for hostname in tls_information.hostnames
+        ] if tls_information else []
         self.tls_hostname_secrets = tls_hostname_secrets
-
-    @property
-    def https_listener_required(self) -> bool:
-        """Whether TLS is enabled based on the presence of TLS information."""
-        return len(self.tls_hostname_secrets) > 0
 
     @property
     def gateway_resource_http_listener_spec(self) -> dict:

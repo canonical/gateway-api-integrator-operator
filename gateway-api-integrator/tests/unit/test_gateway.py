@@ -300,14 +300,3 @@ def test_https_listener_name_sanitizes_dots():
     """
     result = https_listener_name("my-gateway", "example.com")
     assert result == "my-gateway-https-example-com"
-
-
-def test_https_listener_name_truncates_long_names():
-    """
-    arrange: a hostname long enough to push the combined name past 253 characters.
-    act: call https_listener_name.
-    assert: the result is at most 253 characters.
-    """
-    long_hostname = "a" * 300
-    result = https_listener_name("gw", long_hostname)
-    assert len(result) <= 253

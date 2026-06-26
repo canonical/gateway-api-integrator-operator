@@ -13,11 +13,12 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
+from helpers import truncate_k8s_resource_name
+from resource_manager.gateway import https_listener_name
 from state.base import ResourceDefinition
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 
-from .gateway import https_listener_name, truncate_k8s_resource_name
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 

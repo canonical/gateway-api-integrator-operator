@@ -3,7 +3,6 @@
 """Gateway resource manager."""
 
 import dataclasses
-import hashlib
 import ipaddress
 import logging
 import time
@@ -30,8 +29,6 @@ CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 
-_K8S_RESOURCE_NAME_MAX_LENGTH = 63
-
 
 def https_listener_name(gateway_name: str, hostname: str) -> str:
     """Build the per-hostname HTTPS listener name / sectionName.
@@ -47,26 +44,6 @@ def https_listener_name(gateway_name: str, hostname: str) -> str:
         The listener name.
     """
     return f"{gateway_name}-https-{hostname.replace('.', '-')}"
-
-
-def truncate_k8s_resource_name(name: str) -> str:
-    """Truncate a Kubernetes resource name to fit within the 63-character limit.
-
-    If the name exceeds 63 characters it is truncated and an 8-character hex
-    hash suffix is appended for uniqueness.
-
-    Args:
-        name: The desired resource name.
-
-    Returns:
-        The name, possibly truncated with a hash suffix, at most 63 characters.
-    """
-    if len(name) <= _K8S_RESOURCE_NAME_MAX_LENGTH:
-        return name
-    suffix = hashlib.md5(name.encode(), usedforsecurity=False).hexdigest()[:8]
-    max_prefix_length = _K8S_RESOURCE_NAME_MAX_LENGTH - len(suffix) - 1
-    truncated = name[:max_prefix_length].rstrip("-")
-    return f"{truncated}-{suffix}"
 
 
 @dataclasses.dataclass
@@ -102,10 +79,14 @@ class GatewayResourceDefinition(ResourceDefinition):
             tls_information: TLSInformation state component.
         """
         super().__init__(gateway_resource_information, charm_state)
-        tls_hostname_secrets = [
-            (hostname, f"{tls_information.secret_resource_name_prefix}-{hostname}")
-            for hostname in tls_information.hostnames
-        ] if tls_information else []
+        tls_hostname_secrets = (
+            [
+                (hostname, f"{tls_information.secret_resource_name_prefix}-{hostname}")
+                for hostname in tls_information.hostnames
+            ]
+            if tls_information
+            else []
+        )
         self.tls_hostname_secrets = tls_hostname_secrets
 
     @property

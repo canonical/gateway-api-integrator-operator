@@ -11,4 +11,5 @@ jobs:
     secrets: inherit
     with:
       vale-files: '["README.md","CONTRIBUTING.md"]'
+      linkcheck-files: "'./**/README.md' 'README.md' 'CONTRIBUTING.md'"
       linkcheck-clear-cache: true

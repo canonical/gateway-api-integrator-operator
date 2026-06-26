@@ -11,6 +11,10 @@ Each revision is versioned by the date of the revision.
 
 - Improved test coverage for both `ingress` and `gateway-route` mode.
 
+## 2026-06-18
+
+- Migrated the RTD documentation URL under the Canonical domain.
+
 ## 2026-06-11
 
 - Removed support for `gateway-route` v0 library.

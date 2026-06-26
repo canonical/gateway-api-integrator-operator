@@ -9,11 +9,11 @@
 
 A Juju charm that deploys in between a [Gateway API integrator](https://gateway-api.sigs.k8s.io/) and an ingress requirer charm. In its current implementation the Gateway API integrator `ingress` integration doesn't allow users to specify the path their application is exposed in. The `gateway-route` relation gives full control to users for exposing their application. The Gateway Route configurator charm helps users by creating a bridge between the `ingress` and `gateway-route` integrations so users doesn't have to update their charm to use the `gateway-route` integration.
 
-For information about how to deploy, integrate, and manage this charm, see the Official [gateway-route-configurator charm Documentation](https://charmhub.io/gateway-route-configurator/docs).
+For information about how to deploy, integrate, and manage this charm, see the Official [gateway-route-configurator charm Documentation](https://canonical.com/juju/docs/gateway-api-integrator-charm/).
 
 ## Get started
 
-To begin, refer to the [Getting Started](https://charmhub.io/gateway-route-configurator/docs/tutorial-getting-started) tutorial for step-by-step instructions.
+To begin, refer to the [Getting Started](https://canonical.com/juju/docs/gateway-api-integrator-charm/latest/tutorial/using-gateway-route/) tutorial for step-by-step instructions.
 
 ## Usage
 
@@ -36,7 +36,7 @@ juju relate gateway-route-configurator:ingress flask-k8s
 
 ## Learn more
 
-- [Read more](https://charmhub.io/gateway-api-integrator/docs)
+- [Read more](https://canonical.com/juju/docs/gateway-api-integrator-charm/)
 - [Official webpage](https://gateway-api.sigs.k8s.io/)
 
 ## Project and community
@@ -47,5 +47,5 @@ suggestions, fixes and constructive feedback.
 
 - [Code of conduct](https://ubuntu.com/community/docs/ethos/code-of-conduct)
 - [Get support](https://discourse.charmhub.io/)
-- [Contribute](https://charmhub.io/gateway-api-integrator#contributing-to-this-documentation)
+- [Contribute](../CONTRIBUTING.md)
 - [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

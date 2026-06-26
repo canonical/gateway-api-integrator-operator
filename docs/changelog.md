@@ -11,6 +11,14 @@ Each revision is versioned by the date of the revision.
 
 - Fixed a bug where multiple `gateway-route` relations with enforced HTTPS caused the gateway to become unreachable. The fix creates one HTTPS Gateway listener per hostname.
 
+## 2026-06-22
+
+- Improved test coverage for both `ingress` and `gateway-route` mode.
+
+## 2026-06-18
+
+- Migrated the RTD documentation URL under the Canonical domain.
+
 ## 2026-06-11
 
 - Removed support for `gateway-route` v0 library.

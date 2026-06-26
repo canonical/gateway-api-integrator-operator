@@ -13,11 +13,11 @@ As such, the charm makes it easy for those looking to take control of their own 
 
 For DevOps or SRE teams this charm will make operating a Gateway API simple and straightforward through Juju's clean interface. It will allow easy deployment into multiple environments for testing of changes.
 
-For information about how to deploy, integrate, and manage this charm, see the Official [gateway-api-integrator charm Documentation](https://charmhub.io/gateway-api-integrator/docs).
+For information about how to deploy, integrate, and manage this charm, see the Official [gateway-api-integrator charm Documentation](https://canonical.com/juju/docs/gateway-api-integrator-charm/latest/).
 
 ## Get started
 
-To begin, refer to the [Getting Started](https://charmhub.io/gateway-api-integrator/docs/tutorial-getting-started) tutorial for step-by-step instructions.
+To begin, refer to the [Getting Started](https://canonical.com/juju/docs/gateway-api-integrator-charm/latest/tutorial/getting-started/) tutorial for step-by-step instructions.
 
 ### Basic operations
 
@@ -48,8 +48,39 @@ juju integrate gateway-api-integrator self-signed-certificates
 
 ## Learn more
 
-- [Read more](https://charmhub.io/gateway-api-integrator/docs)
+- [Read more](https://canonical.com/juju/docs/gateway-api-integrator-charm/)
 - [Official webpage] (https://gateway-api.sigs.k8s.io/)
+
+## Documentation
+
+Our documentation is stored in the `docs` directory and
+can be viewed at https://canonical.com/juju/docs/gateway-api-integrator-charm/.
+It is based on the Canonical Sphinx Stack and hosted on
+[Read the Docs](https://about.readthedocs.com/). In structuring, the
+documentation employs the [Diátaxis](https://diataxis.fr/) approach.
+
+You may open a pull request with your documentation changes, or you can
+[file a bug](https://github.com/canonical/gateway-api-integrator-operator/issues) to
+provide constructive feedback or suggestions.
+
+To run the documentation locally before submitting your changes:
+
+```bash
+cd docs
+make run
+```
+
+GitHub runs automatic checks on the documentation to verify spelling, 
+validate links and style guide compliance.
+
+You can (and should) run the same checks locally:
+
+```bash
+make spelling
+make linkcheck
+make vale
+make lint-md
+```
 
 ## Project and community
 
@@ -59,5 +90,5 @@ suggestions, fixes and constructive feedback.
 
 - [Code of conduct](https://ubuntu.com/community/docs/ethos/code-of-conduct)
 - [Get support](https://discourse.charmhub.io/)
-- [Contribute](https://charmhub.io/gateway-api-integrator#contributing-to-this-documentation)
+- [Contribute](CONTRIBUTING.md)
 - [Matrix](https://matrix.to/#/#charmhub-charmdev:ubuntu.com)

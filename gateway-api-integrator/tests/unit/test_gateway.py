@@ -16,7 +16,11 @@ from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta, Status
 from ops.testing import Harness
 
-from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
+from resource_manager.gateway import (
+    GatewayResourceDefinition,
+    GatewayResourceManager,
+    https_listener_name,
+)
 from state.charm_state import CharmState
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
@@ -200,3 +204,110 @@ def test_gateway_address_not_available(
         client=mock_lightkube_client,
     )
     assert gateway_resource_manager.gateway_address(name="") is None
+
+
+# ---------------------------------------------------------------------------
+# gateway_resource_spec — per-hostname HTTPS listener tests
+# ---------------------------------------------------------------------------
+
+
+def _make_gw_def(
+    gateway_name: str,
+    tls_pairs: list[tuple[str, str]],
+    gateway_class: str = "cilium",
+) -> GatewayResourceDefinition:
+    """Construct a minimal GatewayResourceDefinition for spec-level unit tests.
+
+    Bypasses the full constructor so tests do not need a running charm harness.
+    """
+    obj = object.__new__(GatewayResourceDefinition)
+    obj.gateway_name = gateway_name
+    obj.gateway_class_name = gateway_class
+    obj.tls_hostname_secrets = tls_pairs
+    return obj
+
+
+def test_gateway_resource_spec_no_tls():
+    """
+    arrange: GatewayResourceDefinition with no TLS hostnames.
+    act: access gateway_resource_spec.
+    assert: only the single HTTP listener is present.
+    """
+    gw_def = _make_gw_def("my-gateway", [])
+    spec = gw_def.gateway_resource_spec
+
+    assert len(spec["listeners"]) == 1
+    assert spec["listeners"][0]["protocol"] == "HTTP"
+
+
+def test_gateway_resource_spec_single_https_listener():
+    """
+    arrange: GatewayResourceDefinition with one TLS hostname.
+    act: access gateway_resource_spec.
+    assert: 2 listeners (HTTP + HTTPS); the HTTPS listener has the correct hostname,
+        name, and a single certificateRef.
+    """
+    hostname = "example.com"
+    secret_name = "my-app-secret-example.com"
+    gw_def = _make_gw_def("my-gateway", [(hostname, secret_name)])
+    spec = gw_def.gateway_resource_spec
+
+    assert len(spec["listeners"]) == 2
+
+    https_listener = spec["listeners"][1]
+    assert https_listener["protocol"] == "HTTPS"
+    assert https_listener["hostname"] == hostname
+    assert https_listener["name"] == https_listener_name("my-gateway", hostname)
+    assert https_listener["tls"]["certificateRefs"] == [{"kind": "Secret", "name": secret_name}]
+
+
+def test_gateway_resource_spec_multiple_https_listeners():
+    """
+    arrange: GatewayResourceDefinition with two TLS hostnames.
+    act: access gateway_resource_spec.
+    assert: 3 listeners (HTTP + 2 HTTPS); each HTTPS listener has a distinct hostname,
+        name, and certificateRef — no two HTTPS listeners share the same match.
+    """
+    pairs = [
+        ("alpha.example.com", "secret-alpha"),
+        ("beta.example.com", "secret-beta"),
+    ]
+    gw_def = _make_gw_def("my-gateway", pairs)
+    spec = gw_def.gateway_resource_spec
+
+    assert len(spec["listeners"]) == 3
+
+    https_listeners = [li for li in spec["listeners"] if li["protocol"] == "HTTPS"]
+    assert len(https_listeners) == 2
+
+    names = [li["name"] for li in https_listeners]
+    hostnames = [li["hostname"] for li in https_listeners]
+    cert_refs = [li["tls"]["certificateRefs"][0]["name"] for li in https_listeners]
+
+    # All values must be distinct so Envoy can distinguish filter chains by SNI.
+    assert len(set(names)) == 2
+    assert len(set(hostnames)) == 2
+    assert len(set(cert_refs)) == 2
+    assert "alpha.example.com" in hostnames
+    assert "beta.example.com" in hostnames
+
+
+def test_https_listener_name_sanitizes_dots():
+    """
+    arrange: a gateway name and a dotted hostname.
+    act: call https_listener_name.
+    assert: dots in the hostname are replaced with hyphens.
+    """
+    result = https_listener_name("my-gateway", "example.com")
+    assert result == "my-gateway-https-example-com"
+
+
+def test_https_listener_name_truncates_long_names():
+    """
+    arrange: a hostname long enough to push the combined name past 253 characters.
+    act: call https_listener_name.
+    assert: the result is at most 253 characters.
+    """
+    long_hostname = "a" * 300
+    result = https_listener_name("gw", long_hostname)
+    assert len(result) <= 253

@@ -12,6 +12,7 @@ import pytest
 from lightkube.core.client import Client
 from ops.testing import Harness
 
+from resource_manager.gateway import https_listener_name
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
     HTTPRouteResourceManager,
@@ -207,3 +208,67 @@ def test_http_route_resource_information_empty_filters_and_paths():
     )
     assert info.filters == []
     assert info.paths == []
+
+
+# ---------------------------------------------------------------------------
+# listener_id / http_route_resource_name — per-hostname HTTPS tests
+# ---------------------------------------------------------------------------
+
+
+def _make_http_route_def(
+    gateway_name: str,
+    http_route_type: HTTPRouteType,
+    hostname: str | None,
+) -> HTTPRouteResourceDefinition:
+    """Construct a minimal HTTPRouteResourceDefinition for property-level tests.
+
+    Bypasses the full constructor so tests do not need a charm harness.
+    """
+    obj = object.__new__(HTTPRouteResourceDefinition)
+    obj.gateway_name = gateway_name
+    obj.http_route_type = http_route_type
+    obj.hostname = hostname
+    return obj
+
+
+def test_https_listener_id_uses_sanitized_hostname():
+    """
+    arrange: HTTPRouteResourceDefinition with HTTPS type and a dotted hostname.
+    act: access listener_id.
+    assert: the id is "{gateway_name}-https-{hostname_with_dots_replaced_by_hyphens}".
+    """
+    obj = _make_http_route_def("my-gateway", HTTPRouteType.HTTPS, "example.com")
+    assert obj.listener_id == "my-gateway-https-example-com"
+    assert obj.listener_id == https_listener_name("my-gateway", "example.com")
+
+
+def test_http_listener_id_unchanged():
+    """
+    arrange: HTTPRouteResourceDefinition with HTTP type.
+    act: access listener_id.
+    assert: the id is the traditional "{gateway_name}-http" (no hostname suffix).
+    """
+    obj = _make_http_route_def("my-gateway", HTTPRouteType.HTTP, None)
+    assert obj.listener_id == "my-gateway-http"
+
+
+def test_https_listener_id_without_hostname_falls_back():
+    """
+    arrange: HTTPRouteResourceDefinition with HTTPS type but hostname=None.
+    act: access listener_id.
+    assert: falls back to "{gateway_name}-https" (legacy single-listener behaviour).
+    """
+    obj = _make_http_route_def("my-gateway", HTTPRouteType.HTTPS, None)
+    assert obj.listener_id == "my-gateway-https"
+
+
+def test_https_resource_name_uses_sanitized_hostname():
+    """
+    arrange: HTTPRouteResourceDefinition with HTTPS type and a dotted hostname.
+    act: access http_route_resource_name.
+    assert: the K8s name is "{gateway_name}-https-{sanitized}" truncated to 63 chars.
+    """
+    obj = _make_http_route_def("my-gateway", HTTPRouteType.HTTPS, "example.com")
+    name = obj.http_route_resource_name
+    assert name == "my-gateway-https-example-com"
+    assert len(name) <= 63

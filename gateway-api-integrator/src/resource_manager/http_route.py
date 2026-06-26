@@ -17,6 +17,7 @@ from state.base import ResourceDefinition
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
 
+from .gateway import https_listener_name, truncate_k8s_resource_name
 from .permission import map_k8s_auth_exception
 from .resource_manager import ResourceManager
 
@@ -114,19 +115,29 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         """Get the listener id for the HTTPRoute resource.
 
         The listener id is used to reference the corresponding listener in the parent Gateway resource.
+        For HTTPS routes with a hostname, returns the per-hostname listener name so it matches
+        the corresponding per-hostname HTTPS Gateway listener.
 
         Returns:
             The listener id.
         """
+        if self.http_route_type == HTTPRouteType.HTTPS and self.hostname is not None:
+            return https_listener_name(self.gateway_name, self.hostname)
         return f"{self.gateway_name}-{self.http_route_type}"
 
     @property
     def http_route_resource_name(self) -> str:
         """Get the HTTPRoute resource name.
 
+        For HTTPS routes with a hostname the name is per-hostname (truncated to the
+        63-character Kubernetes limit).  HTTP routes keep the existing short name.
+
         Returns:
             The HTTPRoute resource name.
         """
+        if self.http_route_type == HTTPRouteType.HTTPS and self.hostname is not None:
+            name = f"{self.gateway_name}-https-{self.hostname.replace('.', '-')}"
+            return truncate_k8s_resource_name(name)
         return f"{self.gateway_name}-{self.http_route_type}"
 
     @property

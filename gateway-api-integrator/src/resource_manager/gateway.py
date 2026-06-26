@@ -3,6 +3,7 @@
 """Gateway resource manager."""
 
 import dataclasses
+import hashlib
 import ipaddress
 import logging
 import time
@@ -29,6 +30,47 @@ CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 
+_GATEWAY_API_SECTION_NAME_MAX_LENGTH = 253
+_K8S_RESOURCE_NAME_MAX_LENGTH = 63
+
+
+def https_listener_name(gateway_name: str, hostname: str) -> str:
+    """Build the per-hostname HTTPS listener name / sectionName.
+
+    The name follows the convention ``{gateway_name}-https-{sanitized_hostname}``
+    where dots in the hostname are replaced with hyphens. The result is capped at
+    253 characters (Gateway API SectionName limit).
+
+    Args:
+        gateway_name: The name of the Gateway K8s resource.
+        hostname: The hostname for this listener.
+
+    Returns:
+        A listener name of at most 253 characters.
+    """
+    name = f"{gateway_name}-https-{hostname.replace('.', '-')}"
+    return name[:_GATEWAY_API_SECTION_NAME_MAX_LENGTH]
+
+
+def truncate_k8s_resource_name(name: str) -> str:
+    """Truncate a Kubernetes resource name to fit within the 63-character limit.
+
+    If the name exceeds 63 characters it is truncated and an 8-character hex
+    hash suffix is appended for uniqueness.
+
+    Args:
+        name: The desired resource name.
+
+    Returns:
+        The name, possibly truncated with a hash suffix, at most 63 characters.
+    """
+    if len(name) <= _K8S_RESOURCE_NAME_MAX_LENGTH:
+        return name
+    suffix = hashlib.md5(name.encode(), usedforsecurity=False).hexdigest()[:8]
+    max_prefix_length = _K8S_RESOURCE_NAME_MAX_LENGTH - len(suffix) - 1
+    truncated = name[:max_prefix_length].rstrip("-")
+    return f"{truncated}-{suffix}"
+
 
 @dataclasses.dataclass
 class GatewayResourceDefinition(ResourceDefinition):
@@ -42,12 +84,12 @@ class GatewayResourceDefinition(ResourceDefinition):
     Attributes:
         gateway_name: The gateway resource's name.
         gateway_class_name: The configured gateway class.
-        tls_secret_names: List of TLS secret names for HTTPS listeners.
+        tls_hostname_secrets: List of (hostname, secret_name) pairs for HTTPS listeners.
     """
 
     gateway_name: str
     gateway_class_name: str
-    tls_secret_names: list[str]
+    tls_hostname_secrets: list[tuple[str, str]]
 
     def __init__(
         self,
@@ -63,18 +105,17 @@ class GatewayResourceDefinition(ResourceDefinition):
             tls_information: TLSInformation state component.
         """
         super().__init__(gateway_resource_information, charm_state)
-        tls_secret_names: list[str] = []
+        tls_hostname_secrets: list[tuple[str, str]] = []
         if tls_information is not None:
             for hostname in tls_information.hostnames:
-                tls_secret_names.append(
-                    f"{tls_information.secret_resource_name_prefix}-{hostname}"
-                )
-        self.tls_secret_names = tls_secret_names
+                secret_name = f"{tls_information.secret_resource_name_prefix}-{hostname}"
+                tls_hostname_secrets.append((hostname, secret_name))
+        self.tls_hostname_secrets = tls_hostname_secrets
 
     @property
     def https_listener_required(self) -> bool:
         """Whether TLS is enabled based on the presence of TLS information."""
-        return len(self.tls_secret_names) > 0
+        return len(self.tls_hostname_secrets) > 0
 
     @property
     def gateway_resource_http_listener_spec(self) -> dict:
@@ -88,21 +129,17 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     @property
     def gateway_resource_spec(self) -> dict:
-        """Return the gateway resource spec with HTTP and HTTPS listeners."""
+        """Return the gateway resource spec with HTTP and per-hostname HTTPS listeners."""
         listeners = [self.gateway_resource_http_listener_spec]
-        if self.tls_secret_names:
+        for hostname, secret_name in self.tls_hostname_secrets:
             listeners.append(
                 {
                     "protocol": "HTTPS",
                     "port": 443,
-                    "name": f"{self.gateway_name}-https",
+                    "name": https_listener_name(self.gateway_name, hostname),
+                    "hostname": hostname,
                     "allowedRoutes": {"namespaces": {"from": "All"}},
-                    "tls": {
-                        "certificateRefs": [
-                            {"kind": "Secret", "name": secret_name}
-                            for secret_name in self.tls_secret_names
-                        ]
-                    },
+                    "tls": {"certificateRefs": [{"kind": "Secret", "name": secret_name}]},
                 }
             )
         return {

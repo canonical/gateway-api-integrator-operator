@@ -129,15 +129,17 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     def http_route_resource_name(self) -> str:
         """Get the HTTPRoute resource name.
 
-        For HTTPS routes with a hostname the name is per-hostname (truncated to the
-        63-character Kubernetes limit).  HTTP routes keep the existing short name.
+        For HTTPS routes with a hostname the name is per-hostname so that each hostname
+        gets its own HTTPRoute resource. The result is truncated to the 63-character
+        Kubernetes name limit.
 
         Returns:
             The HTTPRoute resource name.
         """
         if self.http_route_type == HTTPRouteType.HTTPS and self.hostname is not None:
-            name = f"{self.gateway_name}-https-{self.hostname.replace('.', '-')}"
-            return truncate_k8s_resource_name(name)
+            return truncate_k8s_resource_name(
+                f"{self.gateway_name}-https-{self.hostname.replace('.', '-')}"
+            )
         return f"{self.gateway_name}-{self.http_route_type}"
 
     @property

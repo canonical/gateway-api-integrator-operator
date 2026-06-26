@@ -248,7 +248,7 @@ def test_gateway_resource_spec_single_https_listener():
         name, and a single certificateRef.
     """
     hostname = "example.com"
-    secret_name = "my-app-secret-example.com"
+    secret_name = "my-app-secret-example.com"  # nosec B105
     gw_def = _make_gw_def("my-gateway", [(hostname, secret_name)])
     spec = gw_def.gateway_resource_spec
 

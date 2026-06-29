@@ -46,6 +46,22 @@ def https_listener_name(gateway_name: str, hostname: str) -> str:
     return f"{gateway_name}-https-{hostname.replace('.', '-')}"
 
 
+def http_listener_name(gateway_name: str, hostname: str) -> str:
+    """Build the per-hostname HTTP listener name / sectionName.
+
+    The name follows the convention ``{gateway_name}-http-{sanitized_hostname}``
+    where dots in the hostname are replaced with hyphens.
+
+    Args:
+        gateway_name: The name of the Gateway K8s resource.
+        hostname: The hostname for this listener.
+
+    Returns:
+        The listener name.
+    """
+    return f"{gateway_name}-http-{hostname.replace('.', '-')}"
+
+
 @dataclasses.dataclass
 class GatewayResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage gateway resource.
@@ -58,11 +74,13 @@ class GatewayResourceDefinition(ResourceDefinition):
     Attributes:
         gateway_name: The gateway resource's name.
         gateway_class_name: The configured gateway class.
+        hostnames: Set of hostnames managed in the active mode.
         tls_hostname_secrets: List of (hostname, secret_name) pairs for HTTPS listeners.
     """
 
     gateway_name: str
     gateway_class_name: str
+    hostnames: set[str]
     tls_hostname_secrets: list[tuple[str, str]]
 
     def __init__(
@@ -90,14 +108,42 @@ class GatewayResourceDefinition(ResourceDefinition):
         self.tls_hostname_secrets = tls_hostname_secrets
 
     @property
-    def gateway_resource_http_listener_spec(self) -> dict:
-        """Return the HTTP listener configuration for the gateway resource."""
-        return {
-            "protocol": "HTTP",
-            "port": 80,
-            "name": f"{self.gateway_name}-http",
-            "allowedRoutes": {"namespaces": {"from": "All"}},
-        }
+    def gateway_resource_http_listener_specs(self) -> list[dict[str, typing.Any]]:
+        """Return the HTTP listener configurations for the gateway resource.
+
+        One HTTP listener is created per managed hostname so that each HTTP listener is
+        symmetric with its HTTPS counterpart. Cilium fails to translate the insecure route
+        configuration when a hostname-less HTTP listener coexists with hostname-bearing HTTPS
+        listeners, which drops plain HTTP traffic. When no hostnames are managed (for example,
+        IP-certificate mode) a single hostname-less HTTP listener is returned.
+
+        IP-based listeners omit the ``hostname`` field because Gateway API does not allow IP
+        addresses in the listener ``hostname`` field.
+        """
+        if not self.hostnames:
+            return [
+                {
+                    "protocol": "HTTP",
+                    "port": 80,
+                    "name": f"{self.gateway_name}-http",
+                    "allowedRoutes": {"namespaces": {"from": "All"}},
+                }
+            ]
+        listeners = []
+        for hostname in sorted(self.hostnames):
+            listener: dict = {
+                "protocol": "HTTP",
+                "port": 80,
+                "name": http_listener_name(self.gateway_name, hostname),
+                "allowedRoutes": {"namespaces": {"from": "All"}},
+            }
+            try:
+                ipaddress.ip_address(hostname)
+            except ValueError:
+                # hostname is a DNS name
+                listener["hostname"] = hostname
+            listeners.append(listener)
+        return listeners
 
     @property
     def gateway_resource_spec(self) -> dict:
@@ -106,7 +152,7 @@ class GatewayResourceDefinition(ResourceDefinition):
         IP-based listeners (used when ``requires_ip_certificate=True``) omit the field because Gateway
         API does not allow IP addresses in the listener ``hostname`` field.
         """
-        listeners = [self.gateway_resource_http_listener_spec]
+        listeners = self.gateway_resource_http_listener_specs
         for hostname, secret_name in self.tls_hostname_secrets:
             listener: dict = {
                 "protocol": "HTTPS",

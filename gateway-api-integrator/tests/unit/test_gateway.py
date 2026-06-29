@@ -19,6 +19,7 @@ from ops.testing import Harness
 from resource_manager.gateway import (
     GatewayResourceDefinition,
     GatewayResourceManager,
+    http_listener_name,
     https_listener_name,
 )
 from state.charm_state import CharmState
@@ -215,6 +216,7 @@ def _make_gw_def(
     gateway_name: str,
     tls_pairs: list[tuple[str, str]],
     gateway_class: str = "cilium",
+    hostnames: set[str] | None = None,
 ) -> GatewayResourceDefinition:
     """Construct a minimal GatewayResourceDefinition for spec-level unit tests.
 
@@ -223,29 +225,31 @@ def _make_gw_def(
     obj = object.__new__(GatewayResourceDefinition)
     obj.gateway_name = gateway_name
     obj.gateway_class_name = gateway_class
+    obj.hostnames = {hostname for hostname, _ in tls_pairs} if hostnames is None else hostnames
     obj.tls_hostname_secrets = tls_pairs
     return obj
 
 
 def test_gateway_resource_spec_no_tls():
     """
-    arrange: GatewayResourceDefinition with no TLS hostnames.
+    arrange: GatewayResourceDefinition with no TLS hostnames and no managed hostnames.
     act: access gateway_resource_spec.
-    assert: only the single HTTP listener is present.
+    assert: only the single hostname-less HTTP listener is present.
     """
     gw_def = _make_gw_def("my-gateway", [])
     spec = gw_def.gateway_resource_spec
 
     assert len(spec["listeners"]) == 1
     assert spec["listeners"][0]["protocol"] == "HTTP"
+    assert "hostname" not in spec["listeners"][0]
 
 
 def test_gateway_resource_spec_single_https_listener():
     """
     arrange: GatewayResourceDefinition with one TLS hostname.
     act: access gateway_resource_spec.
-    assert: 2 listeners (HTTP + HTTPS); the HTTPS listener has the correct hostname,
-        name, and a single certificateRef.
+    assert: 2 listeners (per-hostname HTTP + HTTPS); the HTTP and HTTPS listeners share the
+        same hostname, and the HTTPS listener has the correct name and a single certificateRef.
     """
     hostname = "example.com"
     secret_name = "my-app-secret-example.com"  # nosec B105
@@ -253,6 +257,11 @@ def test_gateway_resource_spec_single_https_listener():
     spec = gw_def.gateway_resource_spec
 
     assert len(spec["listeners"]) == 2
+
+    http_listener = spec["listeners"][0]
+    assert http_listener["protocol"] == "HTTP"
+    assert http_listener["hostname"] == hostname
+    assert http_listener["name"] == http_listener_name("my-gateway", hostname)
 
     https_listener = spec["listeners"][1]
     assert https_listener["protocol"] == "HTTPS"
@@ -265,8 +274,8 @@ def test_gateway_resource_spec_multiple_https_listeners():
     """
     arrange: GatewayResourceDefinition with two TLS hostnames.
     act: access gateway_resource_spec.
-    assert: 3 listeners (HTTP + 2 HTTPS); each HTTPS listener has a distinct hostname,
-        name, and certificateRef — no two HTTPS listeners share the same match.
+    assert: 4 listeners (2 HTTP + 2 HTTPS); each HTTP and HTTPS listener has a distinct
+        hostname, name, and certificateRef — no two listeners share the same match.
     """
     pairs = [
         ("alpha.example.com", "secret-alpha"),
@@ -275,7 +284,14 @@ def test_gateway_resource_spec_multiple_https_listeners():
     gw_def = _make_gw_def("my-gateway", pairs)
     spec = gw_def.gateway_resource_spec
 
-    assert len(spec["listeners"]) == 3
+    assert len(spec["listeners"]) == 4
+
+    http_listeners = [li for li in spec["listeners"] if li["protocol"] == "HTTP"]
+    assert len(http_listeners) == 2
+    http_names = [li["name"] for li in http_listeners]
+    http_hostnames = [li["hostname"] for li in http_listeners]
+    assert len(set(http_names)) == 2
+    assert set(http_hostnames) == {"alpha.example.com", "beta.example.com"}
 
     https_listeners = [li for li in spec["listeners"] if li["protocol"] == "HTTPS"]
     assert len(https_listeners) == 2
@@ -302,6 +318,16 @@ def test_https_listener_name_sanitizes_dots():
     assert result == "my-gateway-https-example-com"
 
 
+def test_http_listener_name_sanitizes_dots():
+    """
+    arrange: a gateway name and a dotted hostname.
+    act: call http_listener_name.
+    assert: dots in the hostname are replaced with hyphens.
+    """
+    result = http_listener_name("my-gateway", "example.com")
+    assert result == "my-gateway-http-example-com"
+
+
 def test_gateway_resource_spec_ip_cert_no_hostname_field():
     """
     arrange: GatewayResourceDefinition where the TLS 'hostname' is an IP address
@@ -312,7 +338,7 @@ def test_gateway_resource_spec_ip_cert_no_hostname_field():
     """
     ip = "10.43.45.0"
     secret_name = f"my-app-secret-{ip}"  # nosec B105
-    gw_def = _make_gw_def("my-gateway", [(ip, secret_name)])
+    gw_def = _make_gw_def("my-gateway", [(ip, secret_name)], hostnames=set())
     spec = gw_def.gateway_resource_spec
 
     assert len(spec["listeners"]) == 2

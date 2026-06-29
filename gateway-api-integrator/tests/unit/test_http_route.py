@@ -12,7 +12,7 @@ import pytest
 from lightkube.core.client import Client
 from ops.testing import Harness
 
-from resource_manager.gateway import https_listener_name
+from resource_manager.gateway import http_listener_name, https_listener_name
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
     HTTPRouteResourceManager,
@@ -244,12 +244,23 @@ def test_https_listener_id_uses_sanitized_hostname():
 
 def test_http_listener_id_unchanged():
     """
-    arrange: HTTPRouteResourceDefinition with HTTP type.
+    arrange: HTTPRouteResourceDefinition with HTTP type and no hostname.
     act: access listener_id.
     assert: the id is the traditional "{gateway_name}-http" (no hostname suffix).
     """
     obj = _make_http_route_def("my-gateway", HTTPRouteType.HTTP, None)
     assert obj.listener_id == "my-gateway-http"
+
+
+def test_http_listener_id_uses_sanitized_hostname():
+    """
+    arrange: HTTPRouteResourceDefinition with HTTP type and a dotted hostname.
+    act: access listener_id.
+    assert: the id is "{gateway_name}-http-{hostname_with_dots_replaced_by_hyphens}".
+    """
+    obj = _make_http_route_def("my-gateway", HTTPRouteType.HTTP, "example.com")
+    assert obj.listener_id == "my-gateway-http-example-com"
+    assert obj.listener_id == http_listener_name("my-gateway", "example.com")
 
 
 def test_https_listener_id_without_hostname_falls_back():

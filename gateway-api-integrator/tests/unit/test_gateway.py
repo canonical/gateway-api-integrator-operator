@@ -300,3 +300,23 @@ def test_https_listener_name_sanitizes_dots():
     """
     result = https_listener_name("my-gateway", "example.com")
     assert result == "my-gateway-https-example-com"
+
+
+def test_gateway_resource_spec_ip_cert_no_hostname_field():
+    """
+    arrange: GatewayResourceDefinition where the TLS 'hostname' is an IP address
+        (the requires_ip_certificate=True path).
+    act: access gateway_resource_spec.
+    assert: the HTTPS listener does NOT include a hostname field because Gateway
+        API forbids IP addresses in the listener hostname field.
+    """
+    ip = "10.43.45.0"
+    secret_name = f"my-app-secret-{ip}"  # nosec B105
+    gw_def = _make_gw_def("my-gateway", [(ip, secret_name)])
+    spec = gw_def.gateway_resource_spec
+
+    assert len(spec["listeners"]) == 2
+    https_listener = spec["listeners"][1]
+    assert https_listener["protocol"] == "HTTPS"
+    assert "hostname" not in https_listener
+    assert https_listener["tls"]["certificateRefs"] == [{"kind": "Secret", "name": secret_name}]

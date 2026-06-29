@@ -101,19 +101,26 @@ class GatewayResourceDefinition(ResourceDefinition):
 
     @property
     def gateway_resource_spec(self) -> dict:
-        """Return the gateway resource spec with HTTP and per-hostname HTTPS listeners."""
+        """Return the gateway resource spec with HTTP and per-hostname HTTPS listeners.
+
+        IP-based listeners (used when ``requires_ip_certificate=True``) omit the field because Gateway
+        API does not allow IP addresses in the listener ``hostname`` field.
+        """
         listeners = [self.gateway_resource_http_listener_spec]
         for hostname, secret_name in self.tls_hostname_secrets:
-            listeners.append(
-                {
-                    "protocol": "HTTPS",
-                    "port": 443,
-                    "name": https_listener_name(self.gateway_name, hostname),
-                    "hostname": hostname,
-                    "allowedRoutes": {"namespaces": {"from": "All"}},
-                    "tls": {"certificateRefs": [{"kind": "Secret", "name": secret_name}]},
-                }
-            )
+            listener: dict = {
+                "protocol": "HTTPS",
+                "port": 443,
+                "name": https_listener_name(self.gateway_name, hostname),
+                "allowedRoutes": {"namespaces": {"from": "All"}},
+                "tls": {"certificateRefs": [{"kind": "Secret", "name": secret_name}]},
+            }
+            try:
+                ipaddress.ip_address(hostname)
+            except ValueError:
+                # hostname is a DNS name
+                listener["hostname"] = hostname
+            listeners.append(listener)
         return {
             "gatewayClassName": self.gateway_class_name,
             "listeners": listeners,

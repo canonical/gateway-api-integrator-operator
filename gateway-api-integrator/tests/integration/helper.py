@@ -10,7 +10,66 @@ import jubilant
 import lightkube
 import requests
 from lightkube.generic_resource import GenericNamespacedResource, create_namespaced_resource
+from requests.adapters import DEFAULT_POOLBLOCK, DEFAULT_POOLSIZE, DEFAULT_RETRIES, HTTPAdapter
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
+
+
+class DNSResolverAdapter(HTTPAdapter):
+    """A requests transport adapter that routes a hostname to a fixed IP.
+
+    Lets ``requests`` connect to a known IP while sending the correct SNI and
+    Host header, which hostname-scoped Gateway listeners require.
+    """
+
+    def __init__(self, hostname: str, ip: str) -> None:
+        """Initialise the adapter.
+
+        Args:
+            hostname: The DNS name to intercept.
+            ip: The IP address to route to instead.
+        """
+        self.hostname = hostname
+        self.ip = ip
+        super().__init__(
+            max_retries=DEFAULT_RETRIES,
+            pool_connections=DEFAULT_POOLSIZE,
+            pool_maxsize=DEFAULT_POOLSIZE,
+            pool_block=DEFAULT_POOLBLOCK,
+        )
+
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):  # pylint: disable=too-many-arguments, too-many-positional-arguments
+        """Intercept the request and rewrite the URL to use the target IP.
+
+        Args:
+            request: Outbound HTTP request.
+            stream: Passed through to the parent.
+            timeout: Passed through to the parent.
+            verify: Passed through to the parent.
+            cert: Passed through to the parent.
+            proxies: Passed through to the parent.
+
+        Returns:
+            The HTTP response.
+        """
+        connection_pool_kwargs = self.poolmanager.connection_pool_kw
+        result = urlparse(request.url)
+        if result.hostname == self.hostname:
+            if result.scheme == "http" and self.ip:
+                request.url = request.url.replace("http://" + result.hostname, "http://" + self.ip)
+                connection_pool_kwargs["server_hostname"] = result.hostname
+                request.headers["Host"] = result.hostname
+            elif result.scheme == "https" and self.ip:
+                request.url = request.url.replace(
+                    "https://" + result.hostname, "https://" + self.ip
+                )
+                connection_pool_kwargs["server_hostname"] = result.hostname
+                connection_pool_kwargs["assert_hostname"] = result.hostname
+                request.headers["Host"] = result.hostname
+            else:
+                connection_pool_kwargs.pop("server_hostname", None)
+                connection_pool_kwargs.pop("assert_hostname", None)
+        return super().send(request, stream, timeout, verify, cert, proxies)
+
 
 GATEWAY_API_GROUP = "gateway.networking.k8s.io"
 GATEWAY_RESOURCE_NAME = "Gateway"
@@ -96,10 +155,25 @@ def wait_for_response(
     timeout: int | float = 30,
     **kwargs,
 ) -> requests.Response:
-    """Retry HTTP GET until expected status/body is observed."""
+    """Retry HTTP GET until expected status/body is observed.
+
+    When *hostname* differs from the host in *url* (e.g. the URL contains a
+    bare IP), the URL is rewritten to use *hostname* and a
+    :class:`DNSResolverAdapter` is mounted so the TCP connection still goes to
+    *ip*. This ensures TLS SNI matches the ``hostname:`` field on the Gateway
+    listener.
+    """
     headers = kwargs.pop("headers", {})
     headers.setdefault("Host", hostname)
-    response = requests.get(url, timeout=timeout, headers=headers, **kwargs)
+
+    parsed = urlparse(url)
+    session = requests.Session()
+    if hostname and ip and parsed.hostname != hostname:
+        port = parsed.port
+        new_netloc = f"{hostname}:{port}" if port else hostname
+        url = parsed._replace(netloc=new_netloc).geturl()
+        session.mount(f"{parsed.scheme}://{hostname}", DNSResolverAdapter(hostname, ip))
+    response = session.get(url, timeout=timeout, headers=headers, **kwargs)
 
     assert response.status_code == expected_status, (
         f"Unexpected status from {url}. "

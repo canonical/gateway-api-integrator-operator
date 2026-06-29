@@ -30,6 +30,38 @@ GATEWAY_RESOURCE_NAME = "Gateway"
 GATEWAY_PLURAL = "gateways"
 
 
+def https_listener_name(gateway_name: str, hostname: str) -> str:
+    """Build the per-hostname HTTPS listener name / sectionName.
+
+    The name follows the convention ``{gateway_name}-https-{sanitized_hostname}``
+    where dots in the hostname are replaced with hyphens.
+
+    Args:
+        gateway_name: The name of the Gateway K8s resource.
+        hostname: The hostname for this listener.
+
+    Returns:
+        The listener name.
+    """
+    return f"{gateway_name}-https-{hostname.replace('.', '-')}"
+
+
+def http_listener_name(gateway_name: str, hostname: str) -> str:
+    """Build the per-hostname HTTP listener name / sectionName.
+
+    The name follows the convention ``{gateway_name}-http-{sanitized_hostname}``
+    where dots in the hostname are replaced with hyphens.
+
+    Args:
+        gateway_name: The name of the Gateway K8s resource.
+        hostname: The hostname for this listener.
+
+    Returns:
+        The listener name.
+    """
+    return f"{gateway_name}-http-{hostname.replace('.', '-')}"
+
+
 @dataclasses.dataclass
 class GatewayResourceDefinition(ResourceDefinition):
     """A part of charm state with information required to manage gateway resource.
@@ -42,12 +74,14 @@ class GatewayResourceDefinition(ResourceDefinition):
     Attributes:
         gateway_name: The gateway resource's name.
         gateway_class_name: The configured gateway class.
-        tls_secret_names: List of TLS secret names for HTTPS listeners.
+        hostnames: Set of hostnames managed in the active mode.
+        tls_hostname_secrets: List of (hostname, secret_name) pairs for HTTPS listeners.
     """
 
     gateway_name: str
     gateway_class_name: str
-    tls_secret_names: list[str]
+    hostnames: set[str]
+    tls_hostname_secrets: list[tuple[str, str]]
 
     def __init__(
         self,
@@ -63,48 +97,76 @@ class GatewayResourceDefinition(ResourceDefinition):
             tls_information: TLSInformation state component.
         """
         super().__init__(gateway_resource_information, charm_state)
-        tls_secret_names: list[str] = []
-        if tls_information is not None:
-            for hostname in tls_information.hostnames:
-                tls_secret_names.append(
-                    f"{tls_information.secret_resource_name_prefix}-{hostname}"
-                )
-        self.tls_secret_names = tls_secret_names
+        tls_hostname_secrets = (
+            [
+                (hostname, f"{tls_information.secret_resource_name_prefix}-{hostname}")
+                for hostname in tls_information.hostnames
+            ]
+            if tls_information
+            else []
+        )
+        self.tls_hostname_secrets = tls_hostname_secrets
 
     @property
-    def https_listener_required(self) -> bool:
-        """Whether TLS is enabled based on the presence of TLS information."""
-        return len(self.tls_secret_names) > 0
+    def gateway_resource_http_listener_specs(self) -> list[dict[str, typing.Any]]:
+        """Return the HTTP listener configurations for the gateway resource.
 
-    @property
-    def gateway_resource_http_listener_spec(self) -> dict:
-        """Return the HTTP listener configuration for the gateway resource."""
-        return {
-            "protocol": "HTTP",
-            "port": 80,
-            "name": f"{self.gateway_name}-http",
-            "allowedRoutes": {"namespaces": {"from": "All"}},
-        }
+        One HTTP listener is created per managed hostname so that each HTTP listener is
+        symmetric with its HTTPS counterpart. Cilium fails to translate the insecure route
+        configuration when a hostname-less HTTP listener coexists with hostname-bearing HTTPS
+        listeners, which drops plain HTTP traffic. When no hostnames are managed (for example,
+        IP-certificate mode) a single hostname-less HTTP listener is returned.
+
+        IP-based listeners omit the ``hostname`` field because Gateway API does not allow IP
+        addresses in the listener ``hostname`` field.
+        """
+        if not self.hostnames:
+            return [
+                {
+                    "protocol": "HTTP",
+                    "port": 80,
+                    "name": f"{self.gateway_name}-http",
+                    "allowedRoutes": {"namespaces": {"from": "All"}},
+                }
+            ]
+        listeners = []
+        for hostname in sorted(self.hostnames):
+            listener: dict = {
+                "protocol": "HTTP",
+                "port": 80,
+                "name": http_listener_name(self.gateway_name, hostname),
+                "allowedRoutes": {"namespaces": {"from": "All"}},
+            }
+            try:
+                ipaddress.ip_address(hostname)
+            except ValueError:
+                # hostname is a DNS name
+                listener["hostname"] = hostname
+            listeners.append(listener)
+        return listeners
 
     @property
     def gateway_resource_spec(self) -> dict:
-        """Return the gateway resource spec with HTTP and HTTPS listeners."""
-        listeners = [self.gateway_resource_http_listener_spec]
-        if self.tls_secret_names:
-            listeners.append(
-                {
-                    "protocol": "HTTPS",
-                    "port": 443,
-                    "name": f"{self.gateway_name}-https",
-                    "allowedRoutes": {"namespaces": {"from": "All"}},
-                    "tls": {
-                        "certificateRefs": [
-                            {"kind": "Secret", "name": secret_name}
-                            for secret_name in self.tls_secret_names
-                        ]
-                    },
-                }
-            )
+        """Return the gateway resource spec with HTTP and per-hostname HTTPS listeners.
+
+        IP-based listeners (used when ``requires_ip_certificate=True``) omit the field because Gateway
+        API does not allow IP addresses in the listener ``hostname`` field.
+        """
+        listeners = self.gateway_resource_http_listener_specs
+        for hostname, secret_name in self.tls_hostname_secrets:
+            listener: dict = {
+                "protocol": "HTTPS",
+                "port": 443,
+                "name": https_listener_name(self.gateway_name, hostname),
+                "allowedRoutes": {"namespaces": {"from": "All"}},
+                "tls": {"certificateRefs": [{"kind": "Secret", "name": secret_name}]},
+            }
+            try:
+                ipaddress.ip_address(hostname)
+            except ValueError:
+                # hostname is a DNS name
+                listener["hostname"] = hostname
+            listeners.append(listener)
         return {
             "gatewayClassName": self.gateway_class_name,
             "listeners": listeners,

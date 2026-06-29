@@ -13,6 +13,8 @@ from lightkube.generic_resource import GenericNamespacedResource, create_namespa
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.types import PatchType
 
+from helpers import truncate_k8s_resource_name
+from resource_manager.gateway import http_listener_name, https_listener_name
 from state.base import ResourceDefinition
 from state.gateway import GatewayResourceInformation
 from state.http_route import HTTPRouteResourceInformation
@@ -114,19 +116,33 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         """Get the listener id for the HTTPRoute resource.
 
         The listener id is used to reference the corresponding listener in the parent Gateway resource.
+        For routes with a hostname, returns the per-hostname listener name so it matches
+        the corresponding per-hostname Gateway listener.
 
         Returns:
             The listener id.
         """
+        if self.hostname is not None:
+            if self.http_route_type == HTTPRouteType.HTTPS:
+                return https_listener_name(self.gateway_name, self.hostname)
+            return http_listener_name(self.gateway_name, self.hostname)
         return f"{self.gateway_name}-{self.http_route_type}"
 
     @property
     def http_route_resource_name(self) -> str:
         """Get the HTTPRoute resource name.
 
+        For HTTPS routes with a hostname the name is per-hostname so that each hostname
+        gets its own HTTPRoute resource. The result is truncated to the 63-character
+        Kubernetes name limit.
+
         Returns:
             The HTTPRoute resource name.
         """
+        if self.http_route_type == HTTPRouteType.HTTPS and self.hostname is not None:
+            return truncate_k8s_resource_name(
+                f"{self.gateway_name}-https-{self.hostname.replace('.', '-')}"
+            )
         return f"{self.gateway_name}-{self.http_route_type}"
 
     @property

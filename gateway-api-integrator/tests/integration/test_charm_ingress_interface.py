@@ -105,6 +105,7 @@ def test_ingress_enabled_mode(
         ip=gateway_lb_ip,
         expected_status=200,
         body_contains="Welcome to flask-k8s Charm",
+        allow_redirects=False,
         timeout=10,
     )
     wait_for_response(

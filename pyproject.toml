@@ -17,11 +17,6 @@ skips = ["*/*test.py", "*/test_*.py", "*tests/*.py"]
 [tool.coverage.run]
 branch = true
 
-# Formatting tools configuration
-[tool.black]
-line-length = 99
-target-version = ["py38"]
-
 [tool.coverage.report]
 fail_under = 90
 show_missing = true
@@ -43,11 +38,6 @@ per-file-ignores = [
     "gateway-route-configurator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
 ]
 docstring-convention = "google"
-
-[tool.isort]
-line_length = 99
-profile = "black"
-skip = ["gateway-api-integrator/lib", "gateway-route-configurator/lib"]
 
 [tool.mypy]
 check_untyped_defs = true

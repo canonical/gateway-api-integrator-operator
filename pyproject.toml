@@ -35,7 +35,6 @@ ignore = ["W503", "E501", "D107"]
 per-file-ignores = [
     "tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
     "gateway-api-integrator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
-    "gateway-route-configurator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
 ]
 docstring-convention = "google"
 
@@ -49,7 +48,6 @@ namespace_packages = true
 [[tool.mypy.overrides]]
 module = [
     'gateway_api_integrator/tests.*',
-    'gateway_route_configurator/tests.*',
     "tests.*",
 ]
 disallow_untyped_defs = false
@@ -63,8 +61,6 @@ log_cli_level = "INFO"
 pythonpath = [
     "gateway-api-integrator/lib",
     "gateway-api-integrator/src",
-    "gateway-route-configurator/lib",
-    "gateway-route-configurator/src",
 ]
 
 # Linting tools configuration
@@ -86,7 +82,7 @@ extend-ignore = [
 ]
 ignore = ["E501", "D107"]
 extend-exclude = ["__pycache__", "*.egg_info"]
-per-file-ignores = { "tests/*, gateway-api-integrator/tests/*, gateway-route-configurator/tests/*" = [
+per-file-ignores = { "tests/*, gateway-api-integrator/tests/*" = [
     "D100",
     "D101",
     "D102",

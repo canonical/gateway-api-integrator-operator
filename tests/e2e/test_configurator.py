@@ -6,6 +6,7 @@
 import jubilant
 import pytest
 import requests
+
 from .helper import (
     assert_gateway_route_response,
     get_gateway_ip,

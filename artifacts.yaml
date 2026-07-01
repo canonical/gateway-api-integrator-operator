@@ -10,10 +10,4 @@ charms:
   resources: {}
   platforms:
   - arch: amd64
-- name: gateway-route-configurator
-  charmcraft-yaml: gateway-route-configurator/charmcraft.yaml
-  channel: latest/edge
-  resources: {}
-  platforms:
-  - arch: amd64
 snaps: []

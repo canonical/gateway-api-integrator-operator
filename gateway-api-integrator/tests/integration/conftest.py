@@ -8,7 +8,6 @@ import logging
 import jubilant
 import lightkube
 import pytest
-from opcli.pytest_plugin import charm_paths as opcli_charm_paths  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

@@ -1,0 +1,10 @@
+version: 1
+rocks: []
+charms:
+- name: gateway-api-integrator
+  charmcraft-yaml: gateway-api-integrator/charmcraft.yaml
+  channel: 1/edge
+  resources: {}
+  platforms:
+  - arch: amd64
+snaps: []

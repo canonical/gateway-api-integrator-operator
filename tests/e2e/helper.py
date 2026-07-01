@@ -27,7 +27,7 @@ def assert_gateway_route_response(
     allow_redirects: bool = True,
 ) -> httpx.Response:
     """Get a gateway route and assert expected response, retrying while dataplane converges."""
-    url = f"{scheme}://{hostname if hostname else gateway_address}{path}"
+    url = f"{scheme}://{gateway_address}{path}"
     # When a hostname is given, send it as Host header and TLS SNI so that
     # hostname-scoped gateway listeners route the request correctly.
     extensions = {"sni_hostname": hostname.encode()} if hostname else {}
@@ -39,12 +39,12 @@ def assert_gateway_route_response(
         )
 
     assert response.status_code == expected_status, (
-        f"Failed to route to {hostname}: status={response.status_code}, "
+        f"Failed to route to {hostname if hostname else gateway_address}: status={response.status_code}, "
         f"expected={expected_status}, body={response.text!r}"
     )
     if body_contains is not None:
         assert body_contains in response.text, (
-            f"Expected response body for {hostname} to contain {body_contains!r}, "
+            f"Expected response body for {hostname if hostname else gateway_address} to contain {body_contains!r}, "
             f"body={response.text!r}"
         )
 

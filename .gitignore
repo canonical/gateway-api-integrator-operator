@@ -24,3 +24,8 @@ __pycache__/
 .vale/styles/config/vocabularies/*
 !.vale/styles/config/vocabularies/local
 # END VALE WORKFLOW IGNORE
+
+# opcli/spread generated files
+.spread-reuse.*
+.spread-run-*/
+artifacts.build.yaml

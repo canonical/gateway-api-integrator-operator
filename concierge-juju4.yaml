@@ -3,6 +3,9 @@
 
 juju:
   channel: 4.0/stable
+  # Pin agent to 4.0.5 to avoid juju/juju#22724 (k8s RBAC secrets regression
+  # in 4.0.11). Remove once juju/juju#22751 ships in a stable 4.0.x release.
+  agent-version: "4.0.5"
   model-defaults:
     test-mode: "true"
     automatically-retry-hooks: "false"

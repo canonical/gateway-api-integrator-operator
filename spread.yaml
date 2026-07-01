@@ -11,8 +11,7 @@ backends:
     systems:
     - ubuntu-24.04
 environment:
-  CONCIERGE/juju3: concierge-juju3.yaml
-  CONCIERGE/juju4: concierge-juju4.yaml
+  CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge-juju3.yaml}")'
   OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
 exclude:
 - .git
@@ -30,6 +29,13 @@ integration-suites:
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
     pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+    environment:
+      MODULE/test_actions_juju4: tests/integration/test_actions.py
+      CONCIERGE/test_actions_juju4: concierge-juju4.yaml
+      MODULE/test_charm_dns_juju4: tests/integration/test_charm_dns.py
+      CONCIERGE/test_charm_dns_juju4: concierge-juju4.yaml
+      MODULE/test_charm_ingress_interface_juju4: tests/integration/test_charm_ingress_interface.py
+      CONCIERGE/test_charm_ingress_interface_juju4: concierge-juju4.yaml
   tests/e2e/:
     summary: cross-charm e2e tests
     working-dir: ./
@@ -40,3 +46,6 @@ integration-suites:
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
     pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+    environment:
+      MODULE/test_configurator_juju4: tests/e2e/test_configurator.py
+      CONCIERGE/test_configurator_juju4: concierge-juju4.yaml

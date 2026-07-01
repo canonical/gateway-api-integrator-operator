@@ -1,16 +1,16 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 variable "app_name" {
   description = "Name of the application in the Juju model."
   type        = string
-  default     = "gateway-route-configurator"
+  default     = "ingress-configurator"
 }
 
 variable "channel" {
   description = "The channel to use when deploying a charm."
   type        = string
-  default     = "latest/stable"
+  default     = "latest/edge"
 }
 
 variable "config" {
@@ -43,7 +43,7 @@ variable "base" {
 }
 
 variable "units" {
-  description = "Number of units to deploy"
+  description = "Number of units to deploy."
   type        = number
   default     = 1
 }

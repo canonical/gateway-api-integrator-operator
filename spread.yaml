@@ -11,7 +11,6 @@ backends:
     systems:
     - ubuntu-24.04
 environment:
-  CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge-juju3.yaml}")'
   OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
 exclude:
 - .git
@@ -19,9 +18,10 @@ exclude:
 - .venv
 - .*_cache
 integration-suites:
-  gateway-api-integrator/tests/integration/:
-    summary: gateway-api-integrator charm integration tests
+  gateway-api-integrator/tests/integration-juju3/:
+    summary: gateway-api-integrator charm integration tests (Juju 3)
     working-dir: gateway-api-integrator/
+    discover-path: gateway-api-integrator/tests/integration/
     backends:
     - integration-test
     prepare: |
@@ -29,6 +29,8 @@ integration-suites:
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
     pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+    environment:
+      CONCIERGE: concierge-juju3.yaml
   gateway-api-integrator/tests/integration-juju4/:
     summary: gateway-api-integrator charm integration tests (Juju 4)
     working-dir: gateway-api-integrator/
@@ -42,9 +44,10 @@ integration-suites:
     pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
     environment:
       CONCIERGE: concierge-juju4.yaml
-  tests/e2e/:
-    summary: cross-charm e2e tests
+  tests/e2e-juju3/:
+    summary: cross-charm e2e tests (Juju 3)
     working-dir: ./
+    discover-path: tests/e2e/
     backends:
     - integration-test
     prepare: |
@@ -52,6 +55,8 @@ integration-suites:
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
     pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+    environment:
+      CONCIERGE: concierge-juju3.yaml
   tests/e2e-juju4/:
     summary: cross-charm e2e tests (Juju 4)
     working-dir: ./

@@ -28,6 +28,20 @@ integration-suites:
       mkdir -p /home/ubuntu/.kube
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
+    pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+  gateway-api-integrator/tests/integration-juju4/:
+    summary: gateway-api-integrator charm integration tests (Juju 4)
+    working-dir: gateway-api-integrator/
+    discover-path: gateway-api-integrator/tests/integration/
+    backends:
+    - integration-test
+    prepare: |
+      mkdir -p /home/ubuntu/.kube
+      k8s config > /home/ubuntu/.kube/config
+      chown ubuntu:ubuntu /home/ubuntu/.kube/config
+    pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+    environment:
+      CONCIERGE: concierge-juju4.yaml
   tests/e2e/:
     summary: cross-charm e2e tests
     working-dir: ./
@@ -37,3 +51,17 @@ integration-suites:
       mkdir -p /home/ubuntu/.kube
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
+    pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+  tests/e2e-juju4/:
+    summary: cross-charm e2e tests (Juju 4)
+    working-dir: ./
+    discover-path: tests/e2e/
+    backends:
+    - integration-test
+    prepare: |
+      mkdir -p /home/ubuntu/.kube
+      k8s config > /home/ubuntu/.kube/config
+      chown ubuntu:ubuntu /home/ubuntu/.kube/config
+    pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
+    environment:
+      CONCIERGE: concierge-juju4.yaml

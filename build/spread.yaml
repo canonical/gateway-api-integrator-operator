@@ -123,18 +123,27 @@ suites:
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
     environment:
-      MODULE/test_actions_juju4: tests/integration/test_actions.py
-      CONCIERGE/test_actions_juju4: concierge-juju4.yaml
-      MODULE/test_charm_dns_juju4: tests/integration/test_charm_dns.py
-      CONCIERGE/test_charm_dns_juju4: concierge-juju4.yaml
-      MODULE/test_charm_ingress_interface_juju4: 
-        tests/integration/test_charm_ingress_interface.py
-      CONCIERGE/test_charm_ingress_interface_juju4: concierge-juju4.yaml
       MODULE/test_actions: tests/integration/test_actions.py
       MODULE/test_charm_dns: tests/integration/test_charm_dns.py
       MODULE/test_charm_ingress_interface: 
         tests/integration/test_charm_ingress_interface.py
       OPCLI_SUITE: gateway-api-integrator/tests/integration/
+      OPCLI_CWD: gateway-api-integrator/
+  build/gateway-api-integrator/tests/integration-juju4/:
+    summary: gateway-api-integrator charm integration tests (Juju 4)
+    backends:
+    - integration-test-local
+    prepare: |
+      mkdir -p /home/ubuntu/.kube
+      k8s config > /home/ubuntu/.kube/config
+      chown ubuntu:ubuntu /home/ubuntu/.kube/config
+    environment:
+      CONCIERGE: concierge-juju4.yaml
+      MODULE/test_actions: tests/integration/test_actions.py
+      MODULE/test_charm_dns: tests/integration/test_charm_dns.py
+      MODULE/test_charm_ingress_interface: 
+        tests/integration/test_charm_ingress_interface.py
+      OPCLI_SUITE: gateway-api-integrator/tests/integration-juju4/
       OPCLI_CWD: gateway-api-integrator/
   build/tests/e2e/:
     summary: cross-charm e2e tests
@@ -145,8 +154,19 @@ suites:
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
     environment:
-      MODULE/test_configurator_juju4: tests/e2e/test_configurator.py
-      CONCIERGE/test_configurator_juju4: concierge-juju4.yaml
       MODULE/test_configurator: tests/e2e/test_configurator.py
       OPCLI_SUITE: tests/e2e/
+      OPCLI_CWD: ./
+  build/tests/e2e-juju4/:
+    summary: cross-charm e2e tests (Juju 4)
+    backends:
+    - integration-test-local
+    prepare: |
+      mkdir -p /home/ubuntu/.kube
+      k8s config > /home/ubuntu/.kube/config
+      chown ubuntu:ubuntu /home/ubuntu/.kube/config
+    environment:
+      CONCIERGE: concierge-juju4.yaml
+      MODULE/test_configurator: tests/e2e/test_configurator.py
+      OPCLI_SUITE: tests/e2e-juju4/
       OPCLI_CWD: ./

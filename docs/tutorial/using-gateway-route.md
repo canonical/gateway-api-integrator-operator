@@ -66,7 +66,7 @@ This tutorial will walk you through deploying the gateway-api-integrator and ing
 Check `juju status` to verify that the deployment was successful. The terminal output should look similar to the following:
 
 ```{terminal}
-> juju status
+juju status
 
 App                         Version  Status  Scale  Charm                       Channel      Rev  Address         Exposed  Message
 flask-k8s                            active      1  flask-k8s                   latest/edge   19  10.152.183.114  no                                                                          

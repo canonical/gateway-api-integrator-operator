@@ -27,25 +27,16 @@ def assert_gateway_route_response(
     allow_redirects: bool = True,
 ) -> httpx.Response:
     """Get a gateway route and assert expected response, retrying while dataplane converges."""
-    if hostname is not None:
-        # Connect to the gateway IP while sending the hostname as Host header and TLS SNI,
-        # which hostname-scoped gateway listeners require to route correctly.
-        url = f"{scheme}://{hostname}{path}"
-        extensions = {"sni_hostname": hostname.encode()}
-        headers = {"Host": hostname}
-        transport = httpx.HTTPTransport(verify=False)
-        with httpx.Client(transport=transport) as client:
-            response = client.get(
-                url,
-                headers=headers,
-                extensions=extensions,
-                follow_redirects=allow_redirects,
-                timeout=10,
-            )
-    else:
-        url = f"{scheme}://{gateway_address}{path}"
-        with httpx.Client(verify=False) as client:
-            response = client.get(url, follow_redirects=allow_redirects, timeout=10)
+    url = f"{scheme}://{hostname if hostname else gateway_address}{path}"
+    # When a hostname is given, send it as Host header and TLS SNI so that
+    # hostname-scoped gateway listeners route the request correctly.
+    extensions = {"sni_hostname": hostname.encode()} if hostname else {}
+    headers = {"Host": hostname} if hostname else {}
+    with httpx.Client(verify=False) as client:
+        response = client.send(
+            httpx.Request("GET", url, headers=headers, extensions=extensions),
+            follow_redirects=allow_redirects,
+        )
 
     assert response.status_code == expected_status, (
         f"Failed to route to {hostname}: status={response.status_code}, "

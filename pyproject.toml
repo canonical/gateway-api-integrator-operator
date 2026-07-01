@@ -131,8 +131,8 @@ integration = [
     "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
     "httpx>=0.28.1",
     "jubilant==1.10.0",
+    "opcli @ git+https://github.com/canonical/charm-ci.git",
     "pytest",
     "pytest-asyncio",
-    "pytest-operator",
     "tenacity",
 ]

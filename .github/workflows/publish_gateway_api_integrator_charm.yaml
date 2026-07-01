@@ -10,12 +10,12 @@ on:
 
 jobs:
   publish-to-edge:
-    uses: canonical/operator-workflows/.github/workflows/publish_charm.yaml@main
+    uses: canonical/charm-ci/.github/workflows/publish-artifacts.yml@main
     permissions:
       actions: read
       contents: write
-    secrets: inherit
+    secrets:
+      CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
     with:
-      working-directory: "./gateway-api-integrator"
-      channel: "1/edge"
-      tag-prefix: "gateway-api-integrator"
+      integration-workflow-name: integration_test.yaml
+      working-directory: "."

@@ -9,7 +9,6 @@ from pathlib import Path
 
 import jubilant
 import pytest
-from opcli.pytest_plugin import charm_paths as opcli_charm_paths  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

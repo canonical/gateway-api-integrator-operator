@@ -17,6 +17,5 @@ jobs:
     secrets:
       CHARMHUB_TOKEN: ${{ secrets.CHARMHUB_TOKEN }}
     with:
-      channel: "1/edge"
       integration-workflow-name: integration_test.yaml
       working-directory: "."

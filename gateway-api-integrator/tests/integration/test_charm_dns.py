@@ -38,7 +38,10 @@ def test_dns_record_relation(
     juju.wait(jubilant.all_active)
 
     # Assert that the dns-record is in the relation data
-    unit_info_str = juju.cli("show-unit", "any-charm/0", "--format", "json")
+    if juju.version().major >= 4:
+        unit_info_str = juju.cli("show-unit", "any-charm/0", "--format", "json")
+    else:
+        unit_info_str = juju.cli("show-unit", "any-charm/leader", "--format", "json")
     unit_info_dict = json.loads(unit_info_str)["any-charm/0"]
     for relation in unit_info_dict["relation-info"]:
         if relation["endpoint"] == "provide-dns-record":

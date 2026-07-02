@@ -28,7 +28,6 @@ integration-suites:
       mkdir -p /home/ubuntu/.kube
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
-    pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'
   tests/e2e/:
     summary: cross-charm e2e tests
     working-dir: ./
@@ -38,4 +37,3 @@ integration-suites:
       mkdir -p /home/ubuntu/.kube
       k8s config > /home/ubuntu/.kube/config
       chown ubuntu:ubuntu /home/ubuntu/.kube/config
-    pytest-arguments-template: '--kube-config=/home/ubuntu/.kube/config'

@@ -39,7 +39,9 @@ def test_dns_record_relation(
 
     # Assert that the dns-record is in the relation data
     if juju.version().major >= 4:
-        unit_info_str = juju.cli("show-unit", f"{configured_application_with_tls}/0", "--format", "json")
+        unit_info_str = juju.cli(
+            "show-unit", f"{configured_application_with_tls}/0", "--format", "json"
+        )
     else:
         unit_info_str = juju.cli("show-unit", "any-charm/0", "--format", "json")
     unit_info_dict = json.loads(unit_info_str)["any-charm/0"]

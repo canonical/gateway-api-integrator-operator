@@ -1,0 +1,39 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+project: gateway-api-integrator-operator
+path: /home/ubuntu/proj
+kill-timeout: 60m
+warn-timeout: 1m
+backends:
+  integration-test:
+    type: integration-test
+    systems:
+    - ubuntu-24.04
+environment:
+  CONCIERGE: '$(HOST: echo "${CONCIERGE:-concierge-juju3.yaml}")'
+  OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
+exclude:
+- .git
+- .tox
+- .venv
+- .*_cache
+integration-suites:
+  gateway-api-integrator/tests/integration/:
+    summary: gateway-api-integrator charm integration tests
+    working-dir: gateway-api-integrator/
+    backends:
+    - integration-test
+    prepare: |
+      mkdir -p /home/ubuntu/.kube
+      k8s config > /home/ubuntu/.kube/config
+      chown ubuntu:ubuntu /home/ubuntu/.kube/config
+  tests/e2e/:
+    summary: cross-charm e2e tests
+    working-dir: ./
+    backends:
+    - integration-test
+    prepare: |
+      mkdir -p /home/ubuntu/.kube
+      k8s config > /home/ubuntu/.kube/config
+      chown ubuntu:ubuntu /home/ubuntu/.kube/config

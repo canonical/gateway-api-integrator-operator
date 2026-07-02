@@ -42,9 +42,10 @@ def test_dns_record_relation(
         unit_info_str = juju.cli(
             "show-unit", f"{configured_application_with_tls}/0", "--format", "json"
         )
+        unit_info_dict = json.loads(unit_info_str)[f"{configured_application_with_tls}/0"]
     else:
         unit_info_str = juju.cli("show-unit", "any-charm/0", "--format", "json")
-    unit_info_dict = json.loads(unit_info_str)["any-charm/0"]
+        unit_info_dict = json.loads(unit_info_str)["any-charm/0"]
     for relation in unit_info_dict["relation-info"]:
         if relation["endpoint"] == "provide-dns-record":
             dns_record = json.loads(relation["application-data"]["dns_entries"])[0]

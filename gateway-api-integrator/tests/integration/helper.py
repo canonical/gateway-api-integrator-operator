@@ -130,7 +130,7 @@ def get_ingress_url_for_application(
     Returns:
         ParseResult: The parsed ingress url.
     """
-    unit_name = f"{ingress_requirer_application}/leader"
+    unit_name = f"{ingress_requirer_application}/0"
     stdout = juju.cli("show-unit", unit_name, "--format", "json")
     unit_information = json.loads(stdout)[unit_name]
     ingress_integration_data = json.loads(

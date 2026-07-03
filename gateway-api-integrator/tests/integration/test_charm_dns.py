@@ -7,6 +7,7 @@ import json
 import subprocess  # nosec
 
 import jubilant
+import tenacity
 from conftest import INGRESS_REQUIRER_APP_NAME, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
@@ -38,8 +39,14 @@ def test_dns_record_relation(
     juju.wait(jubilant.all_active)
 
     # Assert that the dns-record is in the relation data
-    unit_info_str = juju.cli("show-unit", "any-charm/0", "--format", "json")
-    unit_info_dict = json.loads(unit_info_str)["any-charm/0"]
+    if juju.version().major >= 4:
+        unit_info_str = juju.cli(
+            "show-unit", f"{configured_application_with_tls}/0", "--format", "json"
+        )
+        unit_info_dict = json.loads(unit_info_str)[f"{configured_application_with_tls}/0"]
+    else:
+        unit_info_str = juju.cli("show-unit", "any-charm/0", "--format", "json")
+        unit_info_dict = json.loads(unit_info_str)["any-charm/0"]
     for relation in unit_info_dict["relation-info"]:
         if relation["endpoint"] == "provide-dns-record":
             dns_record = json.loads(relation["application-data"]["dns_entries"])[0]
@@ -54,7 +61,12 @@ def test_dns_record_relation(
     model_name = juju.show_model().short_name
     cmd = (
         f"kubectl -n {model_name} get all,httproute,service "
-        f"--selector gateway-api-integrator.charm.juju.is/managed-by={gateway_app} | wc -l"
+        f"--selector gateway-api-integrator.charm.juju.is/managed-by={gateway_app}"
+        f" 2>&1"
     )
-    output = subprocess.check_output(["/bin/bash", "-c", cmd], stderr=subprocess.STDOUT)  # nosec
-    assert "No resources found" in str(output)
+    for attempt in tenacity.Retrying(
+        stop=tenacity.stop_after_delay(120), wait=tenacity.wait_fixed(5)
+    ):
+        with attempt:
+            output = subprocess.check_output(["/bin/bash", "-c", cmd], stderr=subprocess.STDOUT)  # nosec
+            assert "No resources found" in str(output)

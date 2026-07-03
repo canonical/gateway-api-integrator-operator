@@ -119,18 +119,25 @@ def get_http_route_resource(
 
 
 def get_ingress_url_for_application(
-    ingress_requirer_application: str, juju: jubilant.Juju
+    ingress_requirer_application: str, ingress_provider_application: str, juju: jubilant.Juju
 ) -> ParseResult:
     """Get the ingress url from the requirer's unit data.
 
+    Passing both the requirer and provider application names is necessary because the unit name to query differs between Juju 3 and 4.
+    In Juju 3, the requirer's unit is queried, while in Juju 4, the provider's unit is queried.
+
     Args:
         ingress_requirer_application: Name of the requirer application.
+        ingress_provider_application: Name of the provider application.
         juju: Jubilant Juju instance.
 
     Returns:
         ParseResult: The parsed ingress url.
     """
-    unit_name = f"{ingress_requirer_application}/0"
+    if juju.version().major >= 4:
+        unit_name = f"{ingress_provider_application}/0"
+    else:
+        unit_name = f"{ingress_requirer_application}/0"
     stdout = juju.cli("show-unit", unit_name, "--format", "json")
     unit_information = json.loads(stdout)[unit_name]
     ingress_integration_data = json.loads(

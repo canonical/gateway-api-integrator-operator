@@ -7,6 +7,7 @@ import json
 import subprocess  # nosec
 
 import jubilant
+import tenacity
 from conftest import INGRESS_REQUIRER_APP_NAME, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
@@ -60,7 +61,10 @@ def test_dns_record_relation(
     model_name = juju.show_model().short_name
     cmd = (
         f"kubectl -n {model_name} get all,httproute,service "
-        f"--selector gateway-api-integrator.charm.juju.is/managed-by={gateway_app} | wc -l"
+        f"--selector gateway-api-integrator.charm.juju.is/managed-by={gateway_app}"
+        f" 2>&1"
     )
-    output = subprocess.check_output(["/bin/bash", "-c", cmd], stderr=subprocess.STDOUT)  # nosec
-    assert "No resources found" in str(output)
+    for attempt in tenacity.Retrying(stop=tenacity.stop_after_delay(120), wait=tenacity.wait_fixed(5)):
+        with attempt:
+            output = subprocess.check_output(["/bin/bash", "-c", cmd], stderr=subprocess.STDOUT)  # nosec
+            assert "No resources found" in str(output)

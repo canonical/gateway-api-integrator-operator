@@ -64,7 +64,9 @@ def test_dns_record_relation(
         f"--selector gateway-api-integrator.charm.juju.is/managed-by={gateway_app}"
         f" 2>&1"
     )
-    for attempt in tenacity.Retrying(stop=tenacity.stop_after_delay(120), wait=tenacity.wait_fixed(5)):
+    for attempt in tenacity.Retrying(
+        stop=tenacity.stop_after_delay(120), wait=tenacity.wait_fixed(5)
+    ):
         with attempt:
             output = subprocess.check_output(["/bin/bash", "-c", cmd], stderr=subprocess.STDOUT)  # nosec
             assert "No resources found" in str(output)

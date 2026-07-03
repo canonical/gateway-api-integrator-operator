@@ -24,10 +24,6 @@ integration-suites:
     discover-path: gateway-api-integrator/tests/integration/
     backends:
     - integration-test
-    prepare: |
-      mkdir -p /home/ubuntu/.kube
-      k8s config > /home/ubuntu/.kube/config
-      chown ubuntu:ubuntu /home/ubuntu/.kube/config
     environment:
       CONCIERGE: concierge-juju3.yaml
   gateway-api-integrator/tests/integration-juju4/:
@@ -36,10 +32,6 @@ integration-suites:
     discover-path: gateway-api-integrator/tests/integration/
     backends:
     - integration-test
-    prepare: |
-      mkdir -p /home/ubuntu/.kube
-      k8s config > /home/ubuntu/.kube/config
-      chown ubuntu:ubuntu /home/ubuntu/.kube/config
     environment:
       CONCIERGE: concierge-juju4.yaml
   tests/e2e-juju3/:
@@ -48,10 +40,6 @@ integration-suites:
     discover-path: tests/e2e/
     backends:
     - integration-test
-    prepare: |
-      mkdir -p /home/ubuntu/.kube
-      k8s config > /home/ubuntu/.kube/config
-      chown ubuntu:ubuntu /home/ubuntu/.kube/config
     environment:
       CONCIERGE: concierge-juju3.yaml
   tests/e2e-juju4/:
@@ -60,9 +48,5 @@ integration-suites:
     discover-path: tests/e2e/
     backends:
     - integration-test
-    prepare: |
-      mkdir -p /home/ubuntu/.kube
-      k8s config > /home/ubuntu/.kube/config
-      chown ubuntu:ubuntu /home/ubuntu/.kube/config
     environment:
       CONCIERGE: concierge-juju4.yaml

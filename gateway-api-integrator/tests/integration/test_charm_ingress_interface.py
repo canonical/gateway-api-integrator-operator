@@ -42,10 +42,9 @@ def test_ingress_enforced_mode(
     gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
 
-    if juju.version().major >= 4:
-        ingress_url = get_ingress_url_for_application(configured_application_with_tls, juju)
-    else:
-        ingress_url = get_ingress_url_for_application(ingress_requirer_application, juju)
+    ingress_url = get_ingress_url_for_application(
+        ingress_requirer_application, configured_application_with_tls, juju
+    )
 
     # HTTP should redirect to HTTPS
     wait_for_response(
@@ -100,10 +99,9 @@ def test_ingress_enabled_mode(
     gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
 
-    if juju.version().major >= 4:
-        ingress_url = get_ingress_url_for_application(configured_application_with_tls, juju)
-    else:
-        ingress_url = get_ingress_url_for_application(ingress_requirer_application, juju)
+    ingress_url = get_ingress_url_for_application(
+        ingress_requirer_application, configured_application_with_tls, juju
+    )
 
     wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",
@@ -152,10 +150,9 @@ def test_ingress_disabled_mode(
     gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
 
-    if juju.version().major >= 4:
-        ingress_url = get_ingress_url_for_application(configured_application_with_tls, juju)
-    else:
-        ingress_url = get_ingress_url_for_application(ingress_requirer_application, juju)
+    ingress_url = get_ingress_url_for_application(
+        ingress_requirer_application, configured_application_with_tls, juju
+    )
 
     wait_for_response(
         f"http://{gateway_lb_ip}{ingress_url.path}",

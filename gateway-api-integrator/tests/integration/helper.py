@@ -123,6 +123,9 @@ def get_ingress_url_for_application(
 ) -> ParseResult:
     """Get the ingress url from the requirer's unit data.
 
+    Passing both the requirer and provider application names is necessary because the unit name to query differs between Juju 3 and 4.
+    In Juju 3, the requirer's unit is queried, while in Juju 4, the provider's unit is queried.
+
     Args:
         ingress_requirer_application: Name of the requirer application.
         ingress_provider_application: Name of the provider application.

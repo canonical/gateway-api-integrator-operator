@@ -35,9 +35,11 @@ def test_ingress_enforced_mode(
     application = configured_application_with_tls
     juju.integrate(application, f"{ingress_requirer_application}:ingress")
     juju.wait(
-        lambda status: jubilant.all_active(status, ingress_requirer_application, application),
+        lambda status: jubilant.all_active(status, ingress_requirer_application, application)
+        and jubilant.all_agents_idle(status, ingress_requirer_application, application),
         timeout=600,
     )
+
 
     gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore

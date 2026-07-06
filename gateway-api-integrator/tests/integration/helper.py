@@ -127,18 +127,23 @@ def get_ingress_url_for_application(
     In Juju 3, the requirer's unit is queried, while in Juju 4, the provider's unit is queried.
 
     Args:
-        ingress_requirer_application: Name of the requirer application.
         ingress_provider_application: Name of the provider application.
         juju: Jubilant Juju instance.
 
     Returns:
         ParseResult: The parsed ingress url.
     """
-    if juju.version().major >= 4:
-        unit_name = f"{ingress_provider_application}/0"
-    else:
-        unit_name = f"{ingress_requirer_application}/0"
-    stdout = juju.cli("show-unit", unit_name, "--format", "json")
+    unit_name = f"{ingress_provider_application}/0"
+    stdout = juju.cli(
+        "show-unit",
+        unit_name,
+        "--format",
+        "json",
+        "--related-unit",
+        ingress_requirer_application,
+        "--endpoint",
+        "gateway",
+    )
     unit_information = json.loads(stdout)[unit_name]
     ingress_integration_data = json.loads(
         unit_information["relation-info"][0]["application-data"]["ingress"]

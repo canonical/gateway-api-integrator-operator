@@ -9,7 +9,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-07-06
 
-- Removed the souce code for the `gateway-route-configurator` charm that is replaced by the `ingress-configurator-charm`
+- Removed the source code for the `gateway-route-configurator` charm that is replaced by the `ingress-configurator-charm`.
 
 ## 2026-06-26
 

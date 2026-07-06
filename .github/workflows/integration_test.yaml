@@ -7,42 +7,28 @@ on:
 
 jobs:
   integration-tests:
-    uses: 
-      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
+    permissions:
+      contents: read
+      packages: write
+      actions: read
+    uses: canonical/charm-ci/.github/workflows/integration-test.yml@v0.0.1-alpha.6
     secrets: inherit
     with:
-      provider: k8s
-      extra-arguments: |
-        --kube-config=~/.kube/config
-      use-canonical-k8s: true
-      self-hosted-runner: false
-      runs-on: ubuntu-24.04
-      juju-channel: 3.6/stable
-      channel: edge
-      charmcraft-channel: latest/edge
-      modules: '["test_actions.py", "test_charm_ingress_interface.py", "test_charm_dns.py"]'
-      tmate-debug: false
-      working-directory: ./gateway-api-integrator
-      with-uv: true
-  allure-report:
-    if: ${{ !cancelled() && github.event_name == 'schedule' }}
+      working-directory: .
+  required_status_checks:
+    name: Required Integration Test Status Checks
+    runs-on: ubuntu-latest
     needs:
-    - integration-tests
-    uses: canonical/operator-workflows/.github/workflows/allure_report.yaml@main
-  integration-tests-global:
-    uses: 
-      canonical/operator-workflows/.github/workflows/integration_test.yaml@main
-    secrets: inherit
-    with:
-      provider: k8s
-      extra-arguments: |
-        --kube-config=~/.kube/config
-      use-canonical-k8s: true
-      self-hosted-runner: false
-      runs-on: ubuntu-24.04
-      juju-channel: 3.6/stable
-      channel: edge
-      charmcraft-channel: latest/edge
-      tmate-debug: false
-      with-uv: true
-      modules: '["test_configurator.py"]'
+      - integration-tests
+    if: always() && !cancelled()
+    timeout-minutes: 5
+    steps:
+      - name: Check integration-test status
+        run: |
+          RESULT="${{ needs.integration-tests.result }}"
+          if [ "$RESULT" = "success" ] || [ "$RESULT" = "skipped" ]; then
+            exit 0
+          else
+            echo "integration-test failed with status: $RESULT"
+            exit 1
+          fi

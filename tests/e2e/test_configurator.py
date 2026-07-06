@@ -76,6 +76,9 @@ def test_enabled_mode(
     juju.wait(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
+        )
+        and jubilant.all_agents_idle(
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,
     )
@@ -118,6 +121,9 @@ def test_disabled_mode(
     juju.wait(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
+        )
+        and jubilant.all_agents_idle(
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,
     )
@@ -157,6 +163,9 @@ def test_disabled_mode_without_hostname(
     juju.config(ingress_configurator, reset="hostname")
     juju.wait(
         lambda status: jubilant.all_active(
+            status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
+        )
+        and jubilant.all_agents_idle(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
         timeout=600,

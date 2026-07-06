@@ -27,8 +27,8 @@ This tutorial will walk you through deploying the gateway-api-integrator and ing
 - Deploy and configure the charm
 
     ```bash
-    juju deploy gateway-api-integrator --trust --channel=1/edge
-    juju config gateway-api-integrator gateway-class=cilium
+    juju deploy gateway-api-integrator --trust --channel=1/stable
+    juju config gateway-api-integrator gateway-class=ck-gateway
     ```
 
 ## Establish an integration with a TLS provider charm
@@ -50,7 +50,7 @@ This tutorial will walk you through deploying the gateway-api-integrator and ing
 - Deploy and configure the charm
 
     ```bash
-    juju deploy ingress-configurator --trust --channel=latest/edge
+    juju deploy ingress-configurator --trust --channel=latest/stable
     juju config ingress-configurator hostname=testing.com paths=/app1,/app2
     ```
 

@@ -25,7 +25,7 @@ This tutorial will walk you through deploying the gateway-api-integrator charm; 
 1. Deploy and configure the charm. The `gateway-class` configuration must match your gateway controller's class name:
 
     ```bash
-    juju deploy gateway-api-integrator --trust --channel=1/edge
+    juju deploy gateway-api-integrator --trust --channel=1/stable
     juju config gateway-api-integrator external-hostname=ingress.internal
     ```
 

@@ -40,7 +40,6 @@ def test_ingress_enforced_mode(
         timeout=600,
     )
 
-
     gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
 

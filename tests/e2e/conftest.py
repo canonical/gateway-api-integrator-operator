@@ -5,7 +5,6 @@
 
 import json
 import logging
-import os
 from pathlib import Path
 
 import jubilant
@@ -42,19 +41,9 @@ def juju_model_fixture(request: pytest.FixtureRequest):
 
 
 @pytest.fixture(scope="module", name="charm")
-def charm_fixture(pytestconfig: pytest.Config) -> str:
-    """Get value from parameter charm-file."""
-    charm_files = pytestconfig.getoption("--charm-file")
-    if charm_files is None:
-        charm_files = []
-
-    charm = next((f for f in charm_files if "gateway-api-integrator" in f), None)
-
-    assert charm, "--charm-file must be set"
-    if not os.path.exists(charm):
-        logger.info("Using parent directory for charm file")
-        charm = os.path.join("..", charm)
-    return charm
+def charm_fixture(charm_paths) -> str:
+    """Get the built gateway-api-integrator charm path."""
+    return charm_paths[GATEWAY_API_INTEGRATOR_APP_NAME].path
 
 
 @pytest.fixture(scope="module")

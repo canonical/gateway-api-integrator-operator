@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Step-by-step guide for setting up a basic deployment of the Gateway API integrator charm."
+---
+
 (tutorial_getting_started)=
 
 # Deploy the Gateway API integrator charm

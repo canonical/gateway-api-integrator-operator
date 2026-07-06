@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Learn how to deploy the Gateway API integrator charm alongside the Ingress configurator charm."
+---
+
 (tutorial_using_gateway_route)=
 
 # Deploy the Gateway API integrator and Ingress Configurator charms

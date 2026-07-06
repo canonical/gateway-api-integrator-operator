@@ -140,7 +140,7 @@ def get_ingress_url_for_application(
         "--format",
         "json",
         "--related-unit",
-        ingress_requirer_application,
+        f"{ingress_requirer_application}/0",
         "--endpoint",
         "gateway",
     )

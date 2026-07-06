@@ -1,12 +1,12 @@
-# Copyright 2026 Canonical Ltd.
+# Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-resource "juju_application" "ingress_configurator" {
+resource "juju_application" "gateway_route_configurator" {
   name       = var.app_name
   model_uuid = var.model_uuid
 
   charm {
-    name     = "ingress-configurator"
+    name     = "gateway-route-configurator"
     channel  = var.channel
     revision = var.revision
     base     = var.base

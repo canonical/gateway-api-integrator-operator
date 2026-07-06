@@ -11,14 +11,14 @@ run "basic_deploy" {
   variables {
     model_uuid = run.setup_tests.model_uuid
     gateway_api_integrator = {
-      channel = "1/edge"
-      # renovate: depName="gateway-api-integrator"
-      revision = 163
-    }
-    ingress_configurator = {
       channel = "latest/edge"
-      # renovate: depName="ingress-configurator"
-      revision = 95
+      # renovate: depName="gateway-api-integrator"
+      revision = 158
+    }
+    gateway_route_configurator = {
+      channel = "latest/edge"
+      # renovate: depName="gateway-route-configurator"
+      revision = 22
     }
   }
 
@@ -28,7 +28,7 @@ run "basic_deploy" {
   }
 
   assert {
-    condition     = output.ingress_configurator_app_name == "ingress-configurator"
-    error_message = "ingress-configurator app_name did not match expected"
+    condition     = output.gateway_route_configurator_app_name == "gateway-route-configurator"
+    error_message = "gateway-route-configurator app_name did not match expected"
   }
 }

@@ -13,20 +13,20 @@ module "gateway_api_integrator" {
   units      = var.gateway_api_integrator.units
 }
 
-module "ingress_configurator" {
-  source = "../modules/ingress-configurator"
+module "gateway_route_configurator" {
+  source = "../modules/gateway-route-configurator"
 
-  app_name   = var.ingress_configurator.app_name
-  channel    = var.ingress_configurator.channel
-  config     = var.ingress_configurator.config
+  app_name   = var.gateway_route_configurator.app_name
+  channel    = var.gateway_route_configurator.channel
+  config     = var.gateway_route_configurator.config
   model_uuid = var.model_uuid
-  revision   = var.ingress_configurator.revision
-  base       = var.ingress_configurator.base
-  units      = var.ingress_configurator.units
+  revision   = var.gateway_route_configurator.revision
+  base       = var.gateway_route_configurator.base
+  units      = var.gateway_route_configurator.units
 }
 
-# Create integration between gateway-api-integrator and ingress-configurator
-resource "juju_integration" "gateway_api_integrator_ingress_configurator" {
+# Create relation between gateway-api-integrator and gateway-route-configurator
+resource "juju_integration" "gateway_api_integrator_route_configurator" {
   model_uuid = var.model_uuid
 
   application {
@@ -35,7 +35,7 @@ resource "juju_integration" "gateway_api_integrator_ingress_configurator" {
   }
 
   application {
-    name     = module.ingress_configurator.app_name
+    name     = module.gateway_route_configurator.app_name
     endpoint = "gateway-route"
   }
 }

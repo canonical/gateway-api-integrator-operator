@@ -28,4 +28,5 @@ jobs:
       doc-automation-disabled: false
       working-directory: ./gateway-api-integrator
       base-channel: 24.04
+      tag-prefix: gateway-api-integrator
     secrets: inherit

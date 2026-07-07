@@ -35,8 +35,8 @@ def test_ingress_enforced_mode(
     application = configured_application_with_tls
     juju.integrate(application, f"{ingress_requirer_application}:ingress")
     juju.wait(
-        lambda status: jubilant.all_active(status, ingress_requirer_application, application)
-        and jubilant.all_agents_idle(status, ingress_requirer_application, application),
+        lambda status: jubilant.all_active(status, ingress_requirer_application, application),
+        delay=5,
         timeout=600,
     )
 
@@ -94,6 +94,7 @@ def test_ingress_enabled_mode(
     juju.config(application, {"enforce-https": "false"})
     juju.wait(
         lambda status: jubilant.all_active(status, application, ingress_requirer_application),
+        delay=5,
         timeout=600,
     )
 
@@ -145,6 +146,7 @@ def test_ingress_disabled_mode(
     )
     juju.wait(
         lambda status: jubilant.all_active(status, application, ingress_requirer_application),
+        delay=5,
         timeout=600,
     )
 

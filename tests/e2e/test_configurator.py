@@ -37,6 +37,7 @@ def test_enforced_mode(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
+        delay=5,
         timeout=600,
     )
 
@@ -77,6 +78,7 @@ def test_enabled_mode(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
+        delay=5,
         timeout=600,
     )
 
@@ -119,6 +121,7 @@ def test_disabled_mode(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
+        delay=5,
         timeout=600,
     )
 
@@ -159,6 +162,7 @@ def test_disabled_mode_without_hostname(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
         ),
+        delay=5,
         timeout=600,
     )
 

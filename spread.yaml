@@ -9,27 +9,36 @@ backends:
   integration-test:
     type: integration-test
     systems:
-    - ubuntu-24.04
+      - ubuntu-24.04
 environment:
   OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
 exclude:
-- .git
-- .tox
-- .venv
-- .*_cache
+  - .git
+  - .tox
+  - .venv
+  - .*_cache
 integration-suites:
-  gateway-api-integrator/tests/integration/:
+  gateway-api-integrator/tests/integration-juju4/:
     summary: gateway-api-integrator charm integration tests (Juju 4)
     working-dir: gateway-api-integrator/
+    discover-path: gateway-api-integrator/tests/integration/
     backends:
-    - integration-test
+      - integration-test
     environment:
       CONCIERGE: concierge-juju4.yaml
+  tests/e2e-juju3/:
+    summary: cross-charm e2e tests (Juju 3)
+    working-dir: ./
+    discover-path: tests/e2e/
+    backends:
+      - integration-test
+    environment:
+      CONCIERGE: concierge-juju3.yaml
   tests/e2e-juju4/:
     summary: cross-charm e2e tests (Juju 4)
     working-dir: ./
     discover-path: tests/e2e/
     backends:
-    - integration-test
+      - integration-test
     environment:
       CONCIERGE: concierge-juju4.yaml

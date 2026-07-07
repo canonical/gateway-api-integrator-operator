@@ -3,6 +3,8 @@
 
 """Integration tests for testing gateway-api with ingress-configurator."""
 
+import time
+
 import jubilant
 import pytest
 import requests
@@ -11,6 +13,13 @@ from .helper import (
     assert_gateway_route_response,
     get_gateway_ip,
 )
+
+# After a mutating juju operation (config change, relation removal) the apps are still
+# reported as active/idle from the previous step. juju.wait() can therefore satisfy its
+# ready condition against this stale state before the config-changed hook has fired,
+# racing ahead of the actual reconcile. A short settle delay lets the hook start (moving
+# an agent out of idle) so the subsequent wait observes the real reconvergence cycle.
+SETTLE_DELAY = 15
 
 
 def test_enforced_mode(
@@ -76,6 +85,7 @@ def test_enabled_mode(
     - Both HTTP and HTTPS traffic are routed correctly to the backend.
     """
     juju.config(gateway_api_integrator, {"enforce-https": False})
+    time.sleep(SETTLE_DELAY)
     juju.wait(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
@@ -121,6 +131,7 @@ def test_disabled_mode(
     - HTTPS is not available.
     """
     juju.remove_relation(gateway_api_integrator, "self-signed-certificates")
+    time.sleep(SETTLE_DELAY)
     juju.wait(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator
@@ -164,6 +175,7 @@ def test_disabled_mode_without_hostname(
     - HTTP traffic is routed correctly to the backend by IP.
     """
     juju.config(ingress_configurator, reset="hostname")
+    time.sleep(SETTLE_DELAY)
     juju.wait(
         lambda status: jubilant.all_active(
             status, ingress_configurator, gateway_route_backend_application, gateway_api_integrator

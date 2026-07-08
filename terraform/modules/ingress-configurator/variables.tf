@@ -10,7 +10,7 @@ variable "app_name" {
 variable "channel" {
   description = "The channel to use when deploying a charm."
   type        = string
-  default     = "latest/edge"
+  default     = "latest/stable"
 }
 
 variable "config" {

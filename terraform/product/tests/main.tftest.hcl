@@ -11,12 +11,12 @@ run "basic_deploy" {
   variables {
     model_uuid = run.setup_tests.model_uuid
     gateway_api_integrator = {
-      channel = "1/edge"
+      channel = "1/stable"
       # renovate: depName="gateway-api-integrator"
-      revision = 163
+      revision = 165
     }
     ingress_configurator = {
-      channel = "latest/edge"
+      channel = "latest/stable"
       # renovate: depName="ingress-configurator"
       revision = 95
     }

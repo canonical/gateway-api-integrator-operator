@@ -24,8 +24,8 @@ The product consists of:
       model_uuid = local.juju_model_uuid
 
       gateway_api_integrator = {
-        channel = "1/edge
-        revision = 127
+        channel = "1/stable"
+        revision = 165
         base    = "ubuntu@24.04"
         config = {
           gateway-class = "ck-gateway"
@@ -33,8 +33,8 @@ The product consists of:
       }
 
       ingress_configurator = {
-        channel = "latest/edge"
-        revision = 2
+        channel = "latest/stable"
+        revision = 95
         base    = "ubuntu@24.04"
         config = {
           hostname = "your_hostname"
@@ -79,7 +79,7 @@ The product consists of:
       }
     }
    ```
-3. Initialize and apply terraform:
+4. Initialize and apply terraform:
    ```bash
    terraform init
    terraform plan
@@ -93,13 +93,13 @@ The product consists of:
 
 ### Gateway API Integrator
 - `gateway_api_integrator.app_name`: Application name (default: "gateway-api-integrator")
-- `gateway_api_integrator.channel`: Charm channel (default: "latest/edge")
+- `gateway_api_integrator.channel`: Charm channel (default: "1/stable")
 - `gateway_api_integrator.config`: Application configuration map
 - `gateway_api_integrator.units`: Number of units (default: 1)
 
 ### Ingress Configurator
 - `ingress_configurator.app_name`: Application name (default: "ingress-configurator")
-- `ingress_configurator.channel`: Charm channel (default: "latest/edge")
+- `ingress_configurator.channel`: Charm channel (default: "latest/stable")
 - `ingress_configurator.config`: Application configuration map
 - `ingress_configurator.units`: Number of units (default: 1)
 
@@ -116,3 +116,56 @@ The product consists of:
 
 The following integration is automatically created:
 - `gateway-route` relation between `gateway-api-integrator` and `ingress-configurator`.
+
+## Testing the deployment
+
+The product and its modules ship
+[Terraform tests](https://developer.hashicorp.com/terraform/language/tests)
+(`*.tftest.hcl`) that deploy the charms into a throwaway Juju model and assert
+the resulting applications. This is the recommended way to validate the
+deployment end to end.
+
+### Prerequisites
+
+- Terraform >= 1.6
+- A bootstrapped Juju controller on a Kubernetes cloud (for example
+  [MicroK8s](https://microk8s.io/) or
+  [Canonical K8s](https://ubuntu.com/kubernetes)), reachable through the local
+  Juju client. The `juju` Terraform provider uses your active Juju CLI
+  credentials, so make sure `juju status` works before running the tests.
+
+### Run the tests
+
+From this directory (`terraform/product`):
+
+```bash
+terraform init
+terraform test
+```
+
+`terraform test`:
+
+1. Creates a temporary Juju model named `tf-testing-<timestamp>`.
+2. Deploys `gateway-api-integrator` (channel `1/stable`) and
+   `ingress-configurator` (channel `latest/stable`) and integrates them over
+   the `gateway-route` relation.
+3. Asserts that both applications are deployed with the expected names.
+4. Destroys the temporary model once the run completes.
+
+Each module can also be tested in isolation, for example:
+
+```bash
+cd ../modules/gateway-api-integrator
+terraform init
+terraform test
+```
+
+### Validate without deploying
+
+To lint and validate the configuration without contacting a Juju controller:
+
+```bash
+terraform init
+terraform fmt -check -recursive
+terraform validate
+```

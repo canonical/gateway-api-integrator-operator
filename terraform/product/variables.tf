@@ -9,7 +9,7 @@ variable "model_uuid" {
 variable "gateway_api_integrator" {
   type = object({
     app_name    = optional(string, "gateway-api-integrator")
-    channel     = optional(string, "1/edge")
+    channel     = optional(string, "1/stable")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
@@ -20,7 +20,7 @@ variable "gateway_api_integrator" {
 variable "ingress_configurator" {
   type = object({
     app_name    = optional(string, "ingress-configurator")
-    channel     = optional(string, "latest/edge")
+    channel     = optional(string, "latest/stable")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)

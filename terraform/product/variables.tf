@@ -16,6 +16,7 @@ variable "gateway_api_integrator" {
     base        = optional(string, "ubuntu@24.04")
     units       = optional(number, 1)
   })
+  default = {}
 }
 variable "ingress_configurator" {
   type = object({
@@ -27,4 +28,5 @@ variable "ingress_configurator" {
     base        = optional(string, "ubuntu@24.04")
     units       = optional(number, 1)
   })
+  default = {}
 }

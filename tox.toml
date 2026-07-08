@@ -25,7 +25,6 @@ commands = [
     "native",
     "--ignore={[vars]tst_path}unit",
     "--ignore={[vars]tst_path}unit_scenario",
-    "--ignore={toxinidir}/gateway-route-configurator",
     "--ignore={toxinidir}/gateway-api-integrator",
     "--log-cli-level=INFO",
     "-s",

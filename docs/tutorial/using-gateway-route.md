@@ -65,7 +65,7 @@ This tutorial will walk you through deploying the gateway-api-integrator and ing
 - Deploy and integrate the charm
 
     ```bash
-    juju deploy flask-k8s
+    juju deploy flask-k8s --channel=latest/edge
     juju integrate flask-k8s:ingress ingress-configurator:ingress
     ```
 

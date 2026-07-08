@@ -18,7 +18,7 @@ GATEWAY_BASE = "ubuntu@24.04"
 CERTIFICATE_PROVIDER_CHANNEL = "1/edge"
 INGRESS_REQUIRER_CHANNEL = "latest/edge"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
-GATEWAY_CLASS_CONFIG = "cilium"
+GATEWAY_CLASS_CONFIG = "ck-gateway"
 
 
 @pytest.fixture(scope="module", name="juju")

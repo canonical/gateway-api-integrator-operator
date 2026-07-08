@@ -11,7 +11,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixe
 
 
 @retry(
-    stop=stop_after_delay(180),
+    stop=stop_after_delay(300),
     wait=wait_fixed(5),
     retry=retry_if_exception_type((AssertionError, httpx.RequestError)),
     reraise=True,

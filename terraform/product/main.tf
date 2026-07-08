@@ -14,7 +14,7 @@ module "gateway_api_integrator" {
 }
 
 module "ingress_configurator" {
-  source = "../modules/ingress-configurator"
+  source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?depth=1"
 
   app_name   = var.ingress_configurator.app_name
   channel    = var.ingress_configurator.channel
@@ -23,6 +23,7 @@ module "ingress_configurator" {
   revision   = var.ingress_configurator.revision
   base       = var.ingress_configurator.base
   units      = var.ingress_configurator.units
+  trust      = true
 }
 
 # Create integration between gateway-api-integrator and ingress-configurator

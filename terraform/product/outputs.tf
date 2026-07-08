@@ -21,12 +21,8 @@ output "gateway_api_integrator_provides" {
   value       = module.gateway_api_integrator.provides
 }
 
-output "ingress_configurator_requires" {
-  description = "List of required relation endpoints for ingress-configurator."
-  value       = module.ingress_configurator.requires
-}
 
-output "ingress_configurator_provides" {
-  description = "List of provided relation endpoints for ingress-configurator."
-  value       = module.ingress_configurator.provides
+output "ingress_configurator_endpoints" {
+  description = "Relation endpoints provided and required by ingress-configurator."
+  value       = module.ingress_configurator.endpoints
 }

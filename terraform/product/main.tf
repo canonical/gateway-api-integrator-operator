@@ -14,7 +14,7 @@ module "gateway_api_integrator" {
 }
 
 module "ingress_configurator" {
-  source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?depth=1"
+  source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?ref=rev95&depth=1"
 
   app_name   = var.ingress_configurator.app_name
   channel    = var.ingress_configurator.channel

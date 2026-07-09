@@ -9,12 +9,14 @@ name: gateway-route-configurator
 title: Gateway Route Configurator
 summary: Configurator for Gateway API routes.
 links:
-  documentation: https://documentation.ubuntu.com/gateway-api-integrator-charm/
+  documentation: https://canonical.com/juju/docs/ingress-configurator-charm/
   issues: https://github.com/canonical/gateway-api-integrator-operator/issues
   source: https://github.com/canonical/gateway-api-integrator-operator/tree/main/gateway-route-configurator
   contact: https://launchpad.net/~canonical-is-devops
 
 description: |
+  This charm is deprecated.
+  Please use the ingress-configurator charm instead, which is maintained and supports the same functionality.
   A charm that acts as a bridge between a workload charm (via ingress relation)
   and the Gateway API Integrator (via gateway-route relation).
   It allows users to configure custom hostnames and paths for their applications.

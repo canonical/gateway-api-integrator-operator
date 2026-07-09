@@ -15,4 +15,4 @@ jobs:
     secrets: inherit
     with:
       k8s-controller: true
-      terraform-directories: '["terraform/modules/gateway-api-integrator", "terraform/modules/gateway-route-configurator", "terraform/product"]'
+      terraform-directories: '["terraform/modules/gateway-api-integrator", "terraform/product"]'

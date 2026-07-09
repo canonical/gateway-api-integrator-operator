@@ -1,12 +1,13 @@
 # Gateway API Integrator Operator - Terraform Product
 
-This terraform configuration deploys the complete Gateway API Integrator solution, including both the `gateway-api-integrator` and `gateway-route-configurator` charms, along with their required integrations.
+This terraform configuration deploys the complete Gateway API Integrator solution, including both the `gateway-api-integrator` and `ingress-configurator` charms, along with their required integrations.
 
 ## Architecture
 
 The product consists of:
+
 - **gateway-api-integrator**: Main charm that manages Gateway API resources
-- **gateway-route-configurator**: Companion charm that configures the gateway-route relation for charms with only ingress relation.
+- **ingress-configurator**: Charm that bridges the `ingress` relation from workload charms to the `gateway-route` relation, allowing users to configure custom hostnames and paths.
 
 ## Prerequisites
 
@@ -17,6 +18,7 @@ The product consists of:
 ## Usage
 
 1. Edit `main.tf` to add the module:
+
    ```hcl
     # Gateway API Integrator Product Module
     module "gateway" {
@@ -24,17 +26,17 @@ The product consists of:
       model_uuid = local.juju_model_uuid
 
       gateway_api_integrator = {
-        channel = "latest/stable"
-        revision = 127
+        channel = "1/stable"
+        revision = 165
         base    = "ubuntu@24.04"
         config = {
-          gateway-class = "cilium"
+          gateway-class = "ck-gateway"
         }
       }
 
-      gateway_route_configurator = {
+      ingress_configurator = {
         channel = "latest/stable"
-        revision = 2
+        revision = 95
         base    = "ubuntu@24.04"
         config = {
           hostname = "your_hostname"
@@ -45,6 +47,7 @@ The product consists of:
    ```
 
 2. Edit `main.tf` to integrate Gateway API Integrator with tls provider charm:
+
    ```hcl
 
     resource "juju_integration" "gai_lego" {
@@ -62,14 +65,15 @@ The product consists of:
     }
    ```
 
-2. Edit `main.tf` to integrate Gateway Route Configurator with ingress requirer charm:
+3. Edit `main.tf` to integrate Ingress Configurator with ingress requirer charm:
+
    ```hcl
 
     resource "juju_integration" "app_ingress" {
       model_uuid = var.model_uuid
 
       application {
-        name     = module.gateway.gateway_route_configurator_app_name
+        name     = module.gateway.ingress_configurator_app_name
         endpoint = "ingress"
       }
 
@@ -79,7 +83,9 @@ The product consists of:
       }
     }
    ```
-3. Initialize and apply terraform:
+
+4. Initialize and apply terraform:
+
    ```bash
    terraform init
    terraform plan
@@ -89,30 +95,34 @@ The product consists of:
 ## Variables
 
 ### Required
+
 - `model_uuid`: UUID of the Juju model where charms will be deployed
 
 ### Gateway API Integrator
+
 - `gateway_api_integrator.app_name`: Application name (default: "gateway-api-integrator")
-- `gateway_api_integrator.channel`: Charm channel (default: "latest/edge")
+- `gateway_api_integrator.channel`: Charm channel (default: "1/stable")
 - `gateway_api_integrator.config`: Application configuration map
 - `gateway_api_integrator.units`: Number of units (default: 1)
 
-### Gateway Route Configurator
-- `gateway_route_configurator.app_name`: Application name (default: "gateway-route-configurator")
-- `gateway_route_configurator.channel`: Charm channel (default: "latest/edge")
-- `gateway_route_configurator.config`: Application configuration map
-- `gateway_route_configurator.units`: Number of units (default: 1)
+### Ingress Configurator
+
+- `ingress_configurator.app_name`: Application name (default: "ingress-configurator")
+- `ingress_configurator.channel`: Charm channel (default: "latest/stable")
+- `ingress_configurator.config`: Application configuration map
+- `ingress_configurator.units`: Number of units (default: 1)
 
 ## Outputs
 
 - `gateway_api_integrator_app_name`: Name of the deployed gateway-api-integrator application
-- `gateway_route_configurator_app_name`: Name of the deployed gateway-route-configurator application
+- `ingress_configurator_app_name`: Name of the deployed ingress-configurator application
 - `gateway_api_integrator_requires`: Required relation endpoints for gateway-api-integrator
 - `gateway_api_integrator_provides`: Provided relation endpoints for gateway-api-integrator
-- `gateway_route_configurator_requires`: Required relation endpoints for gateway-route-configurator
-- `gateway_route_configurator_provides`: Provided relation endpoints for gateway-route-configurator
+- `ingress_configurator_requires`: Required relation endpoints for ingress-configurator
+- `ingress_configurator_provides`: Provided relation endpoints for ingress-configurator
 
 ## Relations
 
 The following integration is automatically created:
-- `gateway-route` relation between `gateway-api-integrator` and `gateway-route-configurator`.
+
+- `gateway-route` relation between `gateway-api-integrator` and `ingress-configurator`.

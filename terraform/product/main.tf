@@ -13,20 +13,21 @@ module "gateway_api_integrator" {
   units      = var.gateway_api_integrator.units
 }
 
-module "gateway_route_configurator" {
-  source = "../modules/gateway-route-configurator"
+module "ingress_configurator" {
+  source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?ref=rev95&depth=1"
 
-  app_name   = var.gateway_route_configurator.app_name
-  channel    = var.gateway_route_configurator.channel
-  config     = var.gateway_route_configurator.config
+  app_name   = var.ingress_configurator.app_name
+  channel    = var.ingress_configurator.channel
+  config     = var.ingress_configurator.config
   model_uuid = var.model_uuid
-  revision   = var.gateway_route_configurator.revision
-  base       = var.gateway_route_configurator.base
-  units      = var.gateway_route_configurator.units
+  revision   = var.ingress_configurator.revision
+  base       = var.ingress_configurator.base
+  units      = var.ingress_configurator.units
+  trust      = true
 }
 
-# Create relation between gateway-api-integrator and gateway-route-configurator
-resource "juju_integration" "gateway_api_integrator_route_configurator" {
+# Create integration between gateway-api-integrator and ingress-configurator
+resource "juju_integration" "gateway_api_integrator_ingress_configurator" {
   model_uuid = var.model_uuid
 
   application {
@@ -35,7 +36,7 @@ resource "juju_integration" "gateway_api_integrator_route_configurator" {
   }
 
   application {
-    name     = module.gateway_route_configurator.app_name
+    name     = module.ingress_configurator.app_name
     endpoint = "gateway-route"
   }
 }

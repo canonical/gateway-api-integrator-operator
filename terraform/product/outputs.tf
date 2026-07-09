@@ -6,9 +6,9 @@ output "gateway_api_integrator_app_name" {
   value       = module.gateway_api_integrator.app_name
 }
 
-output "gateway_route_configurator_app_name" {
-  description = "Name of the deployed gateway-route-configurator application."
-  value       = module.gateway_route_configurator.app_name
+output "ingress_configurator_app_name" {
+  description = "Name of the deployed ingress-configurator application."
+  value       = module.ingress_configurator.app_name
 }
 
 output "gateway_api_integrator_requires" {
@@ -21,12 +21,8 @@ output "gateway_api_integrator_provides" {
   value       = module.gateway_api_integrator.provides
 }
 
-output "gateway_route_configurator_requires" {
-  description = "List of required relation endpoints for gateway-route-configurator."
-  value       = module.gateway_route_configurator.requires
-}
 
-output "gateway_route_configurator_provides" {
-  description = "List of provided relation endpoints for gateway-route-configurator."
-  value       = module.gateway_route_configurator.provides
+output "ingress_configurator_endpoints" {
+  description = "Relation endpoints provided and required by ingress-configurator."
+  value       = module.ingress_configurator.endpoints
 }

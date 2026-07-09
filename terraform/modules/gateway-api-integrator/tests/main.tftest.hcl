@@ -10,9 +10,9 @@ run "setup_tests" {
 run "basic_deploy" {
   variables {
     model_uuid = run.setup_tests.model_uuid
-    channel    = "latest/edge"
+    channel    = "1/stable"
     # renovate: depName="gateway-api-integrator"
-    revision = 158
+    revision = 165
   }
 
   assert {

@@ -11,7 +11,7 @@ summary: Configurator for Gateway API routes.
 links:
   documentation: https://canonical.com/juju/docs/ingress-configurator-charm/
   issues: https://github.com/canonical/gateway-api-integrator-operator/issues
-  source: https://github.com/canonical/gateway-api-integrator-operator/tree/main/gateway-route-configurator
+  source: https://github.com/canonical/gateway-api-integrator-operator/tree/latest/gateway-route-configurator
   contact: https://launchpad.net/~canonical-is-devops
 
 description: |

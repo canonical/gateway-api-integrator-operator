@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-07-13
+
+- Fixed the sitemap configuration for the RTD project.
+
 ## 2026-07-06
 
 - Removed the source code for the `gateway-route-configurator` charm that is replaced by the `ingress-configurator-charm`.

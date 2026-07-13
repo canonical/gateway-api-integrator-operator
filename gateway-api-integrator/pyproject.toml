@@ -16,19 +16,19 @@ classifiers = [
 dependencies = [
   "cryptography==49.0.0",
   "jsonschema==4.26.0",
-  "lightkube==0.21.0",
-  "ops==3.7.1",
+  "lightkube==0.22.0",
+  "ops==3.8.0",
   "pydantic==2.13.4",
   "rpds-py==0.30.0",
   "validators==0.35.0",
-  "charmlibs-interfaces-tls-certificates==1.8.1",
+  "charmlibs-interfaces-tls-certificates==1.10.0",
 ]
 
 [dependency-groups]
 fmt = ["ruff"]
 lint = [
   "codespell",
-  "jubilant==1.10.0",
+  "jubilant==1.11.0",
   "mypy",
   "pep8-naming",
   "pytest",
@@ -43,7 +43,7 @@ static = ["bandit[toml]"]
 integration = [
   "allure-pytest>=2.8.18",
   "allure-pytest-collection-report @ git+https://github.com/canonical/data-platform-workflows@v24.0.0#subdirectory=python/pytest_plugins/allure_pytest_collection_report",
-  "jubilant==1.10.0",
+  "jubilant==1.11.0",
   "pytest",
   "pytest-asyncio",
   "pytest-operator",

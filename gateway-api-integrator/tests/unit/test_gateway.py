@@ -10,12 +10,12 @@ from unittest.mock import MagicMock
 import ops
 import pytest
 from httpx import Response
-from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta, Status
-from ops.testing import Harness
+from ops import testing
 
+from charm import GatewayAPICharm
 from resource_manager.gateway import (
     GatewayResourceDefinition,
     GatewayResourceManager,
@@ -26,111 +26,113 @@ from state.charm_state import CharmState
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
-from .conftest import GATEWAY_CLASS_CONFIG
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
-def test_create_gateway(  # pylint: disable=too-many-arguments, too-many-positional-arguments
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    gateway_relation: dict[str, dict[str, str]],
-    config: dict[str, str],
+def test_create_gateway(
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     """
     arrange: Given a charm with mocked lightkube client, juju secret, relations and gateway ip.
-    act: update the charm's config with the correct values.
+    act: run the config-changed event with valid config.
     assert: the charm goes into active status.
     """
     monkeypatch.setattr(
         "resource_manager.gateway.GatewayResourceManager.current_gateway_resource",
         MagicMock(return_value=None),
     )
-    harness.add_relation(
-        "gateway",
-        "requirer-charm",
-        app_data=gateway_relation["app_data"],
-        unit_data=gateway_relation["unit_data"],
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        relations=[gateway_relation, certificates_relation],
     )
-    relation_id = harness.add_relation("certificates", "self-signed-certificates")
-    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.set_leader()
-    harness.begin()
 
-    harness.update_config(config)
+    state_out = ctx.run(ctx.on.config_changed(), state_in)
 
-    assert harness.charm.unit.status.name == ops.ActiveStatus.name
+    assert state_out.unit_status.name == ops.ActiveStatus.name
 
 
 def test_gateway_resource_definition_insufficient_permission(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
+    certificates_relation: testing.Relation,
     monkeypatch: pytest.MonkeyPatch,
-    config: dict[str, str],
-):
+    mock_lightkube_client: MagicMock,
+) -> None:
     """
     arrange: given a charm with mocked lightkube client that returns 403.
     act: when agent reconciliation triggers.
     assert: The exception is handled and charm is set to blocked state.
     """
-    harness.add_relation(
-        "certificates", "self-signed-certificates", app_data=certificates_relation_data
-    )
     monkeypatch.setattr(
         "lightkube.models.meta_v1.Status.from_dict", MagicMock(return_value=Status(code=403))
     )
-    lightkube_client_mock = MagicMock(spec=Client)
-    lightkube_client_mock.return_value.list = MagicMock(
-        side_effect=ApiError(response=MagicMock(spec=Response))
+    mock_lightkube_client.list = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        relations=[certificates_relation],
     )
-    monkeypatch.setattr(
-        "charm.get_client",
-        lightkube_client_mock,
-    )
-    harness.begin()
-    harness.update_config(config)
 
-    assert harness.charm.unit.status.name == ops.BlockedStatus.name
+    state_out = ctx.run(ctx.on.config_changed(), state_in)
+
+    assert state_out.unit_status.name == ops.BlockedStatus.name
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_gateway_gen_resource(
-    harness: Harness,
-    config: dict[str, str],
-    certificates_relation_data: dict[str, str],
-    client_with_mock_external: MagicMock,
-):
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+    mock_lightkube_client: MagicMock,
+) -> None:
     """
     arrange: Given a charm with valid config and mocked client.
     act: Call _gen_resource from the required state components.
     assert: The k8s resource is correctly generated.
     """
-    relation_id = harness.add_relation("certificates", "self-signed-certificates")
-    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
-    harness.update_config(config)
-    harness.begin()
-
-    gateway_resource_information = GatewayResourceInformation.from_charm(harness.charm)
-    gateway_resource_manager = GatewayResourceManager(
-        labels=harness.charm._labels,
-        client=client_with_mock_external,
-    )
-    charm_state = CharmState.from_charm_and_providers(
-        harness.charm,
-        [GATEWAY_CLASS_CONFIG],
-        harness.charm._ingress_provider,
-        harness.charm._gateway_route_provider,
-    )
-    tls_information = TLSInformation.from_charm(
-        harness.charm,
-        set(),
-        harness.charm.certificates,
-    )
-    gateway_resource = gateway_resource_manager._gen_resource(
-        GatewayResourceDefinition(gateway_resource_information, charm_state, tls_information)
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        relations=[gateway_relation, certificates_relation],
     )
 
-    assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
-    assert len(gateway_resource.spec["listeners"])
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        charm = manager.charm
+        gateway_resource_information = GatewayResourceInformation.from_charm(charm)
+        gateway_resource_manager = GatewayResourceManager(
+            labels=charm._labels,
+            client=mock_lightkube_client,
+        )
+        charm_state = CharmState.from_charm_and_providers(
+            charm,
+            [GATEWAY_CLASS_CONFIG],
+            charm._ingress_provider,
+            charm._gateway_route_provider,
+        )
+        tls_information = TLSInformation.from_charm(
+            charm,
+            set(),
+            charm.certificates,
+        )
+        gateway_resource = gateway_resource_manager._gen_resource(
+            GatewayResourceDefinition(gateway_resource_information, charm_state, tls_information)
+        )
+
+        assert gateway_resource.spec["gatewayClassName"] == GATEWAY_CLASS_CONFIG
+        assert len(gateway_resource.spec["listeners"])
 
 
 def test_get_current_gateway_no_resource(mock_lightkube_client: MagicMock):
@@ -220,7 +222,7 @@ def _make_gw_def(
 ) -> GatewayResourceDefinition:
     """Construct a minimal GatewayResourceDefinition for spec-level unit tests.
 
-    Bypasses the full constructor so tests do not need a running charm harness.
+    Bypasses the full constructor so tests do not need a running charm.
     """
     obj = object.__new__(GatewayResourceDefinition)
     obj.gateway_name = gateway_name

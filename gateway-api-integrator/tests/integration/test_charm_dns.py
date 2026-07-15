@@ -27,7 +27,7 @@ def test_dns_record_relation(
     juju.integrate(gateway_app, f"{ingress_requirer_application}:ingress")
     juju.wait(
         lambda status: jubilant.all_active(status, gateway_app, ingress_requirer_application),
-        timeout=600,
+        error=jubilant.any_error,
     )
 
     # Deploy any-charm that provides the dns-record relation
@@ -36,7 +36,7 @@ def test_dns_record_relation(
         channel="latest/beta",
     )
     juju.integrate(f"{gateway_app}:dns-record", "any-charm")
-    juju.wait(jubilant.all_active)
+    juju.wait(jubilant.all_active, error=jubilant.any_error)
 
     # Assert that the dns-record is in the relation data
     if juju.version().major >= 4:
@@ -57,7 +57,7 @@ def test_dns_record_relation(
             break
 
     juju.remove_relation(gateway_app, INGRESS_REQUIRER_APP_NAME)
-    juju.wait(lambda status: jubilant.all_active(status, gateway_app))
+    juju.wait(lambda status: jubilant.all_active(status, gateway_app), error=jubilant.any_error)
     model_name = juju.show_model().short_name
     cmd = (
         f"kubectl -n {model_name} get all,httproute,service "

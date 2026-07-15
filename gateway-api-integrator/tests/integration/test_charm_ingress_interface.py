@@ -37,7 +37,7 @@ def test_ingress_enforced_mode(
     juju.wait(
         lambda status: jubilant.all_active(status, ingress_requirer_application, application),
         delay=5,
-        timeout=600,
+        error=jubilant.any_error,
     )
 
     gateway = get_gateway_resource(lightkube_client, application)
@@ -95,7 +95,7 @@ def test_ingress_enabled_mode(
     juju.wait(
         lambda status: jubilant.all_active(status, application, ingress_requirer_application),
         delay=5,
-        timeout=600,
+        error=jubilant.any_error,
     )
 
     gateway = get_gateway_resource(lightkube_client, application)
@@ -147,7 +147,7 @@ def test_ingress_disabled_mode(
     juju.wait(
         lambda status: jubilant.all_active(status, application, ingress_requirer_application),
         delay=5,
-        timeout=600,
+        error=jubilant.any_error,
     )
 
     gateway = get_gateway_resource(lightkube_client, application)

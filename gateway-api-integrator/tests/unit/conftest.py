@@ -3,137 +3,153 @@
 
 """Fixtures for gateway-api-integrator charm unit tests."""
 
+import json
+from datetime import timedelta
 from unittest.mock import MagicMock, PropertyMock
 
 import pytest
+from charmlibs.interfaces.tls_certificates import (
+    Certificate,
+    CertificateRequestAttributes,
+    CertificateSigningRequest,
+    PrivateKey,
+)
 from lightkube.core.client import Client
 from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta
-from ops.testing import Harness
+from ops import testing
 
-from charm import GatewayAPICharm
-
-TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
+TEST_EXTERNAL_HOSTNAME_CONFIG = "example.com"
 GATEWAY_CLASS_CONFIG = "cilium"
 
 
-@pytest.fixture(scope="function", name="harness")
-def harness_fixture():
-    """Enable ops test framework harness."""
-    harness = Harness(GatewayAPICharm)
-    yield harness
-    harness.cleanup()
+@pytest.fixture(scope="module", name="mock_certificates_relation_data")
+def mock_certificates_relation_data_fixture() -> str:
+    """Generate valid certificate objects for testing."""
+    # Generate CA
+    ca_private_key = PrivateKey.generate()
+    ca_attributes = CertificateRequestAttributes(
+        common_name="Test CA",
+    )
+    ca_cert = Certificate.generate_self_signed_ca(
+        attributes=ca_attributes, private_key=ca_private_key, validity=timedelta(days=365)
+    )
+
+    # Generate CSR and certificate
+    csr_private_key = PrivateKey.generate()
+    csr_attributes = CertificateRequestAttributes(
+        common_name=TEST_EXTERNAL_HOSTNAME_CONFIG,
+    )
+    csr = CertificateSigningRequest.generate(csr_attributes, csr_private_key)
+    cert = Certificate.generate(
+        csr=csr, ca=ca_cert, ca_private_key=ca_private_key, validity=timedelta(days=365)
+    )
+
+    return json.dumps(
+        [
+            {
+                "certificate": str(cert),
+                "certificate_signing_request": str(csr),
+                "ca": str(ca_cert),
+                "chain": [str(ca_cert), str(cert)],
+            }
+        ]
+    )
 
 
-@pytest.fixture(scope="function", name="certificates_relation_data")
-def certificates_relation_data_fixture(mock_certificate: str) -> dict[str, str]:
-    """Mock tls_certificates relation data."""
+@pytest.fixture(scope="function", name="base_state")
+def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
+    """Mock the base state for the charm."""
+    monkeypatch.setattr("client.KubeConfig", MagicMock())
+    monkeypatch.setattr("client.Client", MagicMock())
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm.available_gateway_classes",
+        lambda self: [GATEWAY_CLASS_CONFIG],
+    )
+    monkeypatch.setattr("charm.GatewayAPICharm._define_secret_resources", MagicMock())
+    monkeypatch.setattr(
+        "charm.GatewayAPICharm._define_ingress_resources_and_publish_url", MagicMock()
+    )
+    monkeypatch.setattr("charm.GatewayAPICharm._set_status_gateway_address", MagicMock())
+    monkeypatch.setattr("charm.GatewayResourceManager.current_gateway_resource", MagicMock())
+    monkeypatch.setattr(
+        "charm.GatewayResourceManager.gateway_address", lambda self, name: "1.2.3.4"
+    )
+    monkeypatch.setattr("charm.HTTPRouteResourceManager.cleanup_resources", MagicMock())
+    monkeypatch.setattr("charm.ServiceResourceManager.cleanup_resources", MagicMock())
+
+    dns_relation = testing.Relation(
+        endpoint="dns-record",
+        interface="dns_record",
+    )
+
     return {
-        f"csr-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
-        f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}": mock_certificate,
-        f"ca-{TEST_EXTERNAL_HOSTNAME_CONFIG}": "whatever",
-        f"chain-{TEST_EXTERNAL_HOSTNAME_CONFIG}": mock_certificate,
+        "leader": True,
+        "config": {
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        "relations": [
+            dns_relation,
+        ],
+        "model": testing.Model(
+            name="testmodel",
+        ),
     }
+
+
+@pytest.fixture(scope="function", name="certificates_relation")
+def certificates_relation_fixture(mock_certificates_relation_data: str):
+    """Return a mock certificates relation data."""
+    return testing.Relation(
+        endpoint="certificates",
+        interface="certificates",
+        remote_app_data={"certificates": mock_certificates_relation_data},
+    )
 
 
 @pytest.fixture(scope="function", name="gateway_relation")
-def gateway_relation_fixture() -> dict[str, dict[str, str]]:
-    """Mock gateway relation data."""
-    return {
-        "app_data": {
-            "name": '"gateway-api-integrator"',
-            "model": '"testing"',
+def gateway_relation_fixture():
+    """Return a mock gateway relation data."""
+    return testing.Relation(
+        endpoint="gateway",
+        interface="ingress",
+        remote_app_data={
+            "model": '"testing-model"',
+            "name": '"testing-ingress-app"',
             "port": "8080",
-            "strip_prefix": "false",
-            "redirect_https": "false",
         },
-        "unit_data": {"host": '"testing.ingress"', "ip": '"10.0.0.1"'},
-    }
+        remote_units_data={
+            0: {"host": '"testing-host.example.com"'},
+        },
+    )
 
 
-@pytest.fixture(scope="function", name="patch_lightkube_client")
-def patch_lightkube_client_fixture(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    """Patch lightkube cluster initialization."""
-    monkeypatch.setattr("client.KubeConfig", MagicMock())
-    monkeypatch.setattr("client.Client", MagicMock())
-
-
-@pytest.fixture(scope="function", name="mock_lightkube_client")
-def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
-    """Mock lightkube client."""
-    lightkube_client_mock = MagicMock(spec=Client)
-    monkeypatch.setattr("charm.get_client", MagicMock(return_value=lightkube_client_mock))
-    return lightkube_client_mock
+@pytest.fixture(scope="function", name="gateway_route_relation")
+def gateway_route_relation_fixture():
+    """Return a mock gateway-route v1 relation data."""
+    return testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway-route",
+        remote_app_data={
+            "hostname": json.dumps("example.com"),
+            "additional_hostnames": json.dumps([]),
+        },
+    )
 
 
 @pytest.fixture(scope="function", name="gateway_class_resource")
-def gateway_class_resource_fixture():
+def gateway_class_resource_fixture() -> GenericGlobalResource:
     """Mock gateway class global resource."""
     return GenericGlobalResource(metadata=ObjectMeta(name=GATEWAY_CLASS_CONFIG))
 
 
-@pytest.fixture(scope="function", name="mock_certificate")
-def mock_certificate_fixture(monkeypatch: pytest.MonkeyPatch) -> str:
-    """Mock tls certificate from a tls provider charm."""
-    cert = (
-        "-----BEGIN CERTIFICATE-----"
-        "MIIDgDCCAmigAwIBAgIUa32Vp4pS2WjrTNG7SZJ66SdMs2YwDQYJKoZIhvcNAQEL"
-        "BQAwOTELMAkGA1UEBhMCVVMxKjAoBgNVBAMMIXNlbGYtc2lnbmVkLWNlcnRpZmlj"
-        "YXRlcy1vcGVyYXRvcjAeFw0yNDA3MDMxODE0MjBaFw0yNTA3MDMxODE0MjBaMEox"
-        "GTAXBgNVBAMMEGdhdGV3YXkuaW50ZXJuYWwxLTArBgNVBC0MJDRmZmM4YjZlLTA0"
-        "MGUtNDIxZC1hOGJhLTNhOTAzMzQxYjg1MzCCASIwDQYJKoZIhvcNAQEBBQADggEP"
-        "ADCCAQoCggEBAJVOj9tOjA6zidDoSpqR4ObnTIouqdbXoibFB8/QlE7KiLkvUe4z"
-        "F53ATHMeXOvJ7/q8sAyyOsHIjmPOf7TSh2lrrZCiwmsy5ma8oNQewps+VJR3tLgb"
-        "OEh2ygpTaEPEK1Xz7zwwRU8EJrRuSo4L37iJJTcu2nubLWvBnzqWE1bYBbV8msH/"
-        "xP88kojbDuufND6ad1qZf1YPmxzbXTlWtYrlGXrvRWf5fP2AWZYwOX4e8m32Xa/m"
-        "z+1vb0xm2YrLqmjC+un0es+XaXSYyh1ZS5t42QW6J5nRwq0z4KOaRjOb9dq+T4nL"
-        "ZdkPn61cRNyY7E+xZ+TqMXGtlNXzTkXcJ3ECAwEAAaNvMG0wIQYDVR0jBBowGIAW"
-        "BBQ8ihb2ukCPiqijvCUaZ6HjYE9slDAdBgNVHQ4EFgQUwQYmWRBZk02AYVbx49QW"
-        "kiVuu2owDAYDVR0TAQH/BAIwADAbBgNVHREEFDASghBnYXRld2F5LmludGVybmFs"
-        "MA0GCSqGSIb3DQEBCwUAA4IBAQADD9FU7rU9ZMqzAAnQ+POpOau9l25/27Itx64W"
-        "BHsIDx29yUCJTKBeV1yU8jlEp6r3H6ntQJO2jke3qQzDPF7eWOyCFhohMRHT9M6N"
-        "r9xzrAaqd2OdQ8xlYqvXJ8JXmUfWE5jstUHK10KBsXjBZdfOTLGhg3kHw72cg/MJ"
-        "bB0JcLv2Lf/sFgU68bEWampwgjlAuybGKSTh+tiJXm2G14eCnI5xEMwezJQS+J+7"
-        "YXZZ153/uJZ5N8hIo9ld0LcYX5l7YrM1GH8CQ5GXN9kTgmRrpuSp/bZKd7GFmRq1"
-        "4+3+0/6Ba2Zlt9fu4PixG+XukQnBIxtIMjWp7q7xWp8F4aOW"
-        "-----END CERTIFICATE-----"
-    )
-    # Create a mock Certificate object with a raw attribute
-    cert_mock = MagicMock()
-    cert_mock.raw = cert
-    cert_mock.__str__ = MagicMock(return_value=cert)  # type: ignore[method-assign]
-    cert_mock.common_name = TEST_EXTERNAL_HOSTNAME_CONFIG
-
-    # Create CSR mock with common_name
-    csr_mock = MagicMock()
-    csr_mock.common_name = TEST_EXTERNAL_HOSTNAME_CONFIG
-
-    provider_cert_mock = MagicMock()
-    provider_cert_mock.certificate = cert_mock
-    provider_cert_mock.certificate_signing_request = csr_mock
-    provider_cert_mock.ca = cert_mock
-    provider_cert_mock.chain = [
-        cert_mock
-    ]  # Chain should be list of Certificate objects with .raw attribute
-    monkeypatch.setattr(
-        (
-            "charmlibs.interfaces.tls_certificates"
-            ".TLSCertificatesRequiresV4.get_provider_certificates"
-        ),
-        MagicMock(return_value=[provider_cert_mock]),
-    )
-    return cert
-
-
-@pytest.fixture(scope="function", name="config")
-def config_fixture() -> dict[str, str]:
-    """Valid charm config fixture."""
-    return {
-        "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
-        "gateway-class": GATEWAY_CLASS_CONFIG,
-    }
+@pytest.fixture(scope="function", name="mock_lightkube_client")
+def mock_lightkube_client_fixture(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """Mock the lightkube client returned by charm.get_client."""
+    lightkube_client_mock = MagicMock(spec=Client)
+    monkeypatch.setattr("charm.get_client", MagicMock(return_value=lightkube_client_mock))
+    return lightkube_client_mock
 
 
 @pytest.fixture(scope="function", name="client_with_mock_external")
@@ -142,7 +158,7 @@ def client_with_mock_external_fixture(
     gateway_class_resource: GenericGlobalResource,
     monkeypatch: pytest.MonkeyPatch,
 ) -> MagicMock:
-    """Mock necessary external methods for the charm to work properly with harness."""
+    """Mock external methods so the charm reconcile can run with a real charm state."""
     mock_lightkube_client.list = MagicMock(return_value=[gateway_class_resource])
     mock_lightkube_client.get = MagicMock(
         return_value=GenericNamespacedResource(status={"addresses": [{"value": "10.0.0.0"}]}),

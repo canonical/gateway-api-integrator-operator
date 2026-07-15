@@ -10,8 +10,9 @@ from unittest.mock import MagicMock
 import pytest
 from httpx import Response
 from lightkube.core.exceptions import ApiError, ConfigError
-from ops.testing import Harness
+from ops import testing
 
+from charm import GatewayAPICharm
 from client import LightKubeInitializationError, cleanup_all_resources, get_client
 
 
@@ -73,21 +74,17 @@ def test_cleanup_resources():
     delete_mock.assert_not_called()
 
 
-def test_client_api_error_4xx(
-    harness: Harness,
-    monkeypatch: pytest.MonkeyPatch,
-):
+def test_client_api_error_4xx(monkeypatch: pytest.MonkeyPatch):
     """
-    arrange: given a charm with mocked lightkube client that returns 404.
+    arrange: given a charm with mocked lightkube client that raises an ApiError.
     act: when agent reconciliation triggers.
     assert: Exception is re-raised.
     """
     get_client_mock = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
-    monkeypatch.setattr(
-        "charm.get_client",
-        get_client_mock,
-    )
-    harness.set_leader(True)
-    harness.update_config({"enforce-https": False})
-    with pytest.raises(ApiError):
-        harness.begin_with_initial_hooks()
+    monkeypatch.setattr("charm.get_client", get_client_mock)
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(leader=True, config={"enforce-https": False})
+
+    with pytest.raises(testing.errors.UncaughtCharmError) as exc_info:
+        ctx.run(ctx.on.config_changed(), state_in)
+    assert isinstance(exc_info.value.__cause__, ApiError)

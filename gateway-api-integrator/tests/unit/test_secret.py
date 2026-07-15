@@ -5,65 +5,68 @@
 # pylint: disable=protected-access
 """Unit tests for secret resource."""
 
+import json
 from unittest.mock import MagicMock
 
-from ops.testing import Harness
+import pytest
+from ops import testing
 
+from charm import GatewayAPICharm
 from resource_manager.secret import (
     SecretResourceDefinition,
     TLSSecretResourceManager,
 )
 from state.tls import TLSInformation
 
-from .conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_secret_gen_resource(
-    harness: Harness,
-    certificates_relation_data: dict[str, str],
-    client_with_mock_external: MagicMock,
-    config: dict[str, str],
-    gateway_relation: dict[str, dict[str, str]],
-):
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+    mock_certificates_relation_data: str,
+    mock_lightkube_client: MagicMock,
+) -> None:
     """
     arrange: Given a charm with valid config and mocked client.
     act: Call _gen_resource from the required state components.
     assert: The k8s resource is correctly generated.
     """
-    harness.update_config(config)
-    harness.add_relation(
-        "gateway",
-        "requirer-charm",
-        app_data=gateway_relation["app_data"],
-        unit_data=gateway_relation["unit_data"],
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        relations=[gateway_relation, certificates_relation],
     )
-    relation_id = harness.add_relation("certificates", "self-signed-certificates")
-    harness.update_relation_data(relation_id, harness.model.app.name, certificates_relation_data)
 
-    harness.set_leader()
-    harness.begin()
-    harness.charm.certificates.get_private_key = MagicMock(return_value="key-data")
-    secret_resource_manager = TLSSecretResourceManager(
-        labels=harness.charm._labels,
-        client=client_with_mock_external,
-    )
-    tls_information = TLSInformation.from_charm(
-        harness.charm,
-        {TEST_EXTERNAL_HOSTNAME_CONFIG},
-        harness.charm.certificates,
-    )
-    secret_resource = secret_resource_manager._gen_resource(
-        SecretResourceDefinition.from_tls_information(
-            tls_information,
-            TEST_EXTERNAL_HOSTNAME_CONFIG,
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        charm = manager.charm
+        charm.certificates.get_private_key = MagicMock(return_value="key-data")
+        secret_resource_manager = TLSSecretResourceManager(
+            labels=charm._labels,
+            client=mock_lightkube_client,
         )
-    )
+        tls_information = TLSInformation.from_charm(
+            charm,
+            {TEST_EXTERNAL_HOSTNAME_CONFIG},
+            charm.certificates,
+        )
+        secret_resource = secret_resource_manager._gen_resource(
+            SecretResourceDefinition.from_tls_information(
+                tls_information,
+                TEST_EXTERNAL_HOSTNAME_CONFIG,
+            )
+        )
 
-    assert (
-        secret_resource.metadata.name
-        == f"{harness.model.app.name}-secret-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
-    )
-    assert (
-        secret_resource.stringData["tls.crt"]
-        == certificates_relation_data[f"certificate-{TEST_EXTERNAL_HOSTNAME_CONFIG}"]
-    )
+        assert (
+            secret_resource.metadata.name
+            == f"{charm.app.name}-secret-{TEST_EXTERNAL_HOSTNAME_CONFIG}"
+        )
+        expected_data = json.loads(mock_certificates_relation_data)[0]
+        assert secret_resource.stringData["tls.crt"] == "\n\n".join(
+            [expected_data["certificate"], expected_data["ca"]]
+        )

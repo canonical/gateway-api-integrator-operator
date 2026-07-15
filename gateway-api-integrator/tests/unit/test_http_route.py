@@ -10,8 +10,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from lightkube.core.client import Client
-from ops.testing import Harness
+from ops import testing
 
+from charm import GatewayAPICharm
 from resource_manager.gateway import http_listener_name, https_listener_name
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
@@ -24,63 +25,64 @@ from state.http_route import (
     IngressIntegrationDataValidationError,
 )
 
+from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
-def test_http_route_resource_information_validation_error(harness: Harness):
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_http_route_resource_information_validation_error() -> None:
     """
     arrange: Given a charm with ingress integration with invalid data.
     act: Initialize HTTPRouteResourceInformation state component.
     assert: IngressIntegrationDataValidationError is raised.
     """
-    harness.add_relation(
-        "gateway",
-        "test-charm",
-    )
+    gateway_relation = testing.Relation(endpoint="gateway", interface="ingress")
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(leader=True, relations=[gateway_relation])
 
-    harness.begin()
-    with pytest.raises(IngressIntegrationDataValidationError):
-        HTTPRouteResourceInformation.from_ingress(harness.charm._ingress_provider, None)
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        charm = manager.charm
+        with pytest.raises(IngressIntegrationDataValidationError):
+            HTTPRouteResourceInformation.from_ingress(charm._ingress_provider, None)
 
 
-def test_http_route_gen_resource(
-    harness: Harness,
-    gateway_relation: dict[str, dict[str, str]],
-    config: dict[str, str],
-):
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_http_route_gen_resource(gateway_relation: testing.Relation) -> None:
     """
     arrange: Given a charm with valid config and mocked client.
     act: Call _gen_resource from the required state components.
     assert: The k8s resource is correctly generated.
     """
     client_mock = MagicMock(spec=Client)
-    harness.update_config(config)
-    harness.add_relation(
-        "gateway",
-        "test-charm",
-        app_data=gateway_relation["app_data"],
-        unit_data=gateway_relation["unit_data"],
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        relations=[gateway_relation],
     )
 
-    harness.begin()
-    charm = harness.charm
-    http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
-        charm._ingress_provider, None
-    )
-    gateway_resource_information = GatewayResourceInformation.from_charm(charm)
-    http_route_resource_manager = HTTPRouteResourceManager(
-        labels=harness.charm._labels,
-        client=client_mock,
-    )
-    https_route_resource = http_route_resource_manager._gen_resource(
-        HTTPRouteResourceDefinition(
-            http_route_resource_information,
-            gateway_resource_information,
-            HTTPRouteType.HTTPS,
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        charm = manager.charm
+        http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
+            charm._ingress_provider, None
         )
-    )
-    assert (
-        https_route_resource.spec["parentRefs"][0]["sectionName"]
-        == f"{harness.model.app.name}-https"
-    )
+        gateway_resource_information = GatewayResourceInformation.from_charm(charm)
+        http_route_resource_manager = HTTPRouteResourceManager(
+            labels=charm._labels,
+            client=client_mock,
+        )
+        https_route_resource = http_route_resource_manager._gen_resource(
+            HTTPRouteResourceDefinition(
+                http_route_resource_information,
+                gateway_resource_information,
+                HTTPRouteType.HTTPS,
+            )
+        )
+        assert (
+            https_route_resource.spec["parentRefs"][0]["sectionName"] == f"{charm.app.name}-https"
+        )
 
 
 def test_patch_http_route(mock_lightkube_client: MagicMock):
@@ -222,7 +224,7 @@ def _make_http_route_def(
 ) -> HTTPRouteResourceDefinition:
     """Construct a minimal HTTPRouteResourceDefinition for property-level tests.
 
-    Bypasses the full constructor so tests do not need a charm harness.
+    Bypasses the full constructor so tests do not need a charm.
     """
     obj = object.__new__(HTTPRouteResourceDefinition)
     obj.gateway_name = gateway_name

@@ -19,6 +19,7 @@ CERTIFICATE_PROVIDER_CHANNEL = "1/edge"
 INGRESS_REQUIRER_CHANNEL = "latest/edge"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "ck-gateway"
+JUJU_WAIT_TIMEOUT = 10 * 60
 
 
 @pytest.fixture(scope="module", name="juju")
@@ -26,7 +27,7 @@ def juju_model_fixture(request: pytest.FixtureRequest):
     """Create a temporary Juju model for testing."""
     keep_models = bool(request.config.getoption("--keep-models"))
     with jubilant.temp_model(keep=keep_models) as juju_model:
-        juju_model.wait_timeout = 10 * 60
+        juju_model.wait_timeout = JUJU_WAIT_TIMEOUT
         yield juju_model
 
         if request.session.testsfailed:
@@ -44,7 +45,10 @@ def charm_fixture(charm_paths) -> str:
 def application_fixture(juju: jubilant.Juju, charm: str) -> str:
     """Deploy the charm and wait for blocked status."""
     juju.deploy(charm, app=GATEWAY_APP_NAME, base=GATEWAY_BASE, trust=True)
-    juju.wait(lambda status: status.apps[GATEWAY_APP_NAME].app_status.current == "blocked")
+    juju.wait(
+        lambda status: status.apps[GATEWAY_APP_NAME].app_status.current == "blocked",
+        error=jubilant.any_error,
+    )
     return GATEWAY_APP_NAME
 
 
@@ -52,7 +56,10 @@ def application_fixture(juju: jubilant.Juju, charm: str) -> str:
 def certificate_provider_application_fixture(juju: jubilant.Juju) -> str:
     """Deploy self-signed-certificates."""
     juju.deploy(CERTIFICATE_PROVIDER_APP_NAME, channel=CERTIFICATE_PROVIDER_CHANNEL)
-    juju.wait(lambda status: jubilant.all_active(status, CERTIFICATE_PROVIDER_APP_NAME))
+    juju.wait(
+        lambda status: jubilant.all_active(status, CERTIFICATE_PROVIDER_APP_NAME),
+        error=jubilant.any_error,
+    )
     return CERTIFICATE_PROVIDER_APP_NAME
 
 
@@ -98,6 +105,6 @@ def configured_application_with_tls_fixture(
     juju.integrate(application, certificate_provider_application)
     juju.wait(
         lambda status: jubilant.all_active(status, application, certificate_provider_application),
-        timeout=600,
+        error=jubilant.any_error,
     )
     return application

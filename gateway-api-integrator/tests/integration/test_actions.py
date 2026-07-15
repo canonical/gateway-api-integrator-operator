@@ -26,7 +26,7 @@ def test_get_certificate_action(
         lambda status: jubilant.all_active(
             status, configured_application_with_tls, ingress_requirer_application
         ),
-        timeout=600,
+        error=jubilant.any_error,
     )
 
     result = juju.run(

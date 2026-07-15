@@ -20,8 +20,6 @@ from state.tls import TLSInformationNotReadyError
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
-ORIGINAL_FROM_CHARM_AND_PROVIDERS = CharmState.from_charm_and_providers
-
 
 def test_dns_record(
     base_state: dict, gateway_relation: testing.Relation, certificates_relation: testing.Relation
@@ -105,18 +103,6 @@ def test_gateway_route(
     assert: The charm updates the dns-record relation with the expected DNS entries
         and publishes provider data to gateway-route relation.
     """
-    # base_state fixture mocks CharmState derivation with ingress state.
-    # Restore the real config path (and gateway class lookup) so this test can
-    # exercise real gateway-route mode behavior from relations/config.
-    monkeypatch.setattr(
-        "charm.CharmState.from_charm_and_providers",
-        ORIGINAL_FROM_CHARM_AND_PROVIDERS,
-    )
-    monkeypatch.setattr(
-        "charm.GatewayAPICharm.available_gateway_classes",
-        lambda self: [GATEWAY_CLASS_CONFIG],
-    )
-
     # external-hostname is ingress-only; clear it for gateway-route mode.
     base_state["config"]["external-hostname"] = ""
     ctx = testing.Context(GatewayAPICharm)
@@ -149,20 +135,10 @@ def test_gateway_route(
 
 def test_blocked_when_relation_integrated_without_hostname(
     base_state: dict,
-    monkeypatch: pytest.MonkeyPatch,
     gateway_relation: testing.Relation,
     certificates_relation: testing.Relation,
 ) -> None:
     """Charm should block when ingress is integrated but no hostname can be derived."""
-    monkeypatch.setattr(
-        "charm.CharmState.from_charm_and_providers",
-        ORIGINAL_FROM_CHARM_AND_PROVIDERS,
-    )
-    monkeypatch.setattr(
-        "charm.GatewayAPICharm.available_gateway_classes",
-        lambda self: [GATEWAY_CLASS_CONFIG],
-    )
-
     ctx = testing.Context(GatewayAPICharm)
     base_state["config"]["external-hostname"] = ""
     base_state["relations"].append(gateway_relation)
@@ -212,15 +188,6 @@ def test_gateway_route_with_invalid_data_not_blocked(
     certificates_relation: testing.Relation,
 ) -> None:
     """Charm should not block when all gateway-route relations provide invalid data."""
-    monkeypatch.setattr(
-        "charm.CharmState.from_charm_and_providers",
-        ORIGINAL_FROM_CHARM_AND_PROVIDERS,
-    )
-    monkeypatch.setattr(
-        "charm.GatewayAPICharm.available_gateway_classes",
-        lambda self: [GATEWAY_CLASS_CONFIG],
-    )
-
     invalid_gateway_route_relation = testing.Relation(
         endpoint="gateway-route",
         interface="gateway-route",

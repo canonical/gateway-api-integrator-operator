@@ -19,8 +19,6 @@ from lightkube.generic_resource import GenericGlobalResource, GenericNamespacedR
 from lightkube.models.meta_v1 import ObjectMeta
 from ops import testing
 
-from state.charm_state import CharmState, ProxyMode
-
 TEST_EXTERNAL_HOSTNAME_CONFIG = "example.com"
 GATEWAY_CLASS_CONFIG = "cilium"
 
@@ -65,16 +63,8 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr("client.KubeConfig", MagicMock())
     monkeypatch.setattr("client.Client", MagicMock())
     monkeypatch.setattr(
-        "charm.CharmState.from_charm_and_providers",
-        MagicMock(
-            return_value=CharmState(
-                gateway_class_name=GATEWAY_CLASS_CONFIG,
-                enforce_https=True,
-                proxy_mode=ProxyMode.INGRESS,
-                requires_ip_certificate=False,
-                hostnames={TEST_EXTERNAL_HOSTNAME_CONFIG},
-            )
-        ),
+        "charm.GatewayAPICharm.available_gateway_classes",
+        lambda self: [GATEWAY_CLASS_CONFIG],
     )
     monkeypatch.setattr("charm.GatewayAPICharm._define_secret_resources", MagicMock())
     monkeypatch.setattr(

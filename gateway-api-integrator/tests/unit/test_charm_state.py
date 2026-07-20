@@ -23,6 +23,7 @@ def test_valid_ingress_config():
         enforce_https=True,
         proxy_mode=ProxyMode.INGRESS,
         requires_ip_certificate=False,
+        hsts_max_age=31536000,
         hostnames={"gateway.internal"},
     )
     assert charm_state.hostnames == {"gateway.internal"}
@@ -42,6 +43,7 @@ def test_valid_ingress_config_no_hostnames():
         enforce_https=False,
         proxy_mode=ProxyMode.INGRESS,
         requires_ip_certificate=False,
+        hsts_max_age=31536000,
         hostnames=set(),
     )
     assert charm_state.hostnames == set()
@@ -59,6 +61,7 @@ def test_valid_gateway_route_config_enforce_https_false():
         enforce_https=False,
         proxy_mode=ProxyMode.GATEWAY_ROUTE,
         requires_ip_certificate=False,
+        hsts_max_age=31536000,
         hostnames={"example.com"},
     )
     assert charm_state.hostnames == {"example.com"}
@@ -72,6 +75,7 @@ def test_valid_inactive_config():
         enforce_https=False,
         proxy_mode=ProxyMode.INACTIVE,
         requires_ip_certificate=False,
+        hsts_max_age=31536000,
         hostnames=set(),
     )
     assert type(charm_state) is CharmState
@@ -89,6 +93,7 @@ def test_invalid_gateway_class_name_empty():
             enforce_https=True,
             proxy_mode=ProxyMode.INGRESS,
             requires_ip_certificate=False,
+            hsts_max_age=31536000,
             hostnames={"gateway.internal"},
         )
 
@@ -105,6 +110,7 @@ def test_invalid_ingress_hostname():
             enforce_https=True,
             proxy_mode=ProxyMode.INGRESS,
             requires_ip_certificate=False,
+            hsts_max_age=31536000,
             hostnames={"not a valid hostname!"},
         )
 
@@ -117,6 +123,7 @@ def test_invalid_gateway_route_hostname():
             enforce_https=True,
             proxy_mode=ProxyMode.GATEWAY_ROUTE,
             requires_ip_certificate=False,
+            hsts_max_age=31536000,
             hostnames={"not a valid hostname!"},
         )
 
@@ -129,6 +136,7 @@ def test_invalid_ingress_multiple_hostnames():
             enforce_https=True,
             proxy_mode=ProxyMode.INGRESS,
             requires_ip_certificate=False,
+            hsts_max_age=31536000,
             hostnames={"one.example.com", "two.example.com"},
         )
 
@@ -152,6 +160,7 @@ def test_valid_hostnames(hostname: str):
         enforce_https=True,
         proxy_mode=ProxyMode.INGRESS,
         requires_ip_certificate=False,
+        hsts_max_age=31536000,
         hostnames={hostname},
     )
     assert charm_state.hostnames == {hostname}

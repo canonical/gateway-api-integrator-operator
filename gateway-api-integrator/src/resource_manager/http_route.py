@@ -59,6 +59,8 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         paths: The list of paths to be added to the HTTPRoute resource.
         filters: The list of filters to be applied to the HTTPRoute resource.
         matches: The list of matches for the HTTPRoute resource.
+        hsts_max_age: The max-age for the Strict-Transport-Security header. When set on
+            an HTTPS route, a ResponseHeaderModifier filter is injected; None disables it.
     """
 
     application_name: str
@@ -71,6 +73,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
     paths: list[str]
     filters: list[dict]
     hostname: str | None
+    hsts_max_age: int | None
 
     def __init__(
         self,
@@ -78,6 +81,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         gateway_resource_information: GatewayResourceInformation,
         http_route_type: HTTPRouteType,
         redirect_https: bool = False,
+        hsts_max_age: int | None = None,
     ):
         """Create the state object with state components.
 
@@ -86,10 +90,13 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
             gateway_resource_information: GatewayResourceInformation state component.
             http_route_type: Type of the HTTP route, can be http or https.
             redirect_https: Whether to redirect HTTP traffic to HTTPS.
+            hsts_max_age: The max-age for the Strict-Transport-Security header. Set only
+                when HTTPS is enforced; None otherwise.
         """
         super().__init__(http_route_resource_information, gateway_resource_information)
         self.http_route_type = http_route_type
         self.redirect_https = redirect_https
+        self.hsts_max_age = hsts_max_age
 
     @property
     def matches(self) -> list[dict[str, dict[str, str]]]:
@@ -154,6 +161,30 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         """
         return [] if self.hostname is None else [self.hostname]
 
+    @property
+    def _hsts_filter(self) -> dict | None:
+        """Build the Strict-Transport-Security ResponseHeaderModifier filter.
+
+        The filter is only produced for HTTPS routes when hsts_max_age is set. A value of
+        0 is still emitted so browsers clear any cached HSTS policy.
+
+        Returns:
+            The HSTS ResponseHeaderModifier filter, or None when it does not apply.
+        """
+        if self.http_route_type != HTTPRouteType.HTTPS or self.hsts_max_age is None:
+            return None
+        return {
+            "type": "ResponseHeaderModifier",
+            "responseHeaderModifier": {
+                "add": [
+                    {
+                        "name": "Strict-Transport-Security",
+                        "value": f"max-age={self.hsts_max_age}",
+                    }
+                ]
+            },
+        }
+
     def http_route_resource_spec(self, namespace: str) -> dict[str, typing.Any]:
         """Generate a Gateway resource from a gateway resource definition.
 
@@ -196,7 +227,10 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
             "rules": [
                 {
                     "matches": self.matches,
-                    "filters": self.filters,
+                    "filters": [
+                        *self.filters,
+                        *filter(None, [self._hsts_filter]),
+                    ],
                     "backendRefs": [
                         {
                             "name": self.service_name,

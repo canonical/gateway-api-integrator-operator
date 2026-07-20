@@ -166,6 +166,7 @@ def test_get_certificate_requests_includes_gateway_ip_when_required(
                 enforce_https=True,
                 proxy_mode=ProxyMode.GATEWAY_ROUTE,
                 requires_ip_certificate=True,
+                hsts_max_age=31536000,
                 hostnames=set(),
             )
         ),
@@ -245,6 +246,7 @@ def test_waiting_when_ip_san_certificate_missing(
                 enforce_https=True,
                 proxy_mode=ProxyMode.INGRESS,
                 requires_ip_certificate=True,
+                hsts_max_age=31536000,
                 hostnames={"example.com"},
             )
         ),

@@ -12,6 +12,10 @@ Each revision is versioned by the date of the revision.
 - Added the `hsts-max-age` configuration option to control the `max-age` directive of the `Strict-Transport-Security` header injected on HTTPS routes when HTTPS is enforced.
 - Added the `hsts_max_age` field to the `gateway-route` provider databag (library v1, LIBPATCH 3), published only when HTTPS is enforced.
 
+## 2026-07-13
+
+- Fixed the sitemap configuration for the RTD project.
+
 ## 2026-07-06
 
 - Removed the source code for the `gateway-route-configurator` charm that is replaced by the `ingress-configurator-charm`.

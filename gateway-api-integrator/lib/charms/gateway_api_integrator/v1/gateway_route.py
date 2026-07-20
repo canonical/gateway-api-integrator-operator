@@ -209,6 +209,7 @@ class GatewayRouteProviderAppData:
     hsts_max_age: int | None = Field(
         description="The max-age for the Strict-Transport-Security header, set only when enforced.",
         default=None,
+        ge=0,
     )
 
 

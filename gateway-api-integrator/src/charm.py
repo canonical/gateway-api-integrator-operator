@@ -419,7 +419,9 @@ class GatewayAPICharm(CharmBase):
             gateway_model=self.model.name,
             https_mode=https_mode,
             gateway_address=gateway_address,
-            hsts_max_age=(charm_state.hsts_max_age if https_mode == HttpsMode.ENFORCED else None),
+            hsts_max_age=(
+                charm_state.hsts_max_age if https_mode == HttpsMode.ENFORCED else None
+            ),
         )
 
     def _update_dns_record_relation(

@@ -63,6 +63,13 @@ config:
         When set to false, plain HTTP traffic on port 80 is allowed and the HTTPS listener is not created.
         Setting this to false also makes the external-hostname configuration optional.
       type: boolean
+    hsts-max-age:
+      default: 31536000
+      description: |
+        Value for the max-age directive of the Strict-Transport-Security header injected on HTTPS routes.
+        Only applied when HTTPS is enforced. The default is 31536000 (1 year).
+        Setting this to 0 instructs browsers to clear any cached HSTS policy.
+      type: int
 
 
 actions:

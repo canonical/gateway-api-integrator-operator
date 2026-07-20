@@ -67,6 +67,8 @@ class CharmState:
     Attributes:
         gateway_class_name: The configured gateway class.
         enforce_https: Whether to enforce HTTPS by redirecting HTTP to HTTPS.
+        hsts_max_age: The max-age value for the Strict-Transport-Security header,
+            injected on HTTPS routes only when HTTPS is enforced.
         proxy_mode: Current proxy mode selected from active relations.
         requires_ip_certificate: Whether an IP SAN certificate is required. This
             is true only when certificates are integrated, proxy mode is
@@ -79,6 +81,7 @@ class CharmState:
     enforce_https: bool = Field()
     proxy_mode: ProxyMode = Field()
     requires_ip_certificate: bool = Field()
+    hsts_max_age: int = Field(ge=0)
     hostnames: set[
         typing.Annotated[
             str,
@@ -122,6 +125,7 @@ class CharmState:
             CharmState: Instance of the charm state component.
         """
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
+        hsts_max_age = typing.cast(int, charm.config.get("hsts-max-age"))
         has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
         if enforce_https and not has_tls:
             raise InvalidCharmConfigError(
@@ -173,6 +177,7 @@ class CharmState:
             return CharmState(
                 gateway_class_name=gateway_class_name,
                 enforce_https=enforce_https,
+                hsts_max_age=hsts_max_age,
                 proxy_mode=proxy_mode,
                 requires_ip_certificate=requires_ip_certificate,
                 hostnames=hostnames,

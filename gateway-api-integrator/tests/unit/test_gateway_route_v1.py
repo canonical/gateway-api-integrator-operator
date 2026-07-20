@@ -216,6 +216,53 @@ class TestGatewayRouteProvider:
             assert json.loads(app_data["https_mode"]) == "enforced"
             assert json.loads(app_data["gateway_address"]) == "10.0.0.1"
 
+    def test_publish_provider_data_includes_hsts_when_enforced(self, ctx):
+        """Test publish_provider_data writes hsts_max_age when provided (enforced mode)."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("app.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.get_requirer_data()
+            mgr.charm.gateway_route.publish_provider_data(
+                gateway_name="my-gateway",
+                gateway_model="my-model",
+                https_mode=HttpsMode.ENFORCED,
+                hsts_max_age=31536000,
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            app_data = rel.data[mgr.charm.app]
+            assert json.loads(app_data["hsts_max_age"]) == 31536000
+
+    def test_publish_provider_data_omits_hsts_when_not_enforced(self, ctx):
+        """Test publish_provider_data leaves hsts_max_age null when None (not enforced)."""
+        relation = testing.Relation(
+            endpoint=GATEWAY_ROUTE_RELATION_NAME,
+            interface="gateway-route",
+            remote_app_data={
+                "hostname": json.dumps("app.example.com"),
+                "additional_hostnames": json.dumps([]),
+            },
+        )
+        state = testing.State(leader=True, relations=[relation])
+
+        with ctx(ctx.on.relation_changed(relation), state) as mgr:
+            mgr.charm.gateway_route.get_requirer_data()
+            mgr.charm.gateway_route.publish_provider_data(
+                gateway_name="my-gateway",
+                gateway_model="my-model",
+                https_mode=HttpsMode.ENABLED,
+            )
+            rel = mgr.charm.model.get_relation(GATEWAY_ROUTE_RELATION_NAME)
+            app_data = rel.data[mgr.charm.app]
+            assert json.loads(app_data["hsts_max_age"]) is None
+
     def test_publish_provider_data_skips_non_leader(self, ctx):
         """Test publish_provider_data does nothing when not leader."""
         relation = testing.Relation(

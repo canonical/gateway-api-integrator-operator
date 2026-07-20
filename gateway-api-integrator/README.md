@@ -46,6 +46,18 @@ juju deploy self-signed-certificates
 juju integrate gateway-api-integrator self-signed-certificates
 ```
 
+#### Configure HSTS
+
+When HTTPS is enforced (`enforce-https=true`), the charm injects a
+`Strict-Transport-Security` header on HTTPS routes. The `hsts-max-age`
+configuration sets the `max-age` directive (in seconds) of that header. It
+defaults to `31536000` (1 year) and is only applied when HTTPS is enforced.
+Setting it to `0` instructs browsers to clear any cached HSTS policy.
+
+```
+juju config gateway-api-integrator hsts-max-age=63072000
+```
+
 ## Learn more
 
 - [Read more](https://canonical.com/juju/docs/gateway-api-integrator-charm/)

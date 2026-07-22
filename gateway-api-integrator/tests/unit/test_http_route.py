@@ -85,6 +85,120 @@ def test_http_route_gen_resource(gateway_relation: testing.Relation) -> None:
         )
 
 
+def _hsts_filters(spec: dict) -> list[dict]:
+    """Return the ResponseHeaderModifier HSTS filters found in a route spec."""
+    filters = []
+    for rule in spec.get("rules", []):
+        for rule_filter in rule.get("filters", []):
+            if rule_filter.get("type") == "ResponseHeaderModifier":
+                for header in rule_filter["responseHeaderModifier"]["add"]:
+                    if header["name"] == "Strict-Transport-Security":
+                        filters.append(rule_filter)
+    return filters
+
+
+def _build_route_spec(gateway_relation: testing.Relation, **definition_kwargs) -> dict:
+    """Build an HTTPRoute resource spec for the given definition kwargs.
+
+    Requires the ``client_with_mock_external`` fixture to be active.
+    """
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+        relations=[gateway_relation],
+    )
+
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        charm = manager.charm
+        http_route_resource_information = HTTPRouteResourceInformation.from_ingress(
+            charm._ingress_provider, "gateway.internal"
+        )
+        gateway_resource_information = GatewayResourceInformation.from_charm(charm)
+        definition = HTTPRouteResourceDefinition(
+            http_route_resource_information,
+            gateway_resource_information,
+            **definition_kwargs,
+        )
+        return definition.http_route_resource_spec("test-namespace")
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_https_route_injects_hsts_filter_when_enforced(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTPS HTTPRouteResourceDefinition with hsts_max_age set.
+    act: Generate the HTTPRoute resource spec.
+    assert: A ResponseHeaderModifier filter adds Strict-Transport-Security: max-age=<value>.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTPS,
+        hsts_max_age=31536000,
+    )
+    hsts_filters = _hsts_filters(spec)
+    assert len(hsts_filters) == 1
+    header = hsts_filters[0]["responseHeaderModifier"]["add"][0]
+    assert header == {"name": "Strict-Transport-Security", "value": "max-age=31536000"}
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_https_route_omits_hsts_filter_when_not_enforced(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTPS HTTPRouteResourceDefinition with hsts_max_age unset (None).
+    act: Generate the HTTPRoute resource spec.
+    assert: No Strict-Transport-Security ResponseHeaderModifier filter is present.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTPS,
+    )
+    assert _hsts_filters(spec) == []
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_https_route_hsts_filter_zero_max_age(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTPS HTTPRouteResourceDefinition with hsts_max_age=0.
+    act: Generate the HTTPRoute resource spec.
+    assert: The header is still emitted as max-age=0 to clear cached HSTS policy.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTPS,
+        hsts_max_age=0,
+    )
+    hsts_filters = _hsts_filters(spec)
+    assert len(hsts_filters) == 1
+    header = hsts_filters[0]["responseHeaderModifier"]["add"][0]
+    assert header["value"] == "max-age=0"
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_http_redirect_route_never_injects_hsts_filter(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTP redirect HTTPRouteResourceDefinition.
+    act: Generate the HTTPRoute resource spec.
+    assert: No Strict-Transport-Security filter is added to the redirect rule.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTP,
+        redirect_https=True,
+    )
+    assert _hsts_filters(spec) == []
+
+
 def test_patch_http_route(mock_lightkube_client: MagicMock):
     """
     arrange: Given an HTTPRouteResourceManager with mocked lightkube client.

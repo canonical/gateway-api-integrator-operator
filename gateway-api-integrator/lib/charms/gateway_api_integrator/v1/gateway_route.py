@@ -119,7 +119,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 GATEWAY_ROUTE_RELATION_NAME = "gateway-route"
@@ -193,6 +193,8 @@ class GatewayRouteProviderAppData:
         https_mode: The HTTPS mode indicating how the provider handles TLS.
         gateway_address: The gateway LB address. Provided so requirers without a
             configured hostname can reference the gateway by IP.
+        hsts_max_age: The max-age value for the Strict-Transport-Security header.
+            Set only when HTTPS is enforced; None otherwise.
     """
 
     gateway_name: str = Field(description="The name of the Gateway resource.")
@@ -203,6 +205,11 @@ class GatewayRouteProviderAppData:
     gateway_address: str | None = Field(
         description="The gateway LB address, used when no hostname is configured.",
         default=None,
+    )
+    hsts_max_age: int | None = Field(
+        description="The max-age for the Strict-Transport-Security header, set only when enforced.",
+        default=None,
+        ge=0,
     )
 
 
@@ -263,6 +270,7 @@ class GatewayRouteProvider(Object):
         gateway_model: str,
         https_mode: HttpsMode,
         gateway_address: str | None = None,
+        hsts_max_age: int | None = None,
     ) -> None:
         """Publish gateway information to requirers with valid data.
 
@@ -273,6 +281,8 @@ class GatewayRouteProvider(Object):
             gateway_model: The Juju model (K8s namespace) of the Gateway resource.
             https_mode: The HTTPS mode for the gateway.
             gateway_address: The gateway LB address, used when no hostname is configured.
+            hsts_max_age: The max-age for the Strict-Transport-Security header. Should
+                only be set when HTTPS is enforced; None otherwise.
 
         Raises:
             GatewayRouteInvalidRelationDataError: When publishing fails for any relation.
@@ -288,6 +298,7 @@ class GatewayRouteProvider(Object):
                     gateway_model=gateway_model,
                     https_mode=https_mode,
                     gateway_address=gateway_address,
+                    hsts_max_age=hsts_max_age,
                 )
                 relation.save(app_data, self.charm.app)
             except (ValidationError, RelationDataTypeError):

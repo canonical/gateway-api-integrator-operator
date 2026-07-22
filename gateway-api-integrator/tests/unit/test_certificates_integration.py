@@ -28,6 +28,7 @@ def test_tls_information_integration_missing() -> None:
             enforce_https=True,
             proxy_mode=ProxyMode.INGRESS,
             requires_ip_certificate=False,
+            hsts_max_age=31536000,
             hostnames={"example.com"},
         )
         with pytest.raises(TlsIntegrationMissingError):

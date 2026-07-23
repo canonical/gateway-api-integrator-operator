@@ -6,7 +6,11 @@ on:
     branches:
     - main
     paths:
-    - 'gateway-api-integrator/**'
+    - 'gateway-api-integrator/src/**'
+    - 'gateway-api-integrator/lib/**'
+    - 'gateway-api-integrator/charmcraft.yaml'
+    - 'gateway-api-integrator/pyproject.toml'
+    - 'gateway-api-integrator/uv.lock' 
 
 jobs:
   publish-to-edge:

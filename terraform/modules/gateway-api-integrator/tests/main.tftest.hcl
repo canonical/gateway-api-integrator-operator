@@ -12,7 +12,7 @@ run "basic_deploy" {
     model_uuid = run.setup_tests.model_uuid
     channel    = "1/stable"
     # renovate: depName="gateway-api-integrator"
-    revision = 165
+    revision = 169
   }
 
   assert {

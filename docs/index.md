@@ -20,7 +20,7 @@ This operator is built for the **Kubernetes** substrate.
   -
 * - **Get started**
   - {ref}`tutorial_getting_started` | {ref}`tutorial_using_gateway_route`
-* - **Integrations**
+* - **Design**
   - {ref}`Charm architecture <reference_charm_architecture>` | {ref}`Actions <reference_actions>`
 * - **Security**
   - {ref}`Overview <explanation_security_overview>`

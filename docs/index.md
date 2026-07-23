@@ -6,7 +6,7 @@ myst:
 
 # Gateway API integrator operator
 
-The `gateway-api-integrator` charm deploys and manages [Gateway API](https://gateway-api.sigs.k8s.io/) resources — a `Gateway` and `HTTPRoute` — to provide ingress for applications in a Kubernetes cluster. It requires a [Gateway API controller](https://gateway-api.sigs.k8s.io/implementations/) to already be deployed in the cluster, and supports both the `gateway-route` interface and the `ingress` interface, with TLS termination handled through the `tls-certificates` relation and DNS record management through the `dns-record` relation.
+The `gateway-api-integrator` charm deploys and manages [Gateway API](https://gateway-api.sigs.k8s.io/) resources (`Gateway` and `HTTPRoute`) to provide ingress for applications in a Kubernetes cluster. It requires a [Gateway API controller](https://gateway-api.sigs.k8s.io/implementations/) to already be deployed in the cluster, and supports both the `gateway-route` interface and the `ingress` interface, with TLS termination handled through the `tls-certificates` relation and DNS record management through the `dns-record` relation.
 
 This operator is built for the **Kubernetes** substrate.
 

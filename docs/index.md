@@ -30,7 +30,7 @@ This operator is built for the **Kubernetes** substrate.
 
 This documentation uses the [Diátaxis documentation structure](https://diataxis.fr/).
 
-* The {ref}`Tutorial <tutorial_index>` takes you step-by-step through a basic deployment of the Gateway API integrator charm, and through combining it with the `gateway-route` interface.
+* The {ref}`Tutorial <tutorial_index>` takes you step-by-step through a basic deployment of the Gateway API integrator charm. The advanced tutorial deploys and integrates the Gateway API charm with the Ingress Configurator charm using the `gateway-route` interface.
 * The {ref}`How-to guides <how_to_index>` cover practical tasks such as upgrading the charm and contributing to this documentation.
 * {ref}`Reference <reference_index>` provides technical details on the charm's architecture and supported actions.
 * {ref}`Explanation <explanation_index>` covers the charm's workflow and security posture in more depth.

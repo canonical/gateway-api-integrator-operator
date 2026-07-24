@@ -1,0 +1,41 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: Tag a Terraform module
+
+on:
+  workflow_call:
+    inputs:
+      module-directory:
+        description: Path to the module directory containing the VERSION file.
+        required: true
+        type: string
+      tag-prefix:
+        description: Tag prefix for the module, e.g. tf-gateway-api-integrator.
+        required: true
+        type: string
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag module if its VERSION is not yet released
+        env:
+          MODULE_DIR: ${{ inputs.module-directory }}
+          TAG_PREFIX: ${{ inputs.tag-prefix }}
+        run: |
+          set -euo pipefail
+          tag="${TAG_PREFIX}-$(tr -d '[:space:]' < "${MODULE_DIR}/VERSION")"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "${tag} already exists, skipping."
+          else
+            echo "Creating ${tag}"
+            git tag "${tag}"
+            git push origin "${tag}"
+          fi

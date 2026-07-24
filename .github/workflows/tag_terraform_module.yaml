@@ -31,10 +31,7 @@ jobs:
           TAG_PREFIX: ${{ inputs.tag-prefix }}
         run: |
           set -euo pipefail
-          tag="${TAG_PREFIX}-$(tr -d '[:space:]' < "${MODULE_DIR}/VERSION")"\
-          # checks if tag exist
-          # other options:
-          # get latest tag and verify that the version file did increment
+          tag="${TAG_PREFIX}-$(tr -d '[:space:]' < "${MODULE_DIR}/VERSION")"
           if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
             echo "${tag} already exists, skipping."
           else

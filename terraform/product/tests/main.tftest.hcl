@@ -13,7 +13,7 @@ run "basic_deploy" {
     gateway_api_integrator = {
       channel = "1/stable"
       # renovate: depName="gateway-api-integrator"
-      revision = 165
+      revision = 173
     }
     ingress_configurator = {
       channel = "latest/stable"

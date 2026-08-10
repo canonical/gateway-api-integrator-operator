@@ -22,7 +22,7 @@ The product consists of:
    ```hcl
     # Gateway API Integrator Product Module
     module "gateway" {
-      source = "git::https://github.com/canonical/gateway-api-integrator-operator//terraform/product?depth=1"
+      source = "git::https://github.com/canonical/gateway-api-integrator-operator//terraform/product?ref=tf-1.0.0&depth=1"
       model_uuid = local.juju_model_uuid
 
       gateway_api_integrator = {

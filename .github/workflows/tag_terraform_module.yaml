@@ -1,19 +1,24 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: Tag a Terraform module
+name: Tag the Terraform module
 
 on:
-  workflow_call:
-    inputs:
-      module-directory:
-        description: Path to the module directory containing the VERSION file.
-        required: true
-        type: string
-      tag-prefix:
-        description: Tag prefix for the module, e.g. tf-gateway-api-integrator.
-        required: true
-        type: string
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+
+# Serialize tag creation so concurrent pushes don't compute the same minor.
+concurrency:
+  group: tag-terraform-module
+  cancel-in-progress: false
+
+env:
+  TAG_PREFIX: tf
+  VERSION_FILE: terraform/VERSION
 
 jobs:
   tag:
@@ -25,17 +30,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Tag module if its VERSION is not yet released
-        env:
-          MODULE_DIR: ${{ inputs.module-directory }}
-          TAG_PREFIX: ${{ inputs.tag-prefix }}
+      - name: Compute and push the next Terraform module tag
         run: |
           set -euo pipefail
-          tag="${TAG_PREFIX}-$(tr -d '[:space:]' < "${MODULE_DIR}/VERSION")"
-          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
-            echo "${tag} already exists, skipping."
-          else
-            echo "Creating ${tag}"
-            git tag "${tag}"
-            git push origin "${tag}"
+
+          # The VERSION file holds only the major version. Minor is auto-bumped
+          # on every change under terraform/; patch is always 0.
+          major="$(grep -oE '^[0-9]+' "${VERSION_FILE}" | head -1)"
+          if [ -z "${major}" ]; then
+            echo "Could not read a major version from ${VERSION_FILE}" >&2
+            exit 1
           fi
+
+          # Highest existing minor for this major, if any.
+          latest_minor="$(
+            git tag --list "${TAG_PREFIX}-${major}.*" \
+              | sed -nE "s/^${TAG_PREFIX}-${major}\.([0-9]+)\.[0-9]+$/\1/p" \
+              | sort -n \
+              | tail -1
+          )"
+
+          if [ -z "${latest_minor}" ]; then
+            new_minor=0
+          else
+            new_minor=$((latest_minor + 1))
+          fi
+
+          tag="${TAG_PREFIX}-${major}.${new_minor}.0"
+          if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
+            echo "${tag} unexpectedly already exists; refusing to overwrite." >&2
+            exit 1
+          fi
+
+          echo "Creating ${tag}"
+          git tag "${tag}"
+          git push origin "${tag}"

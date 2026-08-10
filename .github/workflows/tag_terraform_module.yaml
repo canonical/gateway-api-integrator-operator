@@ -18,7 +18,7 @@ concurrency:
 
 env:
   TAG_PREFIX: tf
-  VERSION_FILE: terraform/VERSION
+  MAJOR_VERSION_FILE: terraform/MAJOR_VERSION
 
 jobs:
   tag:
@@ -34,11 +34,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The VERSION file holds only the major version. Minor is auto-bumped
+          # MAJOR_VERSION holds only the major version. Minor is auto-bumped
           # on every change under terraform/; patch is always 0.
-          major="$(grep -oE '^[0-9]+' "${VERSION_FILE}" | head -1)"
+          major="$(grep -oE '^[0-9]+' "${MAJOR_VERSION_FILE}" | head -1)"
           if [ -z "${major}" ]; then
-            echo "Could not read a major version from ${VERSION_FILE}" >&2
+            echo "Could not read a major version from ${MAJOR_VERSION_FILE}" >&2
             exit 1
           fi
 

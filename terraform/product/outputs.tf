@@ -3,7 +3,7 @@
 
 output "gateway_api_integrator_app_name" {
   description = "Name of the deployed gateway-api-integrator application."
-  value       = module.gateway_api_integrator.app_nam
+  value       = module.gateway_api_integrator.app_name
 }
 
 output "ingress_configurator_app_name" {

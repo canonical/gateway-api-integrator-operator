@@ -9,25 +9,25 @@ header:
       Copyright \d{4} Canonical Ltd.
       See LICENSE file for licensing details.
   paths:
-    - "**"
+    - '**'
   paths-ignore:
-    - ".github/**"
-    - "**/*.json"
-    - "**/*.md"
-    - "**/*.txt"
-    - ".jujuignore"
-    - ".gitignore"
-    - ".licenserc.yaml"
-    - "CODEOWNERS"
-    - "LICENSE"
-    - "trivy.yaml"
-    - "pyproject.toml"
-    - "zap_rules.tsv"
-    - "gateway-api-integrator/lib/charms/bind/v0/dns_record.py"
-    - "gateway-api-integrator/lib/charms/operator_libs_linux/v0/apt.py"
-    - "**/uv.lock"
-    - ".readthedocs.yaml"
-    - "docs/**"
-    - "terraform/MAJOR_VERSION"
-
+    - '.github/**'
+    - '**/*.json'
+    - '**/*.md'
+    - '**/*.txt'
+    - '.jujuignore'
+    - '.gitignore'
+    - '.licenserc.yaml'
+    - 'CODEOWNERS'
+    - 'LICENSE'
+    - 'trivy.yaml'
+    - 'pyproject.toml'
+    - 'zap_rules.tsv'
+    - 'gateway-api-integrator/lib/charms/bind/v0/dns_record.py'
+    - 'gateway-api-integrator/lib/charms/operator_libs_linux/v0/apt.py'
+    - '**/uv.lock'
+    - '.readthedocs.yaml'
+    - 'docs/**'
+    - 'terraform/MAJOR_VERSION'
+    
   comment: on-failure

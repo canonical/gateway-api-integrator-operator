@@ -13,5 +13,5 @@ on:
 
 jobs:
   tag:
-    uses: canonical/operator-workflows/.github/workflows/terraform_modules_release.yaml@main
+    uses: f-atwi/operator-workflows/.github/workflows/terraform_modules_release.yaml@main
     secrets: inherit

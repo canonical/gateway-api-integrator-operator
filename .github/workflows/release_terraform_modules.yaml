@@ -20,4 +20,3 @@ jobs:
       contents: write
     with:
       check-only: ${{ github.event_name == 'pull_request' }}
-    secrets: inherit

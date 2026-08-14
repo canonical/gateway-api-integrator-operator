@@ -16,6 +16,8 @@ on:
 jobs:
   terraform:
     uses: f-atwi/operator-workflows/.github/workflows/terraform_modules_release.yaml@main
+    permissions:
+      contents: write
     with:
       compliance-only: ${{ github.event_name == 'pull_request' }}
       terraform-directories: '["terraform/product", "terraform/modules/gateway-api-integrator"]'

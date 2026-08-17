@@ -15,7 +15,7 @@ on:
 
 jobs:
   terraform:
-    uses: canonical/operator-workflows/.github/workflows/terraform_modules_release.yaml@add-tf-release-checker
+    uses: canonical/operator-workflows/.github/workflows/terraform_modules_release.yaml@main
     permissions:
       contents: write
 

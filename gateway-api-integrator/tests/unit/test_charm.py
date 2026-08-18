@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import ops
 import pytest
 from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
-from httpx import Response
+from httpx2 import Response
 from lightkube.core.exceptions import ApiError
 from lightkube.models.meta_v1 import Status
 from ops import testing

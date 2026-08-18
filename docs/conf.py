@@ -1,6 +1,6 @@
 import datetime
 import os
-import yaml
+import textwrap
 version = f"{os.environ.get('READTHEDOCS_VERSION', 'local')}"
 
 # Configuration for the Sphinx documentation builder.
@@ -38,30 +38,8 @@ author = "Canonical Ltd."
 html_title = project + " documentation"
 
 
-# Copyright string; shown at the bottom of the page
-#
-# Now, the starter pack uses CC-BY-SA as the license
-# and the current year as the copyright year.
-#
-# TODO: If your docs need another license, specify it instead of 'CC-BY-SA'.
-#
-# TODO: If your documentation is a part of the code repository of your project,
-#       it inherits the code license instead; specify it instead of 'CC-BY-SA'.
-#
-# NOTE: For static works, it is common to provide the first publication year.
-#       Another option is to provide both the first year of publication
-#       and the current year, especially for docs that frequently change,
-#       e.g. 2022–2023 (note the en-dash).
-#
-#       A way to check a repo's creation date is to get a classic GitHub token
-#       with 'repo' permissions; see https://github.com/settings/tokens
-#       Next, use 'curl' and 'jq' to extract the date from the API's output:
-#
-#       curl -H 'Authorization: token <TOKEN>' \
-#         -H 'Accept: application/vnd.github.v3.raw' \
-#         https://api.github.com/repos/canonical/<REPO> | jq '.created_at'
-
-copyright = "%s CC-BY-SA, %s" % (datetime.date.today().year, author)
+# The year in the copyright statement
+copyright = f"{datetime.date.today().year}"
 
 
 # Documentation website URL
@@ -152,6 +130,13 @@ html_context = {
 
     # Required for feedback button
     'github_issues': 'enabled',
+    # Passes the top-level 'author' value to the theme
+    "author": author,
+    # Documentation license information
+    "license": {
+        "name": "CC-BY-SA 4.0",
+        "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+    },
 }
 
 html_extra_path = []
@@ -187,6 +172,9 @@ slug = 'juju/docs/gateway-api-integrator-charm'
 
 html_baseurl = f"https://canonical.com/juju/docs/gateway-api-integrator-charm/{version}/"
 
+if os.environ.get("READTHEDOCS"):
+    markdown_http_base = html_baseurl
+
 # sphinx-sitemap uses html_baseurl to generate the full URL for each page:
 
 sitemap_url_scheme = '{link}'
@@ -220,17 +208,27 @@ templates_path = ["_templates"]
 # Redirects #
 #############
 
-# To set up redirects: https://documatt.gitlab.io/sphinx-reredirects/usage.html
-# For example: 'explanation/old-name.html': '../how-to/prettify.html',
+# https://sphinxext-rediraffe.readthedocs.io/en/latest/
 
 # To set up redirects in the Read the Docs project dashboard:
 # https://docs.readthedocs.io/en/stable/guides/redirects.html
 
-# NOTE: If undefined, set to None, or empty,
-#       the sphinx_reredirects extension will be disabled.
+rediraffe_redirects = "redirects.txt"
 
-redirects = {}
+# Strips '/index.html' from destination URLs when building with 'dirhtml'
+rediraffe_dir_only = True
 
+
+############################
+# sphinx-llm configuration #
+############################
+
+llms_txt_description = textwrap.dedent(
+    """\
+    This is the documentation for the Gateway API integrator charm, a Juju
+    charm that integrates Kubernetes workloads with the Gateway API.
+    """
+)
 
 ###########################
 # Link checker exceptions #
@@ -284,13 +282,14 @@ extensions = [
     "canonical_sphinx",
     "notfound.extension",
     "sphinx_design",
-    "sphinx_reredirects",
+    "sphinx_rerediraffe",
     "sphinx_tabs.tabs",
     "sphinxcontrib.jquery",
     "sphinxext.opengraph",
     "sphinx_config_options",
     "sphinx_contributor_listing",
     "sphinx_filtered_toctree",
+    "sphinx_llm.txt",
     "sphinx_related_links",
     "sphinx_roles",
     "sphinx_terminal",
@@ -306,18 +305,21 @@ extensions = [
 
 exclude_patterns = [
     "doc-cheat-sheet*",
-    ".venv",
+    ".venv*",
+    "_dev",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'
 
-html_css_files = ['cookie-banner.css']
+html_css_files = [
+    "https://assets.ubuntu.com/v1/d86746ef-cookie_banner.css",
+]
 
 
 # Adds custom JavaScript files, located under 'html_static_path'
 
 html_js_files = [
-    'js/bundle.js',
+    "https://assets.ubuntu.com/v1/287a5e8f-bundle.js",
     "js/overwrite_links.js",
 ]
 
@@ -363,17 +365,6 @@ rst_prolog = """
 .. role:: vale-ignore
     :class: vale-ignore
 """
-
-# Workaround for https://github.com/canonical/canonical-sphinx/issues/34
-
-if "discourse_prefix" not in html_context and "discourse" in html_context:
-    html_context["discourse_prefix"] = f"{html_context['discourse']}/t/"
-
-# Workaround for substitutions.yaml
-
-if os.path.exists('./reuse/substitutions.yaml'):
-    with open('./reuse/substitutions.yaml', 'r') as fd:
-        myst_substitutions = yaml.safe_load(fd.read())
 
 # Add configuration for intersphinx mapping
 # Map only the Sphinx documentation sets that you need to link to from your docs set.

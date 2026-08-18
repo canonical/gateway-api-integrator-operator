@@ -11,7 +11,7 @@ run "basic_deploy" {
   variables {
     model_uuid = run.setup_tests.model_uuid
     channel    = "1/stable"
-    # renovate: depName="gateway-api-integrator"
+    # renovate: charm="gateway-api-integrator" track="1" risk="stable" base="24.04" arch="amd64"
     revision = 165
   }
 

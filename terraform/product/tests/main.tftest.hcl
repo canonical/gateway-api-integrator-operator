@@ -12,12 +12,12 @@ run "basic_deploy" {
     model_uuid = run.setup_tests.model_uuid
     gateway_api_integrator = {
       channel = "1/stable"
-      # renovate: depName="gateway-api-integrator"
+      # renovate: charm="gateway-api-integrator" track="1" risk="stable" base="24.04" arch="amd64"
       revision = 165
     }
     ingress_configurator = {
       channel = "latest/stable"
-      # renovate: depName="ingress-configurator"
+      # renovate: charm="ingress-configurator" track="latest" risk="stable" base="24.04" arch="amd64"
       revision = 95
     }
   }

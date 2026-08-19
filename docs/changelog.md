@@ -7,6 +7,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-08-18
+
+- Upgraded Sphinx Stack from version 1.5 to 2.0.
+- Migrated documentation tooling from `.sphinx/` to `_dev/` directory structure.
+- Moved Python virtual environment from `.sphinx/venv` to `.venv`.
+- Added `sphinx-llm` extension for LLM-friendly documentation output.
+- Added `sphinx-rerediraffe` for improved redirect handling.
+- Updated all documentation dependencies to latest pinned versions.
+
 ## 2026-08-10
 
 - Added the Terraform module versioning into a single auto-bumping `tf-X.Y.Z`.

@@ -12,6 +12,7 @@ The following guides cover key processes and common tasks for managing and using
 
 ```{toctree}
 :maxdepth: 1
+Select a gateway class <select-gateway-class.md>
 Upgrade <upgrade.md>
 Contribute <contribute>
 ```

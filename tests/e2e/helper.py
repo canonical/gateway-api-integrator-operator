@@ -5,7 +5,7 @@
 
 import ipaddress
 
-import httpx
+import httpx2
 import jubilant
 from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixed
 
@@ -13,7 +13,7 @@ from tenacity import retry, retry_if_exception_type, stop_after_delay, wait_fixe
 @retry(
     stop=stop_after_delay(300),
     wait=wait_fixed(5),
-    retry=retry_if_exception_type((AssertionError, httpx.RequestError)),
+    retry=retry_if_exception_type((AssertionError, httpx2.RequestError)),
     reraise=True,
 )
 def assert_gateway_route_response(
@@ -25,16 +25,16 @@ def assert_gateway_route_response(
     expected_status: int = 200,
     body_contains: str | None = None,
     allow_redirects: bool = True,
-) -> httpx.Response:
+) -> httpx2.Response:
     """Get a gateway route and assert expected response, retrying while dataplane converges."""
     url = f"{scheme}://{gateway_address}{path}"
     # When a hostname is given, send it as Host header and TLS SNI so that
     # hostname-scoped gateway listeners route the request correctly.
     extensions = {"sni_hostname": hostname.encode()} if hostname else {}
     headers = {"Host": hostname} if hostname else {}
-    with httpx.Client(verify=False) as client:
+    with httpx2.Client(verify=False) as client:
         response = client.send(
-            httpx.Request("GET", url, headers=headers, extensions=extensions),
+            httpx2.Request("GET", url, headers=headers, extensions=extensions),
             follow_redirects=allow_redirects,
         )
 

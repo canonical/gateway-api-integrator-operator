@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 import ops
 import pytest
-from httpx import Response
+from httpx2 import Response
 from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.models.meta_v1 import ObjectMeta, Status

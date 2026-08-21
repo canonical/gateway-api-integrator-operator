@@ -40,8 +40,16 @@ it goes into a blocked state whose status message lists the classes available:
 ```{terminal}
 :scroll:
 juju status
-App                     Version  Status   Scale  Charm                   Channel   Rev  Address         Exposed  Message
-gateway-api-integrator           blocked      1  gateway-api-integrator  1/stable  xxx  10.152.183.178  no       Gateway class must be one of: [cilium,ck-gateway]
+
+Model  Controller     Cloud/Region  Version  SLA          Timestamp
+test   concierge-k8s  k8s           3.6.27   unsupported  ...
+
+App                     Version  Status   Scale  Charm                   Channel  Rev  Address         Exposed  Message
+gateway-api-integrator           blocked      1  gateway-api-integrator  1/static xxx  10.152.183.178  no       Gateway class must be one of: [cilium,ck-gateway]
+
+Unit                       Workload  Agent  Address    Ports  Message
+gateway-api-integrator/0*  blocked   idle   10.1.0.44         Gateway class must be one of: [cilium,ck-gateway]
+
 ```
 
 ## Set the gateway class

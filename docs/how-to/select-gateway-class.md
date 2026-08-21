@@ -64,6 +64,7 @@ The blocked status message shows the valid options, for example:
 
 ```{terminal}
 :output-only:
+:scroll:
 App                     Version  Status   Scale  Charm                   Channel   Rev  Address         Exposed  Message
 gateway-api-integrator           blocked      1  gateway-api-integrator  1/stable  165  10.152.183.178  no       Gateway class must be one of: [cilium,ck-gateway]
 ```

@@ -37,7 +37,7 @@ lint = [
   "types-pyyaml",
   "types-requests",
 ]
-unit = ["coverage[toml]", "ops[testing]", "pytest"]
+unit = ["coverage[toml]", "httpx", "ops[testing]", "pytest"]
 coverage-report = ["coverage[toml]", "pytest"]
 static = ["bandit[toml]"]
 integration = [

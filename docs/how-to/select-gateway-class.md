@@ -11,7 +11,7 @@ myst:
 The `gateway-class` configuration option tells the `gateway-api-integrator` charm which
 [GatewayClass](https://gateway-api.sigs.k8s.io/reference/api-types/gatewayclass/)
 to use when creating the `Gateway` resource.
-A `GatewayClass` is associated with a gateway controller (for example "Cilium")
+A `GatewayClass` is associated with a gateway controller
 running on the Kubernetes cluster, so the value you choose must match a class that already exists on
 the cluster.
 

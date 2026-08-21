@@ -295,7 +295,7 @@ def test_deploy_missing_tls() -> None:
     state_out = ctx.run(ctx.on.config_changed(), state_in)
 
     assert state_out.unit_status == ops.BlockedStatus(
-        "Certificates relation is needed if enforce-https is enabled."
+        "Certificates relation is required when enforce-https is enabled."
     )
 
 

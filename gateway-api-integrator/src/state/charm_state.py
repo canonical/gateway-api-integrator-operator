@@ -124,28 +124,7 @@ class CharmState:
         Returns:
             CharmState: Instance of the charm state component.
         """
-        enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
-        hsts_max_age = typing.cast(int, charm.config.get("hsts-max-age"))
-        has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
-        if enforce_https and not has_tls:
-            raise InvalidCharmConfigError(
-                "Certificates relation is needed if enforce-https is enabled."
-            )
-
-        proxy_mode = cls._validate_state(
-            ingress_provider.relations, gateway_route_provider.relations
-        )
         gateway_class_name = typing.cast(str, charm.config.get("gateway-class"))
-        config_external_hostname = cls.get_ingress_hostname(charm)
-
-        # external-hostname is an ingress-mode-only config option. In gateway-route
-        # mode hostnames come from the relation data, so setting it is a misconfiguration.
-        if proxy_mode == ProxyMode.GATEWAY_ROUTE and config_external_hostname:
-            raise InvalidCharmConfigError(
-                "external-hostname must only be set when related via ingress, "
-                "not when integrating via gateway-route."
-            )
-
         if gateway_class_name not in available_gateway_classes:
             available_gateway_classes_str = ",".join(available_gateway_classes)
             logger.error(
@@ -157,9 +136,30 @@ class CharmState:
                 f"Gateway class must be one of: [{available_gateway_classes_str}]"
             )
 
+        proxy_mode = cls._validate_state(
+            ingress_provider.relations, gateway_route_provider.relations
+        )
+
+        config_external_hostname = cls.get_ingress_hostname(charm)
+
+        # external-hostname is an ingress-mode-only config option. In gateway-route
+        # mode hostnames come from the relation data, so setting it is a misconfiguration.
+        if proxy_mode == ProxyMode.GATEWAY_ROUTE and config_external_hostname:
+            raise InvalidCharmConfigError(
+                "external-hostname must only be set when related via ingress, "
+                "not when integrating via gateway-route."
+            )
+
+        enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
+        has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
+        if enforce_https and not has_tls:
+            raise InvalidCharmConfigError(
+                "Certificates relation is required when enforce-https is enabled."
+            )
+
         if proxy_mode == ProxyMode.INGRESS and has_tls and not config_external_hostname:
             raise HostnameMissingError(
-                "external-hostname must be set in when related to ingress and certificates"
+                "external-hostname must be set when related to ingress and certificates"
             )
 
         requires_ip_certificate = cls._requires_ip_certificate(
@@ -177,7 +177,7 @@ class CharmState:
             return CharmState(
                 gateway_class_name=gateway_class_name,
                 enforce_https=enforce_https,
-                hsts_max_age=hsts_max_age,
+                hsts_max_age=typing.cast(int, charm.config.get("hsts-max-age")),
                 proxy_mode=proxy_mode,
                 requires_ip_certificate=requires_ip_certificate,
                 hostnames=hostnames,

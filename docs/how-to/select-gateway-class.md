@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Learn how to set the gateway-class configuration for the gateway-api-integrator charm"
+---
+
 (how_to_select_gateway_class)=
 
 # How to select a gateway class
@@ -36,7 +42,7 @@ Configure the charm with one of the available class names:
 juju config gateway-api-integrator gateway-class=<gateway-class-name>
 ```
 
-For example, to use the `ck-gateway` class shipped with Canonical Kubernetes:
+For example, to use the `ck-gateway` class shipped with Canonical Kubernetes, run:
 
 ```bash
 juju config gateway-api-integrator gateway-class=ck-gateway

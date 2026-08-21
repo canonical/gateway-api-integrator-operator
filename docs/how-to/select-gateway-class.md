@@ -15,7 +15,7 @@ A `GatewayClass` is associated with a gateway controller (for example "Cilium")
 running on the Kubernetes cluster, so the value you choose must match a class that already exists on
 the cluster.
 
-```{note}
+```{caution}
 The `gateway-api-integrator` charm is currently tested against the `cilium` and `ck-gateway`
 gateway classes. Other gateway classes may work but are not verified.
 ```

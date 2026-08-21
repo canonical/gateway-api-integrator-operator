@@ -151,13 +151,12 @@ class CharmState:
             )
 
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
-        hsts_max_age = typing.cast(int, charm.config.get("hsts-max-age"))
         has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
         if enforce_https and not has_tls:
             raise InvalidCharmConfigError(
                 "Certificates relation is required when enforce-https is enabled."
             )
- 
+
         if proxy_mode == ProxyMode.INGRESS and has_tls and not config_external_hostname:
             raise HostnameMissingError(
                 "external-hostname must be set when related to ingress and certificates"
@@ -178,7 +177,7 @@ class CharmState:
             return CharmState(
                 gateway_class_name=gateway_class_name,
                 enforce_https=enforce_https,
-                hsts_max_age=hsts_max_age,
+                hsts_max_age=typing.cast(int, charm.config.get("hsts-max-age")),
                 proxy_mode=proxy_mode,
                 requires_ip_certificate=requires_ip_certificate,
                 hostnames=hostnames,

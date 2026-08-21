@@ -8,7 +8,7 @@ from typing import Optional
 from unittest.mock import MagicMock
 
 import pytest
-from httpx import Response
+from httpx2 import Response
 from lightkube.core.exceptions import ApiError, ConfigError
 from ops import testing
 
@@ -80,7 +80,7 @@ def test_client_api_error_4xx(monkeypatch: pytest.MonkeyPatch):
     act: when agent reconciliation triggers.
     assert: Exception is re-raised.
     """
-    get_client_mock = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
+    get_client_mock = MagicMock(side_effect=ApiError(response=Response(status_code=400, json={})))
     monkeypatch.setattr("charm.get_client", get_client_mock)
     ctx = testing.Context(GatewayAPICharm)
     state_in = testing.State(leader=True, config={"enforce-https": False})

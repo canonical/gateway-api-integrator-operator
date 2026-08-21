@@ -20,6 +20,8 @@ This operator is built for the **Kubernetes** substrate.
   -
 * - **Get started**
   - {ref}`tutorial_getting_started` | {ref}`tutorial_using_gateway_route`
+* - **Deployment**
+  - {ref}`how_to_select_gateway_class`
 * - **Design**
   - {ref}`Charm architecture <reference_charm_architecture>` | {ref}`Charm workflow <explanation_workflow>`
 * - **Security**

@@ -60,7 +60,7 @@ This tutorial will walk you through deploying the gateway-api-integrator and ing
     juju integrate gateway-api-integrator:gateway-route ingress-configurator:gateway-route
     ```
 
-## Deploy and integrate the flask-k8s charn
+## Deploy and integrate the flask-k8s charm
 
 - Deploy and integrate the charm
 

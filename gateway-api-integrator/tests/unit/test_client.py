@@ -82,7 +82,13 @@ def test_client_api_error_4xx(
     act: when agent reconciliation triggers.
     assert: Exception is re-raised.
     """
-    get_client_mock = MagicMock(side_effect=ApiError(response=MagicMock(spec=Response)))
+    response_mock = MagicMock(spec=Response)
+    response_mock.json.return_value = {
+        "apiVersion": "v1",
+        "kind": "Status",
+        "message": "Not found",
+    }
+    get_client_mock = MagicMock(side_effect=ApiError(response=response_mock))
     monkeypatch.setattr(
         "charm.get_client",
         get_client_mock,

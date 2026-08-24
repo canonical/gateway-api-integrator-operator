@@ -44,9 +44,9 @@ juju config gateway-api-integrator external-hostname=<hostname>
 ```
 
 ```{note}
-Only set `external-hostname` for the direct `ingress` relation. When routing through the
-`gateway-route` relation (for example with the ingress-configurator charm), hostnames come from
-the relation data and `external-hostname` must be left unset.
+Only set `external-hostname` when using the `ingress` relation directly.
+When routing through the `gateway-route` relation (with the `ingress-configurator` charm),
+hostnames come from the relation data and `external-hostname` must be left unset.
 ```
 
 ## Turn off HTTPS enforcement

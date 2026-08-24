@@ -9,9 +9,9 @@ variable "app_name" {
 }
 
 variable "base" {
-  description = "The operating system on which to deploy."
+  description = "The operating system on which to deploy. null lets the provider use the charm's default."
   type        = string
-  default     = "ubuntu@24.04"
+  default     = null
 }
 
 variable "channel" {
@@ -30,7 +30,7 @@ variable "config" {
 variable "constraints" {
   description = "Juju constraints to apply for this application."
   type        = string
-  default     = "arch=amd64"
+  default     = null
 }
 
 variable "model_uuid" {

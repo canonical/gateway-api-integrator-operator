@@ -27,10 +27,10 @@ module "gateway_api_integrator" {
 | Name        | Type        | Default                  | Nullable | Description |
 | ----------- | ----------- | ------------------------ | -------- | ----------- |
 | app_name    | string      | "gateway-api-integrator" | no       | Name of the application in the Juju model. |
-| base        | string      | "ubuntu@24.04"           | yes      | The operating system on which to deploy. |
+| base        | string      | null                     | yes      | The operating system on which to deploy. null lets the provider use the charm's default. |
 | channel     | string      | "1/stable"               | no       | The channel to use when deploying a charm. |
 | config      | map(string) | {}                       | yes      | Application config. |
-| constraints | string      | "arch=amd64"             | yes      | Juju constraints to apply for this application. |
+| constraints | string      | null                     | yes      | Juju constraints to apply for this application. |
 | model_uuid  | string      | n/a (required)           | no       | UUID of the Juju model where the application will be deployed. |
 | revision    | number      | null                     | yes      | Revision number of the charm. null deploys the latest on the channel. |
 | trust       | bool        | true                     | yes      | Deploy with --trust (required for Kubernetes). |

@@ -116,10 +116,10 @@ The product consists of:
 
 - `gateway_api_integrator_app_name`: Name of the deployed gateway-api-integrator application
 - `ingress_configurator_app_name`: Name of the deployed ingress-configurator application
-- `gateway_api_integrator_requires`: Required relation endpoints for gateway-api-integrator
-- `gateway_api_integrator_provides`: Provided relation endpoints for gateway-api-integrator
-- `ingress_configurator_requires`: Required relation endpoints for ingress-configurator
-- `ingress_configurator_provides`: Provided relation endpoints for ingress-configurator
+- `metadata`: Deployment metadata object (`{ version }`)
+- `models`: Map of model key to its `model_uuid` and deployed `components`
+- `provides`: Map of provided integration endpoints (`kind`, `name`, `endpoint`, `controller`)
+- `requires`: Map of required integration endpoints (`kind`, `name`, `endpoint`, `controller`)
 
 ## Relations
 

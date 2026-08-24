@@ -9,6 +9,10 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-08-20
 
+- Added `How to configure HTTPS enforcement` to how-to guides.
+
+## 2026-08-20
+
 - Added `How to select a gateway class` to how-to guides.
 
 ## 2026-08-18

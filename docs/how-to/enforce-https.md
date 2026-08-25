@@ -50,6 +50,14 @@ hostnames come from the relation data and `external-hostname` must be left unset
 
 ## Turn off HTTPS enforcement
 
+```{warning}
+Turning off HTTPS enforcement lets clients reach your services over unencrypted HTTP,
+which exposes traffic to interception and downgrade attacks.
+
+Only disable enforcement when plain HTTP is acceptable for your deployment
+(for example, when TLS is terminated by another component in front of the gateway).
+```
+
 Set the option to `false` to stop redirecting HTTP traffic to HTTPS:
 
 ```bash
@@ -81,12 +89,4 @@ gateway-api-integrator           active      1  gateway-api-integrator  1/stable
 
 Unit                       Workload  Agent  Address    Ports  Message
 gateway-api-integrator/0*  active    idle   10.1.0.37         Gateway addresses: 10.76.109.0 (enforce-https is set to false)
-```
-
-```{warning}
-Turning off HTTPS enforcement lets clients reach your services over unencrypted HTTP,
-which exposes traffic to interception and downgrade attacks.
-
-Only disable enforcement when plain HTTP is acceptable for your deployment
-(for example, when TLS is terminated by another component in front of the gateway).
 ```

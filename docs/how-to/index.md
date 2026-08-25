@@ -11,6 +11,7 @@ myst:
 Task-oriented procedures for configuring, securing, and maintaining the `gateway-api-integrator` charm.
 
 ## Traffic and TLS configuration
+
 <!--
 Themes: gateway class selection, HTTPS enforcement, HTTP-to-HTTPS redirect, HSTS headers, transport security
 Justification: shared configuration surface — how the gateway binds to a controller and how inbound traffic is routed and secured
@@ -27,6 +28,7 @@ Configure HSTS <configure-hsts.md>
 ```
 
 ## Maintenance and development
+
 <!--
 Themes: charm upgrade, documentation contribution
 Justification: single-page topics without a shared peer domain — merged into fallback

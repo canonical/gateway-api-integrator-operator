@@ -14,9 +14,10 @@ This type of attack refers to an attacker intercepting traffic between a client 
 
 ### Good practices
 
-By default, the charm enforces HTTPS by redirecting HTTP traffic to HTTPS and injecting a `Strict-Transport-Security` (HSTS) header. Provide a TLS certificate through the `certificates` integration and keep HTTPS enforcement enabled. See {ref}`how_to_enforce_https` for details on configuring this behaviour.
+By default, the charm enforces HTTPS by redirecting HTTP traffic to HTTPS and injecting a `Strict-Transport-Security` (HSTS) header. Provide a TLS certificate through the `certificates` integration and keep HTTPS enforcement enabled. See {ref}`how_to_enforce_https` for details on configuring this behaviour. The HSTS header's `max-age` is configurable; see {ref}`how_to_configure_hsts`.
 
 ### Summary
 
 - Use TLS certificates to encrypt traffic.
 - Keep HTTPS enforcement enabled.
+- Keep the HSTS `max-age` at a suitable value so browsers continue to enforce HTTPS.

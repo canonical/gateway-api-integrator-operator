@@ -38,7 +38,8 @@ juju config gateway-api-integrator hsts-max-age=31536000
 
 The charm then injects the following header on HTTPS responses:
 
-```
+```{terminal}
+:output-only:
 Strict-Transport-Security: max-age=31536000
 ```
 
@@ -52,7 +53,8 @@ juju config gateway-api-integrator hsts-max-age=0
 
 The charm still injects the header, but with a zero `max-age`:
 
-```
+```{terminal}
+:output-only:
 Strict-Transport-Security: max-age=0
 ```
 

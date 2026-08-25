@@ -66,14 +66,15 @@ juju config gateway-api-integrator enforce-https=false
 
 With enforcement turned off:
 
-- Plain HTTP traffic on port 80 is served and is **not** redirected to HTTPS.
-- If no `certificates` relation is present,
-  traffic is served over unencrypted HTTP only (the HTTPS listener is not created).
-- If a `certificates` relation is present, both HTTP and HTTPS traffic is served,
-  but HTTP is not redirected to HTTPS.
+- HTTP traffic on port 80 is served and is **not** redirected to HTTPS.
 - The `Strict-Transport-Security` (HSTS) header is no longer injected.
-- With no `certificates` relation,
-  the `external-hostname` configuration option is optional for the `ingress` relation.
+
+Whether HTTPS is still served then depends on the `certificates` relation:
+
+- **Without a `certificates` relation:** traffic is served over unencrypted HTTP only
+  (the HTTPS listener is not created), and `external-hostname` is optional for the `ingress` relation.
+- **With a `certificates` relation:** both HTTP and HTTPS traffic is served,
+  but HTTP is not redirected to HTTPS.
 
 The charm reflects the disabled state in its status message, for example:
 

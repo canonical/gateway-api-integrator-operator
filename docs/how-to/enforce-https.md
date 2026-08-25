@@ -35,7 +35,7 @@ Integrate the charm with a TLS certificate provider:
 juju integrate gateway-api-integrator <certificate-provider-charm>
 ```
 
-When applications use the direct `ingress` relation, you must also set the `external-hostname`
+When backend applications use the direct `ingress` relation, you must also set the `external-hostname`
 configuration option:
 
 ```bash

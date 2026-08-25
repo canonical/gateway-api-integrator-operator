@@ -14,6 +14,7 @@ The following guides cover key processes and common tasks for managing and using
 :maxdepth: 1
 Select a gateway class <select-gateway-class.md>
 Configure HTTPS enforcement <enforce-https.md>
+Configure HSTS <configure-hsts.md>
 Upgrade <upgrade.md>
 Contribute <contribute>
 ```

@@ -18,7 +18,7 @@ When HTTPS is enforced, the charm:
 - Requires an integration with a TLS certificates provider through the `certificates` relation.
 - Serves an HTTP listener that issues a `301` redirect to HTTPS, alongside the HTTPS listener.
 - Injects a `Strict-Transport-Security` (HSTS) header on HTTPS responses,
-controlled by the `hsts-max-age` configuration option.
+controlled by the `hsts-max-age` configuration option (see {ref}`how_to_configure_hsts`).
 
 ## Turn on HTTPS enforcement
 

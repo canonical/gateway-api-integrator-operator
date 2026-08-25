@@ -15,5 +15,5 @@ resource "juju_application" "gateway_api_integrator" {
   config      = var.config
   constraints = var.constraints
   units       = var.units
-  trust       = var.trust
+  trust       = true
 }

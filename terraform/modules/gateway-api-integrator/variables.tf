@@ -45,12 +45,6 @@ variable "revision" {
   default     = null
 }
 
-variable "trust" {
-  description = "Deploy with --trust (required for Kubernetes)."
-  type        = bool
-  default     = true
-}
-
 variable "units" {
   description = "Number of units to deploy."
   type        = number

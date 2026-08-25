@@ -33,7 +33,6 @@ module "gateway_api_integrator" {
 | constraints | string      | null                     | yes      | Juju constraints to apply for this application. |
 | model_uuid  | string      | n/a (required)           | no       | UUID of the Juju model where the application will be deployed. |
 | revision    | number      | null                     | yes      | Revision number of the charm. null deploys the latest on the channel. |
-| trust       | bool        | true                     | yes      | Deploy with --trust (required for Kubernetes). |
 | units       | number      | 1                        | yes      | Number of units to deploy. |
 
 ## Outputs

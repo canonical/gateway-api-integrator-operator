@@ -9,6 +9,10 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-08-25
 
+- Added `How to configure HSTS` to how-to guides.
+
+## 2026-08-24
+
 - Added `How to configure HTTPS enforcement` to how-to guides.
 - Align the terraform modules with CC008 creating a version "2" of the modules.
 

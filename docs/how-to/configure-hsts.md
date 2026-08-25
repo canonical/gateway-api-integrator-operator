@@ -13,6 +13,11 @@ The `hsts-max-age` configuration option controls the `max-age` directive of the
 `Strict-Transport-Security` header that the `gateway-api-integrator` charm injects on HTTPS
 responses. The value is an integer number of seconds and defaults to `31536000` (one year).
 
+```{warning}
+`hsts-max-age` accepts only non-negative integers. A negative value is rejected and leaves the
+charm in a blocked state until a valid value is provided.
+```
+
 The HSTS header tells browsers to contact the site over HTTPS only for the duration of `max-age`,
 which helps prevent protocol downgrade and cookie hijacking attacks.
 
@@ -60,8 +65,3 @@ Strict-Transport-Security: max-age=0
 
 This configuration is useful when you are migrating a hostname away from HTTPS-only and need clients to stop
 enforcing HTTPS.
-
-```{note}
-`hsts-max-age` accepts only non-negative integers. A negative value is rejected and leaves the
-charm in a blocked state until a valid value is provided.
-```

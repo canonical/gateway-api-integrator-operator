@@ -8,21 +8,61 @@ output "gateway_api_integrator_app_name" {
 
 output "ingress_configurator_app_name" {
   description = "Name of the deployed ingress-configurator application."
-  value       = module.ingress_configurator.app_name
+  value       = module.ingress_configurator.application.name
 }
 
-output "gateway_api_integrator_requires" {
-  description = "List of required relation endpoints for gateway-api-integrator."
-  value       = module.gateway_api_integrator.requires
+output "metadata" {
+  description = "Deployment metadata."
+  value = {
+    version = var.metadata_version
+  }
 }
 
-output "gateway_api_integrator_provides" {
-  description = "List of provided relation endpoints for gateway-api-integrator."
-  value       = module.gateway_api_integrator.provides
+output "models" {
+  description = "Map of model key to its model_uuid and deployed components."
+  value = {
+    gateway_api_integrator = {
+      model_uuid = var.model_uuid
+      components = {
+        gateway_api_integrator = module.gateway_api_integrator.application
+        ingress_configurator   = module.ingress_configurator.application
+      }
+    }
+  }
 }
 
+output "provides" {
+  description = "Map of provided endpoints."
+  value = {
+    gateway = {
+      kind       = "endpoint"
+      name       = module.gateway_api_integrator.app_name
+      endpoint   = "gateway"
+      controller = null
+    }
+    ingress = {
+      kind       = "endpoint"
+      name       = module.ingress_configurator.application.name
+      endpoint   = "ingress"
+      controller = null
+    }
+  }
+}
 
-output "ingress_configurator_endpoints" {
-  description = "Relation endpoints provided and required by ingress-configurator."
-  value       = module.ingress_configurator.endpoints
+output "requires" {
+  description = "Map of required endpoints."
+  value = {
+    certificates = {
+      kind       = "endpoint"
+      name       = module.gateway_api_integrator.app_name
+      endpoint   = "certificates"
+      controller = null
+    }
+    dns_record = {
+      kind       = "endpoint"
+      name       = module.gateway_api_integrator.app_name
+      endpoint   = "dns-record"
+      controller = null
+    }
+  }
 }

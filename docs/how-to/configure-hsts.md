@@ -14,7 +14,7 @@ The `hsts-max-age` configuration option controls the `max-age` directive of the
 responses. The value is an integer number of seconds and defaults to `31536000` (one year).
 
 The HSTS header tells browsers to contact the site over HTTPS only for the duration of `max-age`,
-which helps prevent protocol-downgrade and cookie-hijacking attacks.
+which helps prevent protocol downgrade and cookie hijacking attacks.
 
 ```{important}
 The `Strict-Transport-Security` header is only injected when HTTPS is enforced
@@ -22,7 +22,7 @@ The `Strict-Transport-Security` header is only injected when HTTPS is enforced
 value has no effect. See {ref}`how_to_enforce_https`.
 ```
 
-## Set the HSTS max-age
+## Set the HSTS max age
 
 Configure the option with the number of seconds browsers should remember to use HTTPS:
 
@@ -30,7 +30,7 @@ Configure the option with the number of seconds browsers should remember to use 
 juju config gateway-api-integrator hsts-max-age=<seconds>
 ```
 
-For example, to set a max-age of one year (the default):
+For example, to set a `max-age` of one year (the default):
 
 ```bash
 juju config gateway-api-integrator hsts-max-age=31536000
@@ -50,13 +50,13 @@ Set `hsts-max-age` to `0` to instruct browsers to clear any cached HSTS policy:
 juju config gateway-api-integrator hsts-max-age=0
 ```
 
-The charm still injects the header, but with a zero max-age:
+The charm still injects the header, but with a zero `max-age`:
 
 ```
 Strict-Transport-Security: max-age=0
 ```
 
-This is useful when you are migrating a hostname away from HTTPS-only and need clients to stop
+This configuration is useful when you are migrating a hostname away from HTTPS-only and need clients to stop
 enforcing HTTPS.
 
 ```{note}

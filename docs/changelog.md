@@ -9,7 +9,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-08-25
 
-- Align the terrafrom modules with CC008 creating a version "2" of the modules.
+- Align the terrafomm modules with CC008 creating a version "2" of the modules.
 
 ## 2026-08-20
 

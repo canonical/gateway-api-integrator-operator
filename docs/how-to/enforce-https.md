@@ -29,8 +29,7 @@ If enforcement was previously turned off, set the option back to `true`:
 juju config gateway-api-integrator enforce-https=true
 ```
 
-HTTPS enforcement requires a `certificates` relation with a TLS provider;
-without one the charm stays in a blocked state:
+Integrate the charm with a TLS certificate provider:
 
 ```bash
 juju integrate gateway-api-integrator <certificate-provider-charm>
@@ -60,12 +59,13 @@ juju config gateway-api-integrator enforce-https=false
 With enforcement turned off:
 
 - Plain HTTP traffic on port 80 is served and is **not** redirected to HTTPS.
-- If no `certificates` relation is present, the HTTPS listener is not created and traffic is
-  served over unencrypted HTTP only.
-- If a `certificates` relation is present, both HTTP and HTTPS listeners are served, but HTTP is
-  still not redirected to HTTPS.
+- If no `certificates` relation is present,
+  traffic is served over unencrypted HTTP only (the HTTPS listener is not created).
+- If a `certificates` relation is present, both HTTP and HTTPS traffic is served,
+  but HTTP is not redirected to HTTPS.
 - The `Strict-Transport-Security` (HSTS) header is no longer injected.
-- With no `certificates` relation, the `external-h ostname` configuration option is optional.
+- With no `certificates` relation,
+  the `external-hostname` configuration option is optional for the `ingress` relation.
 
 The charm reflects the disabled state in its status message, for example:
 
@@ -87,6 +87,6 @@ gateway-api-integrator/0*  active    idle   10.1.0.37         Gateway addresses:
 Turning off HTTPS enforcement lets clients reach your services over unencrypted HTTP,
 which exposes traffic to interception and downgrade attacks.
 
-Only disable enforcement when plain HTTP is acceptable for your deployment,
-for example when TLS is terminated by another component in front of the gateway.
+Only disable enforcement when plain HTTP is acceptable for your deployment
+(for example, when TLS is terminated by another component in front of the gateway).
 ```

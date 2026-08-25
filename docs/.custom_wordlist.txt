@@ -1,5 +1,6 @@
-HTTPRoute
+boolean
 configurator
-workloadless
-hostnames
 databag
+hostnames
+HTTPRoute
+workloadless

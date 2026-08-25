@@ -26,7 +26,7 @@ Configure HTTPS enforcement <enforce-https.md>
 Configure HSTS <configure-hsts.md>
 ```
 
-## Advanced operations
+## Maintenance and development
 <!--
 Themes: charm upgrade, documentation contribution
 Justification: single-page topics without a shared peer domain — merged into fallback

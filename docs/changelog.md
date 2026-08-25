@@ -7,9 +7,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
-## 2026-08-24
+## 2026-08-25
 
 - Added `How to configure HTTPS enforcement` to how-to guides.
+- Align the terraform modules with CC008 creating a version "2" of the modules.
 
 ## 2026-08-20
 

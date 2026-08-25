@@ -14,7 +14,7 @@ module "gateway_api_integrator" {
 }
 
 module "ingress_configurator" {
-  source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?ref=rev95&depth=1"
+  source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?ref=tf-2.0.0&depth=1"
 
   app_name   = var.ingress_configurator.app_name
   channel    = var.ingress_configurator.channel
@@ -36,7 +36,7 @@ resource "juju_integration" "gateway_api_integrator_ingress_configurator" {
   }
 
   application {
-    name     = module.ingress_configurator.app_name
+    name     = module.ingress_configurator.application.name
     endpoint = "gateway-route"
   }
 }

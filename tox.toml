@@ -33,6 +33,18 @@ commands = [
 ]
 dependency_groups = [ "integration" ]
 
+[env.terraform-compliance]
+description = "Run CC008 Terraform module compliance unit tests"
+commands = [
+  [
+    "pytest",
+    "-v",
+    "terraform/compliance/tests",
+    { replace = "posargs", extend = "true" },
+  ],
+]
+dependency_groups = [ "dev", "terraform" ]
+
 
 [vars]
 src_path = "{toxinidir}/src/"

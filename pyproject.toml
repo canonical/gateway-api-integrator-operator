@@ -39,6 +39,7 @@ ignore = ["W503", "E501", "D107"]
 per-file-ignores = [
     "tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
     "gateway-api-integrator/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
+    "terraform/compliance/tests/*:D100,D101,D102,D103,D104,D205,D212,D415",
 ]
 docstring-convention = "google"
 
@@ -65,6 +66,7 @@ log_cli_level = "INFO"
 pythonpath = [
     "gateway-api-integrator/lib",
     "gateway-api-integrator/src",
+    "terraform/compliance",
 ]
 
 # Linting tools configuration
@@ -87,6 +89,12 @@ extend-ignore = [
 ignore = ["E501", "D107"]
 extend-exclude = ["__pycache__", "*.egg_info"]
 per-file-ignores = { "tests/*, gateway-api-integrator/tests/*" = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+], "terraform/compliance/tests/*" = [
     "D100",
     "D101",
     "D102",
@@ -126,4 +134,7 @@ integration = [
     "pytest-asyncio",
     "pytest-operator",
     "tenacity",
+]
+terraform = [
+    "python-hcl2>=4.3.5",
 ]

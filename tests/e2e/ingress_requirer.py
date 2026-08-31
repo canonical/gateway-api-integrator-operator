@@ -43,8 +43,10 @@ class AnyCharm(AnyCharmBase):
         # integration tests can verify the gateway proxy sets them.
         headers_conf = pathlib.Path("/etc/apache2/conf-enabled/echo-forwarded.conf")
         headers_conf.write_text(
-            "Header always set X-Echo-Forwarded-For \"%{X-Forwarded-For}i\"\n"
-            "Header always set X-Echo-Forwarded-Proto \"%{X-Forwarded-Proto}i\"\n"
+            'SetEnvIf X-Forwarded-For "^(.*)$" FORWARDED_FOR=$1\n'
+            'SetEnvIf X-Forwarded-Proto "^(.*)$" FORWARDED_PROTO=$1\n'
+            'Header always set X-Echo-Forwarded-For "%{FORWARDED_FOR}e"\n'
+            'Header always set X-Echo-Forwarded-Proto "%{FORWARDED_PROTO}e"\n'
         )
         subprocess.run(["a2enmod", "headers"], check=True)
 

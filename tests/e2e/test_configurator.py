@@ -13,6 +13,28 @@ from .helper import (
 )
 
 
+def _assert_forwarded_headers(response, *, expected_proto: str) -> None:
+    """Assert that the gateway proxy injected X-Forwarded-For and X-Forwarded-Proto.
+
+    The backend Apache echoes the received request headers back as
+    ``X-Echo-Forwarded-For`` and ``X-Echo-Forwarded-Proto`` response headers.
+
+    Args:
+        response: The httpx response to inspect.
+        expected_proto: The expected X-Forwarded-Proto value ("http" or "https").
+    """
+    echo_xff = response.headers.get("x-echo-forwarded-for", "")
+    assert echo_xff and echo_xff != "(null)", (
+        f"Expected X-Forwarded-For to be set by the gateway proxy, "
+        f"got X-Echo-Forwarded-For={echo_xff!r}"
+    )
+    echo_xfp = response.headers.get("x-echo-forwarded-proto", "")
+    assert echo_xfp == expected_proto, (
+        f"Expected X-Forwarded-Proto={expected_proto!r}, "
+        f"got X-Echo-Forwarded-Proto={echo_xfp!r}"
+    )
+
+
 def test_enforced_mode(
     juju: jubilant.Juju,
     ingress_configurator: str,
@@ -50,6 +72,14 @@ def test_enforced_mode(
         body_contains="Hello from any_charm",
     )
 
+    # Verify the gateway proxy sets X-Forwarded-For and X-Forwarded-Proto on HTTPS.
+    response = assert_gateway_route_response(
+        gateway_address,
+        external_hostname,
+        "/app1/",
+    )
+    _assert_forwarded_headers(response, expected_proto="https")
+
     # HTTP should redirect to HTTPS
     assert_gateway_route_response(
         gateway_address,
@@ -85,22 +115,24 @@ def test_enabled_mode(
     gateway_address = get_gateway_ip(juju, gateway_api_integrator)
 
     # HTTPS should work
-    assert_gateway_route_response(
+    response = assert_gateway_route_response(
         gateway_address,
         external_hostname,
         "/app1/",
         scheme="https",
         body_contains="Hello from any_charm",
     )
+    _assert_forwarded_headers(response, expected_proto="https")
 
     # HTTP should also work (no redirect)
-    assert_gateway_route_response(
+    response = assert_gateway_route_response(
         gateway_address,
         external_hostname,
         "/app1/",
         scheme="http",
         body_contains="Hello from any_charm",
     )
+    _assert_forwarded_headers(response, expected_proto="http")
 
 
 def test_disabled_mode(
@@ -128,13 +160,14 @@ def test_disabled_mode(
     gateway_address = get_gateway_ip(juju, gateway_api_integrator)
 
     # HTTP should work
-    assert_gateway_route_response(
+    response = assert_gateway_route_response(
         gateway_address,
         external_hostname,
         "/app1/",
         scheme="http",
         body_contains="Hello from any_charm",
     )
+    _assert_forwarded_headers(response, expected_proto="http")
 
     # HTTPS should not be available
     with pytest.raises(requests.exceptions.ConnectionError):
@@ -168,10 +201,11 @@ def test_disabled_mode_without_hostname(
 
     gateway_address = get_gateway_ip(juju, gateway_api_integrator)
 
-    assert_gateway_route_response(
+    response = assert_gateway_route_response(
         gateway_address,
         None,
         "/app1/",
         scheme="http",
         body_contains="Hello from any_charm",
     )
+    _assert_forwarded_headers(response, expected_proto="http")

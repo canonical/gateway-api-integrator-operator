@@ -39,6 +39,14 @@ class AnyCharm(AnyCharmBase):
         file_path = www_dir / "index.html"
         file_path.parent.mkdir(exist_ok=True, parents=True)
         file_path.write_text("Hello from any_charm")
+        # Echo X-Forwarded-* request headers back as response headers so
+        # integration tests can verify the gateway proxy sets them.
+        headers_conf = pathlib.Path("/etc/apache2/conf-enabled/echo-forwarded.conf")
+        headers_conf.write_text(
+            "Header always set X-Echo-Forwarded-For \"%{X-Forwarded-For}i\"\n"
+            "Header always set X-Echo-Forwarded-Proto \"%{X-Forwarded-Proto}i\"\n"
+        )
+        subprocess.run(["a2enmod", "headers"], check=True)
 
     def _on_start(self, _: ops.StartEvent):
         """Start Apache so the backend is reachable."""

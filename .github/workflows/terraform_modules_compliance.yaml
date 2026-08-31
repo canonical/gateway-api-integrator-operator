@@ -11,6 +11,6 @@ on:
 
 jobs:
   cc008:
-    uses: ./.github/workflows/terraform_cc008_check.yaml
+    uses: canonical/operator-workflows/.github/workflows/terraform_modules_compliance.yaml@feat/terraform-compliance
     with:
       terraform-directories: '["terraform/modules/gateway-api-integrator", "terraform/product"]'

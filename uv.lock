@@ -548,7 +548,7 @@ integration = [
     { name = "allure-pytest-collection-report", git = "https://github.com/canonical/data-platform-workflows?subdirectory=python%2Fpytest_plugins%2Fallure_pytest_collection_report&rev=v24.0.0" },
     { name = "httpx2", specifier = ">=2.11.0" },
     { name = "jubilant", specifier = "==1.13.0" },
-    { name = "opcli", marker = "python_full_version >= '3.12'", git = "https://github.com/canonical/charm-ci.git?tag=v1.0.0" },
+    { name = "opcli", marker = "python_full_version >= '3.12'", git = "https://github.com/canonical/charm-ci.git?tag=v1.0.1" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-operator" },
@@ -1024,7 +1024,7 @@ wheels = [
 [[package]]
 name = "opcli"
 version = "1.0.0"
-source = { git = "https://github.com/canonical/charm-ci.git?tag=v1.0.0#0eef5b8cbef3ee74907850f790cab64bcf0499e5" }
+source = { git = "https://github.com/canonical/charm-ci.git?tag=v1.0.1#58ae6614a3b143d4e57eff0fd1770e97d8c30fab" }
 dependencies = [
     { name = "pydantic" },
     { name = "ruamel-yaml" },

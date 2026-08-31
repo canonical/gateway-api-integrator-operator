@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 
 [tool.uv.sources]
 # opcli is published only from the charm-ci git repository, not PyPI.
-opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.0" }
+opcli = { git = "https://github.com/canonical/charm-ci.git", tag = "v1.0.1" }
 
 [tool.bandit]
 exclude_dirs = ["/venv/"]

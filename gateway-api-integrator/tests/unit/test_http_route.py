@@ -211,8 +211,7 @@ def _forwarded_headers_filters(spec: dict) -> list[dict]:
         for rule_filter in rule.get("filters", []):
             if rule_filter.get("type") == "RequestHeaderModifier":
                 header_names = {
-                    h["name"]
-                    for h in rule_filter.get("requestHeaderModifier", {}).get("set", [])
+                    h["name"] for h in rule_filter.get("requestHeaderModifier", {}).get("set", [])
                 }
                 if "X-Forwarded-For" in header_names or "X-Forwarded-Proto" in header_names:
                     filters.append(rule_filter)

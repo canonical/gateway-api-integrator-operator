@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-08-28
+
+- Added `X-Forwarded-For` and `X-Forwarded-Proto` request headers by default on all non-redirect HTTPRoute resources.
+
 ## 2026-07-20
 
 - Added the `hsts-max-age` configuration option to control the `max-age` directive of the `Strict-Transport-Security` header injected on HTTPS routes when HTTPS is enforced.

@@ -199,6 +199,83 @@ def test_http_redirect_route_never_injects_hsts_filter(
     assert _hsts_filters(spec) == []
 
 
+# ---------------------------------------------------------------------------
+# X-Forwarded-For / X-Forwarded-Proto filter tests
+# ---------------------------------------------------------------------------
+
+
+def _forwarded_headers_filters(spec: dict) -> list[dict]:
+    """Return the RequestHeaderModifier filters containing X-Forwarded-* headers."""
+    filters = []
+    for rule in spec.get("rules", []):
+        for rule_filter in rule.get("filters", []):
+            if rule_filter.get("type") == "RequestHeaderModifier":
+                header_names = {
+                    h["name"]
+                    for h in rule_filter.get("requestHeaderModifier", {}).get("set", [])
+                }
+                if "X-Forwarded-For" in header_names or "X-Forwarded-Proto" in header_names:
+                    filters.append(rule_filter)
+    return filters
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_http_route_injects_forwarded_headers(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTP HTTPRouteResourceDefinition (non-redirect).
+    act: Generate the HTTPRoute resource spec.
+    assert: A RequestHeaderModifier filter sets X-Forwarded-For and X-Forwarded-Proto=http.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTP,
+    )
+    fwd_filters = _forwarded_headers_filters(spec)
+    assert len(fwd_filters) == 1
+    headers = {h["name"]: h["value"] for h in fwd_filters[0]["requestHeaderModifier"]["set"]}
+    assert "X-Forwarded-For" in headers
+    assert headers["X-Forwarded-Proto"] == "http"
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_https_route_injects_forwarded_headers(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTPS HTTPRouteResourceDefinition (non-redirect).
+    act: Generate the HTTPRoute resource spec.
+    assert: A RequestHeaderModifier filter sets X-Forwarded-For and X-Forwarded-Proto=https.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTPS,
+    )
+    fwd_filters = _forwarded_headers_filters(spec)
+    assert len(fwd_filters) == 1
+    headers = {h["name"]: h["value"] for h in fwd_filters[0]["requestHeaderModifier"]["set"]}
+    assert "X-Forwarded-For" in headers
+    assert headers["X-Forwarded-Proto"] == "https"
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_redirect_route_omits_forwarded_headers(
+    gateway_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Given an HTTP redirect HTTPRouteResourceDefinition.
+    act: Generate the HTTPRoute resource spec.
+    assert: No RequestHeaderModifier filter with X-Forwarded-* is present.
+    """
+    spec = _build_route_spec(
+        gateway_relation,
+        http_route_type=HTTPRouteType.HTTP,
+        redirect_https=True,
+    )
+    assert _forwarded_headers_filters(spec) == []
+
+
 def test_patch_http_route(mock_lightkube_client: MagicMock):
     """
     arrange: Given an HTTPRouteResourceManager with mocked lightkube client.

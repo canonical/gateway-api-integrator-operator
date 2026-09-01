@@ -162,6 +162,27 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
         return [] if self.hostname is None else [self.hostname]
 
     @property
+    def _forwarded_headers_filter(self) -> dict:
+        """Build the RequestHeaderModifier filter for X-Forwarded-For and X-Forwarded-Proto.
+
+        These headers are set on every non-redirect route so upstream services
+        can identify the original client IP and protocol.
+
+        Returns:
+            The RequestHeaderModifier filter dictionary.
+        """
+        proto = "https" if self.http_route_type == HTTPRouteType.HTTPS else "http"
+        return {
+            "type": "RequestHeaderModifier",
+            "requestHeaderModifier": {
+                "set": [
+                    {"name": "X-Forwarded-For", "value": "%DOWNSTREAM_REMOTE_ADDRESS%"},
+                    {"name": "X-Forwarded-Proto", "value": proto},
+                ]
+            },
+        }
+
+    @property
     def _hsts_filter(self) -> dict | None:
         """Build the Strict-Transport-Security ResponseHeaderModifier filter.
 
@@ -229,6 +250,7 @@ class HTTPRouteResourceDefinition(ResourceDefinition):
                     "matches": self.matches,
                     "filters": [
                         *self.filters,
+                        self._forwarded_headers_filter,
                         *filter(None, [self._hsts_filter]),
                     ],
                     "backendRefs": [

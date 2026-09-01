@@ -20,6 +20,10 @@ This operator is built for the **Kubernetes** substrate.
   -
 * - **Get started**
   - {ref}`tutorial_getting_started` | {ref}`tutorial_using_gateway_route`
+* - **Deployment**
+  - {ref}`Select a gateway class <how_to_select_gateway_class>` | {ref}`Configure HTTPS enforcement <how_to_enforce_https>`
+* - **Operations**
+  - {ref}`Configure HSTS <how_to_configure_hsts>`
 * - **Design**
   - {ref}`Charm architecture <reference_charm_architecture>` | {ref}`Charm workflow <explanation_workflow>`
 * - **Security**

@@ -7,10 +7,9 @@
   ],
   "customDatasources": {
     "charmhub": {
-      "defaultRegistryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{packageName}}?fields=channel-map",
       "format": "json",
       "transformTemplates": [
-        "{\"releases\": [{\"version\": $string($$.(`channel-map`[channel.risk = 'edge' and channel.track = 'latest' and channel.base.architecture = 'amd64' and channel.base.channel = '24.04'].revision.revision))}]}"
+        "($parts := $split(\"{{{packageName}}}\", \":\"); {\"releases\": [{\"version\": $string(`channel-map`[channel.track = $parts[1] and channel.risk = $parts[2] and channel.base.channel = $parts[3] and channel.base.architecture = $parts[4]].revision.revision)}]})"
       ]
     }
   },
@@ -37,9 +36,11 @@
         "\\.tf$"
       ],
       "matchStrings": [
-        "# renovate: depName=\"(?<packageName>[^\"]+)\"\\s*\\n\\s*(?<fieldName>[a-zA-Z0-9_]+)\\s*=\\s*(?<currentValue>\\d+)"
+        "#\\s*renovate:\\s*charm=\"(?<depName>[^\"]+)\"\\s+track=\"(?<charmTrack>[^\"]*)\"\\s+risk=\"(?<charmRisk>[^\"]+)\"\\s+base=\"(?<charmBase>[^\"]+)\"\\s+arch=\"(?<charmArch>[^\"]+)\"\\s*\\n\\s*revision\\s*=\\s*(?<currentValue>\\d+)\\s*\\n"
       ],
-      "versioningTemplate": "semver-coerced"
+      "packageNameTemplate": "{{{depName}}}:{{{charmTrack}}}:{{{charmRisk}}}:{{{charmBase}}}:{{{charmArch}}}",
+      "registryUrlTemplate": "https://api.charmhub.io/v2/charms/info/{{{depName}}}?fields=channel-map",
+      "versioningTemplate": "loose"
     }
   ],
   "extends": [
@@ -58,6 +59,7 @@
     {
       "automerge": true,
       "enabled": true,
+      "groupName": null,
       "matchDatasources": [
         "custom.charmhub"
       ]
@@ -71,6 +73,15 @@
         "major",
         "minor",
         "patch"
+      ]
+    },
+    {
+      "groupName": "charm-ci",
+      "description": "Keep the opcli git dependency (pyproject.toml/uv.lock) and the canonical/charm-ci reusable workflow refs (.github/workflows) in lockstep, since they must always point at the same charm-ci release.",
+      "matchPackageNames": [
+        "opcli",
+        "canonical/charm-ci",
+        "*charm-ci*"
       ]
     }
   ],

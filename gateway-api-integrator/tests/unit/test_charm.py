@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 import ops
 import pytest
 from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
-from httpx import Response
+from httpx2 import Response
 from lightkube.core.exceptions import ApiError
 from lightkube.models.meta_v1 import Status
 from ops import testing
@@ -295,7 +295,7 @@ def test_deploy_missing_tls() -> None:
     state_out = ctx.run(ctx.on.config_changed(), state_in)
 
     assert state_out.unit_status == ops.BlockedStatus(
-        "Certificates relation is needed if enforce-https is enabled."
+        "Certificates relation is required when enforce-https is enabled."
     )
 
 

@@ -30,10 +30,8 @@ This tutorial will walk you through deploying the gateway-api-integrator charm; 
     ```
 
     ```{note}
-    `external-hostname` is set here because this tutorial uses the direct `ingress` relation.
-    When routing through the `gateway-route` relation with the `ingress-configurator` charm,
-    leave `external-hostname` unset — see {ref}`tutorial_using_gateway_route` and
-    {ref}`how_to_configure_external_hostname`.
+    `external-hostname` is set here because this tutorial uses the `ingress` relation.
+    See {ref}`how_to_configure_external_hostname`.
     ```
 
 ## Establish an integration with a TLS provider charm

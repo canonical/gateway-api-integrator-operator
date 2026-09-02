@@ -24,7 +24,7 @@ def _assert_forwarded_headers(response, *, expected_proto: str) -> None:
         expected_proto: The expected X-Forwarded-Proto value ("http" or "https").
     """
     echo_xff = response.headers.get("x-echo-forwarded-for", "")
-    assert echo_xff and echo_xff != "(null)", (
+    assert echo_xff and echo_xff == "(null)", (
         f"Expected X-Forwarded-For to be set by the gateway proxy, "
         f"got X-Echo-Forwarded-For={echo_xff!r}"
     )

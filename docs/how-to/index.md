@@ -23,9 +23,9 @@ Strategic notes: enforce-https true vs false — competing security postures; hs
 ```{toctree}
 :maxdepth: 1
 Select a gateway class <select-gateway-class.md>
+Configure the external hostname <configure-external-hostname.md>
 Configure HTTPS enforcement <enforce-https.md>
 Configure HSTS <configure-hsts.md>
-Configure the external hostname <configure-external-hostname.md>
 ```
 
 ## Maintenance and development

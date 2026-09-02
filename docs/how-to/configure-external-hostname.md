@@ -8,7 +8,7 @@ myst:
 
 # How to configure the external hostname
 
-```{note}
+```{important}
 `external-hostname` applies only to the `ingress` relation.
 When routing through the `gateway-route` relation (with the `ingress-configurator` charm),
 hostnames come from the relation data, and setting `external-hostname` leaves the charm in a blocked state.

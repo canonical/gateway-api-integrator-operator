@@ -25,9 +25,9 @@ It is a string option with no default.
 
 On the `ingress` relation, `external-hostname` is required whenever a `certificates` relation is
 present. It is optional only when HTTPS enforcement is disabled (see {ref}`how_to_enforce_https`)
-and there is no `certificates` relation. In that case you can still set it to serve plain HTTP on
+and there is no `certificates` relation. In that case you can still set the configuration option to serve plain HTTP on
 that hostname, or leave it unset to serve plain HTTP on the gateway's load-balancer IP address.
-When it is unset, clients reach the gateway through that IP address instead of a hostname, and the
+When the configuration option is unset, clients reach the gateway through that IP address instead of a hostname, and the
 published ingress URL becomes `http://<gateway-address>`.
 
 ## Set the external hostname
@@ -57,4 +57,4 @@ juju config gateway-api-integrator --reset external-hostname
 
 You must unset it when you switch to routing through the `gateway-route` relation.
 On the `ingress` relation you can also unset it to serve plain HTTP on the gateway's IP
-address instead of a hostname, as described above.
+address instead of a hostname.

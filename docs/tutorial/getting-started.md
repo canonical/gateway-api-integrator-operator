@@ -29,6 +29,11 @@ This tutorial will walk you through deploying the gateway-api-integrator charm; 
     juju config gateway-api-integrator external-hostname=ingress.internal
     ```
 
+    ```{note}
+    `external-hostname` is set here because this tutorial uses the `ingress` relation.
+    See {ref}`how_to_configure_external_hostname`.
+    ```
+
 ## Establish an integration with a TLS provider charm
 
 1. Deploy a TLS provider

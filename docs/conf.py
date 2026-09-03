@@ -308,8 +308,6 @@ exclude_patterns = [
     ".venv*",
     "_dev",
     "adr",
-    "adr/*",
-    "adr/**",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'

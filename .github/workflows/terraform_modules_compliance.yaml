@@ -1,0 +1,16 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: Terraform modules compliance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "terraform/**"
+
+jobs:
+  cc008:
+    uses: canonical/operator-workflows/.github/workflows/terraform_modules_compliance.yaml@feat/terraform-compliance
+    with:
+      terraform-directories: '["terraform/modules/gateway-api-integrator", "terraform/product"]'

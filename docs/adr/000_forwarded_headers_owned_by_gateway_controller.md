@@ -37,4 +37,4 @@ implementation to populate and sanitize forwarded headers according to its own p
 
 ## Consequences
 
-- So far the only supported gateway controller is cilium, and cilium automatically adds these headers. If a new gateway controller is added in the future, it needs to be evaluated to see if it adds these headers automatically.
+So far the only supported gateway controller is Cilium, and Cilium automatically adds these headers. If a new gateway controller is added in the future, it needs to be evaluated to see if it adds these headers automatically.

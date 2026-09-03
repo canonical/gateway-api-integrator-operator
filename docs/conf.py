@@ -307,6 +307,7 @@ exclude_patterns = [
     "doc-cheat-sheet*",
     ".venv*",
     "_dev",
+    "adr",
 ]
 
 # Adds custom CSS files, located under 'html_static_path'

@@ -38,6 +38,20 @@ def test_tls_certificate_rotates_after_csr_subject_attributes_change(
     """Changing CSR subject attributes should rotate the served TLS certificate."""
     application = configured_application_with_tls
 
+    juju.integrate(
+        application,
+        f"{ingress_requirer_application}:ingress",
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status,
+            application,
+            ingress_requirer_application,
+            certificate_provider_application,
+        ),
+        error=jubilant.any_error,
+    )
+
     gateway = get_gateway_resource(lightkube_client, application)
     gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
     ingress_url = get_ingress_url_for_application(

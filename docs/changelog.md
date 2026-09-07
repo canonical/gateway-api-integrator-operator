@@ -7,6 +7,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-09-04
+
+- Added `csr-subject-attributes` config to include configurable CSR subject fields such as `C`, `ST`, `L`, `O`, `OU`, `CN`, and `emailAddress` in certificate requests.
+
+## 2026-09-02
+
+- Added `How to configure the external hostname` to how-to guides.
+
 ## 2026-08-25
 
 - Added `How to configure HSTS` to how-to guides.

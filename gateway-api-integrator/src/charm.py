@@ -154,16 +154,40 @@ class GatewayAPICharm(CharmBase):
                 self._ingress_provider,
                 self._gateway_route_provider,
             )
-            csrs = [
-                CertificateRequestAttributes(common_name=hostname, sans_dns=[hostname])
-                for hostname in sorted(charm_state.hostnames)
-            ]
+            subject_attributes = charm_state.csr_subject_attributes
+
+            csrs = []
+            for hostname in sorted(charm_state.hostnames):
+                common_name = subject_attributes.get("common_name", hostname)
+                csrs.append(
+                    CertificateRequestAttributes(
+                        common_name=common_name,
+                        sans_dns=[hostname],
+                        email_address=subject_attributes.get("email_address"),
+                        organization=subject_attributes.get("organization"),
+                        organizational_unit=subject_attributes.get("organizational_unit"),
+                        country_name=subject_attributes.get("country_name"),
+                        state_or_province_name=subject_attributes.get("state_or_province_name"),
+                        locality_name=subject_attributes.get("locality_name"),
+                    )
+                )
+
             if charm_state.requires_ip_certificate:
                 gateway_address = self._current_gateway_address()
                 if gateway_address:
+                    common_name = subject_attributes.get("common_name", gateway_address)
                     csrs.append(
                         CertificateRequestAttributes(
-                            common_name=gateway_address, sans_ip=[gateway_address]
+                            common_name=common_name,
+                            sans_ip=[gateway_address],
+                            email_address=subject_attributes.get("email_address"),
+                            organization=subject_attributes.get("organization"),
+                            organizational_unit=subject_attributes.get("organizational_unit"),
+                            country_name=subject_attributes.get("country_name"),
+                            state_or_province_name=subject_attributes.get(
+                                "state_or_province_name"
+                            ),
+                            locality_name=subject_attributes.get("locality_name"),
                         )
                     )
             return csrs

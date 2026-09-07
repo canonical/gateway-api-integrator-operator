@@ -70,6 +70,16 @@ config:
         Only applied when HTTPS is enforced. The default is 31536000 (1 year).
         Setting this to 0 instructs browsers to clear any cached HSTS policy.
       type: int
+    csr-subject-attributes:
+      description: |
+        Optional CSR subject attributes to include when requesting certificates from the
+        `certificates` relation. The value must be a comma-separated list of X.500-style
+        key-value pairs such as `C=DE, ST=Hesse, L=Berlin, O=Canonical, OU=Engineering`.
+
+        Supported keys are `CN`, `C`, `ST`, `L`, `O`, `OU`, and `emailAddress`.
+        `CN` overrides the CSR common name that would otherwise be derived from
+        `external-hostname` or the gateway address.
+      type: string
 
 
 actions:

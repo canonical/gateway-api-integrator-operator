@@ -262,6 +262,83 @@ def test_waiting_when_ip_san_certificate_missing(
 
 
 @pytest.mark.usefixtures("client_with_mock_external")
+def test_get_certificate_requests_uses_configured_common_name_instead_of_hostname(
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
+    """Configured CSR subject attributes should be propagated into generated CSRs."""
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+            "csr-subject-attributes": (
+                "C=DE, ST=Hesse, L=Frankfurt, O=Canonical, "
+                "OU=Engineering, CN=csr.example.com, emailAddress=ops@example.com"
+            ),
+        },
+        relations=[gateway_relation, certificates_relation],
+    )
+
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        csrs = manager.charm._get_certificate_requests()
+
+    assert len(csrs) == 1
+    csr = csrs[0]
+    assert csr.common_name == "csr.example.com"
+    assert csr.sans_dns is not None
+    assert "example.com" in csr.sans_dns
+    assert csr.country_name == "DE"
+    assert csr.state_or_province_name == "Hesse"
+    assert csr.locality_name == "Frankfurt"
+    assert csr.organization == "Canonical"
+    assert csr.organizational_unit == "Engineering"
+    assert csr.email_address == "ops@example.com"
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
+def test_get_certificate_requests_uses_default_cn_when_not_set(
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
+    """Hostname should remain CSR common_name when custom CN is not configured."""
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+            "csr-subject-attributes": "C=DE, ST=Hesse, O=Canonical",
+        },
+        relations=[gateway_relation, certificates_relation],
+    )
+
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        csrs = manager.charm._get_certificate_requests()
+
+    assert len(csrs) == 1
+    assert csrs[0].common_name == "example.com"
+
+
+def test_invalid_custom_csr_subject_attributes_blocks_charm(
+    base_state: dict,
+    certificates_relation: testing.Relation,
+) -> None:
+    """Invalid custom CSR subject attributes should put charm in blocked state."""
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["config"]["csr-subject-attributes"] = "foo=bar"
+    base_state["relations"].append(certificates_relation)
+    state_in = testing.State(**base_state)
+
+    state_out = ctx.run(ctx.on.config_changed(), state_in)
+
+    assert state_out.unit_status == ops.BlockedStatus(
+        'invalid "csr-subject-attributes" value; see logs.'
+    )
+
+
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_deploy_invalid_config(certificates_relation: testing.Relation) -> None:
     """
     arrange: given a leader charm related to a TLS provider but with no gateway-class configured.

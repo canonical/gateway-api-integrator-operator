@@ -9,8 +9,6 @@
 - [ ] I updated `docs/changelog.md` with user-relevant changes
 - [ ] I used AI to assist with preparing this PR
 - [ ] I added or updated tests as needed (unit and integration)
-- [ ] **If integration test modules are used:** I updated the workflow configuration  
-      (e.g., in `.github/workflows/integration_tests.yaml`, ensure the `modules` list is correct)
 - [ ] **If this PR involves Terraform:** `terraform fmt` passes and `tflint` reports no errors
 
 <!--  

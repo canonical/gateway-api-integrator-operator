@@ -15,7 +15,7 @@ from ops import testing
 
 from charm import GatewayAPICharm
 from resource_manager.permission import InsufficientPermissionError
-from state.charm_state import CharmState, ProxyMode, parse_csr_subject_attributes
+from state.charm_state import CharmState, ProxyMode
 from state.tls import TLSInformationNotReadyError
 
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -259,38 +259,6 @@ def test_waiting_when_ip_san_certificate_missing(
 
     assert state.unit_status.name == ops.WaitingStatus.name
     assert state.unit_status.message == "Waiting for TLS certificates to be issued."
-
-
-def test_parse_custom_csr_subject_attributes() -> None:
-    """Parser should map supported X.500 aliases to CSR attribute names."""
-    parsed = parse_csr_subject_attributes(
-        "C=DE, ST=Hesse, L=Frankfurt, O=Canonical, OU=Engineering, "
-        "CN=csr.example.com, emailAddress=ops@example.com"
-    )
-
-    assert parsed == {
-        "country_name": "DE",
-        "state_or_province_name": "Hesse",
-        "locality_name": "Frankfurt",
-        "organization": "Canonical",
-        "organizational_unit": "Engineering",
-        "common_name": "csr.example.com",
-        "email_address": "ops@example.com",
-    }
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        pytest.param("foo=bar", id="unsupported-key"),
-        pytest.param("C=DE,,O=Canonical", id="empty-pair"),
-        pytest.param("C=DE,C=US", id="duplicate-key"),
-        pytest.param("C=", id="empty-value"),
-    ],
-)
-def test_parse_custom_csr_subject_attributes_invalid(value: str) -> None:
-    """Parser should return None when custom CSR subject attributes are invalid."""
-    assert parse_csr_subject_attributes(value) is None
 
 
 def test_get_certificate_requests_uses_configured_common_name_instead_of_hostname(

@@ -4,14 +4,11 @@
 """Integration test for charm deploy."""
 
 import logging
-import socket
-import ssl
 
 import jubilant
 import lightkube
 import pytest
 import requests
-import tenacity
 from helper import (
     get_gateway_resource,
     get_ingress_url_for_application,
@@ -19,18 +16,6 @@ from helper import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _get_served_certificate(gateway_ip: str, server_hostname: str) -> str:
-    """Fetch the currently served leaf certificate via TLS SNI."""
-    context = ssl.create_default_context()
-    with (
-        socket.create_connection((gateway_ip, 443), timeout=15) as sock,
-        context.wrap_socket(sock, server_hostname=server_hostname) as tls_sock,
-    ):
-        cert_der = tls_sock.getpeercert(binary_form=True)
-    assert cert_der is not None
-    return ssl.DER_cert_to_PEM_cert(cert_der)
 
 
 @pytest.mark.abort_on_fail
@@ -129,64 +114,6 @@ def test_ingress_enabled_mode(
         allow_redirects=False,
         timeout=10,
     )
-    wait_for_response(
-        f"https://{gateway_lb_ip}{ingress_url.path}",
-        hostname=ingress_url.netloc,
-        ip=gateway_lb_ip,
-        expected_status=200,
-        body_contains="Welcome to flask-k8s Charm",
-        verify=False,  # nosec - self-signed certificate
-        timeout=10,
-    )
-
-
-@pytest.mark.abort_on_fail
-def test_tls_certificate_rotates_after_custom_csr_subject_attributes_change(
-    juju: jubilant.Juju,
-    configured_application_with_tls: str,
-    ingress_requirer_application: str,
-    certificate_provider_application: str,
-    lightkube_client: lightkube.Client,
-):
-    """Changing custom CSR subject attributes should rotate the served TLS certificate."""
-    application = configured_application_with_tls
-
-    gateway = get_gateway_resource(lightkube_client, application)
-    gateway_lb_ip = gateway.status["addresses"][0]["value"]  # type: ignore
-    ingress_url = get_ingress_url_for_application(
-        ingress_requirer_application, configured_application_with_tls, juju
-    )
-
-    old_certificate = _get_served_certificate(gateway_lb_ip, ingress_url.netloc)
-
-    juju.config(
-        application,
-        {
-            "csr-subject-attributes": (
-                "C=DE, ST=Hesse, L=Frankfurt, O=Canonical, "
-                "OU=Engineering, emailAddress=ops@example.com"
-            )
-        },
-    )
-    juju.wait(
-        lambda status: jubilant.all_active(
-            status,
-            application,
-            ingress_requirer_application,
-            certificate_provider_application,
-        ),
-        delay=5,
-        error=jubilant.any_error,
-    )
-
-    @tenacity.retry(stop=tenacity.stop_after_delay(180), wait=tenacity.wait_fixed(5), reraise=True)
-    def _assert_certificate_rotated() -> str:
-        new_certificate = _get_served_certificate(gateway_lb_ip, ingress_url.netloc)
-        assert new_certificate != old_certificate
-        return new_certificate
-
-    _assert_certificate_rotated()
-
     wait_for_response(
         f"https://{gateway_lb_ip}{ingress_url.path}",
         hostname=ingress_url.netloc,

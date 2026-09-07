@@ -25,6 +25,16 @@ TLS_CERTIFICATES_INTEGRATION = "certificates"
 
 logger = logging.getLogger()
 
+CSR_SUBJECT_ATTRIBUTE_ALIASES = {
+    "C": "country_name",
+    "CN": "common_name",
+    "emailAddress": "email_address",
+    "L": "locality_name",
+    "O": "organization",
+    "OU": "organizational_unit",
+    "ST": "state_or_province_name",
+}
+
 
 class InvalidCharmConfigError(CharmStateValidationBaseError):
     """Exception raised when a charm configuration is found to be invalid."""
@@ -75,6 +85,7 @@ class CharmState:
             gateway-route, and at least one relation provides no hostname.
         hostnames: Set of hostnames managed in the active mode. In ingress mode,
             at most one hostname is allowed.
+        csr_subject_attributes: Parsed optional CSR subject attributes from config.
     """
 
     gateway_class_name: str = Field(min_length=1)
@@ -88,6 +99,7 @@ class CharmState:
             BeforeValidator(valid_fqdn),
         ]
     ] = Field(default_factory=set)
+    csr_subject_attributes: dict[str, str] = Field(default_factory=dict)
 
     @field_validator("hostnames", mode="after")
     @classmethod
@@ -162,6 +174,12 @@ class CharmState:
                 "external-hostname must be set when related to ingress and certificates"
             )
 
+        csr_subject_attributes = parse_csr_subject_attributes(
+            typing.cast(str | None, charm.config.get("csr-subject-attributes", None))
+        )
+        if csr_subject_attributes is None:
+            raise InvalidCharmConfigError('invalid "csr-subject-attributes" value; see logs.')
+
         requires_ip_certificate = cls._requires_ip_certificate(
             proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls, gateway_route_provider
         )
@@ -181,6 +199,7 @@ class CharmState:
                 proxy_mode=proxy_mode,
                 requires_ip_certificate=requires_ip_certificate,
                 hostnames=hostnames,
+                csr_subject_attributes=csr_subject_attributes,
             )
         except ValidationError as exc:
             error_field_str = ",".join(f"{field}" for field in get_invalid_config_fields(exc))
@@ -254,3 +273,70 @@ def get_invalid_config_fields(exc: ValidationError) -> typing.Set[int | str]:
     """
     error_fields = set(itertools.chain.from_iterable(error["loc"] for error in exc.errors()))
     return error_fields
+
+
+def parse_csr_subject_attributes(attributes: str | None) -> dict[str, str] | None:
+    """Parse csr-subject-attributes config.
+
+    The config accepts comma-separated X.500-style key-value pairs.
+
+    Returns:
+        dict[str, str] | None: Parsed CSR subject attributes if valid, otherwise None.
+    """
+    if not attributes:
+        return {}
+
+    normalized_attributes = attributes.strip().rstrip(",")
+    if not normalized_attributes:
+        return {}
+
+    parsed_attributes: dict[str, str] = {}
+    supported_keys = ", ".join(sorted(CSR_SUBJECT_ATTRIBUTE_ALIASES))
+    error = False
+
+    for pair in normalized_attributes.split(","):
+        if not pair.strip():
+            logger.error("Invalid format for 'csr-subject-attributes'. Empty attribute found.")
+            error = True
+            continue
+
+        key_value = pair.split("=", maxsplit=1)
+        if len(key_value) != 2:
+            logger.error(
+                "Invalid format for 'csr-subject-attributes'. "
+                "Expected format: key1=value1,key2=value2."
+            )
+            error = True
+            continue
+
+        key = key_value[0].strip()
+        value = key_value[1].strip()
+        if not key or not value:
+            logger.error(
+                "Invalid format for 'csr-subject-attributes'. "
+                "Each attribute must have a non-empty key and value."
+            )
+            error = True
+            continue
+
+        mapped_key = CSR_SUBJECT_ATTRIBUTE_ALIASES.get(key)
+        if not mapped_key:
+            logger.error(
+                "Unsupported CSR subject attribute key '%s'. Supported keys are: %s.",
+                key,
+                supported_keys,
+            )
+            error = True
+            continue
+
+        if mapped_key in parsed_attributes:
+            logger.error(
+                "Duplicate CSR subject attribute '%s' is not allowed in 'csr-subject-attributes'.",
+                key,
+            )
+            error = True
+            continue
+
+        parsed_attributes[mapped_key] = value
+
+    return None if error else parsed_attributes

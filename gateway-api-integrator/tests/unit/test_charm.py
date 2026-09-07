@@ -261,36 +261,28 @@ def test_waiting_when_ip_san_certificate_missing(
     assert state.unit_status.message == "Waiting for TLS certificates to be issued."
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_get_certificate_requests_uses_configured_common_name_instead_of_hostname(
-    monkeypatch: pytest.MonkeyPatch,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
 ) -> None:
     """Configured CSR subject attributes should be propagated into generated CSRs."""
-    monkeypatch.setattr(
-        "charm.CharmState.from_charm_and_providers",
-        MagicMock(
-            return_value=CharmState(
-                gateway_class_name=GATEWAY_CLASS_CONFIG,
-                enforce_https=True,
-                proxy_mode=ProxyMode.INGRESS,
-                requires_ip_certificate=False,
-                hsts_max_age=31536000,
-                hostnames={"example.com"},
-                csr_subject_attributes={
-                    "country_name": "DE",
-                    "state_or_province_name": "Hesse",
-                    "locality_name": "Frankfurt",
-                    "organization": "Canonical",
-                    "organizational_unit": "Engineering",
-                    "common_name": "csr.example.com",
-                    "email_address": "ops@example.com",
-                },
-            )
-        ),
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+            "csr-subject-attributes": (
+                "C=DE, ST=Hesse, L=Frankfurt, O=Canonical, "
+                "OU=Engineering, CN=csr.example.com, emailAddress=ops@example.com"
+            ),
+        },
+        relations=[gateway_relation, certificates_relation],
     )
 
-    mock_self = MagicMock()
-
-    csrs = GatewayAPICharm._get_certificate_requests(mock_self)
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        csrs = manager.charm._get_certificate_requests()
 
     assert len(csrs) == 1
     csr = csrs[0]
@@ -305,32 +297,25 @@ def test_get_certificate_requests_uses_configured_common_name_instead_of_hostnam
     assert csr.email_address == "ops@example.com"
 
 
+@pytest.mark.usefixtures("client_with_mock_external")
 def test_get_certificate_requests_uses_default_cn_when_not_set(
-    monkeypatch: pytest.MonkeyPatch,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
 ) -> None:
     """Hostname should remain CSR common_name when custom CN is not configured."""
-    monkeypatch.setattr(
-        "charm.CharmState.from_charm_and_providers",
-        MagicMock(
-            return_value=CharmState(
-                gateway_class_name=GATEWAY_CLASS_CONFIG,
-                enforce_https=True,
-                proxy_mode=ProxyMode.INGRESS,
-                requires_ip_certificate=False,
-                hsts_max_age=31536000,
-                hostnames={"example.com"},
-                csr_subject_attributes={
-                    "country_name": "DE",
-                    "state_or_province_name": "Hesse",
-                    "organization": "Canonical",
-                },
-            )
-        ),
+    ctx = testing.Context(GatewayAPICharm)
+    state_in = testing.State(
+        leader=True,
+        config={
+            "external-hostname": TEST_EXTERNAL_HOSTNAME_CONFIG,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+            "csr-subject-attributes": "C=DE, ST=Hesse, O=Canonical",
+        },
+        relations=[gateway_relation, certificates_relation],
     )
 
-    mock_self = MagicMock()
-
-    csrs = GatewayAPICharm._get_certificate_requests(mock_self)
+    with ctx(ctx.on.update_status(), state_in) as manager:
+        csrs = manager.charm._get_certificate_requests()
 
     assert len(csrs) == 1
     assert csrs[0].common_name == "example.com"

@@ -31,7 +31,7 @@ output "models" {
   }
 }
 
-output "provide" {
+output "provides" {
   description = "Map of provided endpoints."
   value = {
     gateway = {

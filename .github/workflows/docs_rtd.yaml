@@ -5,7 +5,7 @@ on:
 
 jobs:
   rtd-docs-checks:
-    uses: canonical/operator-workflows/.github/workflows/docs_rtd.yaml@94c3a0c54ca84d82351c419a77f3f61d56b478e8  # main
+    uses: canonical/operator-workflows/.github/workflows/docs_rtd.yaml@428b02d2dbe42238177aeaf4b9d3488e068e41b9  # main
     secrets: inherit
     with:
       enable-sphinx-python-dependency-build-checks: false

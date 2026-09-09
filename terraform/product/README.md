@@ -26,7 +26,6 @@ The product consists of:
       model_uuid = local.juju_model_uuid
 
       gateway_api_integrator = {
-        channel = "1/stable"
         revision = 165
         base    = "ubuntu@24.04"
         config = {
@@ -35,7 +34,6 @@ The product consists of:
       }
 
       ingress_configurator = {
-        channel = "latest/stable"
         revision = 95
         base    = "ubuntu@24.04"
         config = {
@@ -101,14 +99,12 @@ The product consists of:
 ### Gateway API Integrator
 
 - `gateway_api_integrator.app_name`: Application name (default: "gateway-api-integrator")
-- `gateway_api_integrator.channel`: Charm channel (default: "1/stable")
 - `gateway_api_integrator.config`: Application configuration map
 - `gateway_api_integrator.units`: Number of units (default: 1)
 
 ### Ingress Configurator
 
 - `ingress_configurator.app_name`: Application name (default: "ingress-configurator")
-- `ingress_configurator.channel`: Charm channel (default: "latest/stable")
 - `ingress_configurator.config`: Application configuration map
 - `ingress_configurator.units`: Number of units (default: 1)
 

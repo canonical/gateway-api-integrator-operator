@@ -5,7 +5,7 @@ module "gateway_api_integrator" {
   source = "../modules/gateway-api-integrator"
 
   app_name   = var.gateway_api_integrator.app_name
-  channel    = var.gateway_api_integrator.channel
+  channel    = local.gateway_api_integrator_channel
   config     = var.gateway_api_integrator.config
   model_uuid = var.model_uuid
   revision   = var.gateway_api_integrator.revision
@@ -17,7 +17,7 @@ module "ingress_configurator" {
   source = "git::https://github.com/canonical/ingress-configurator-operator//terraform?ref=tf-2.0.0&depth=1"
 
   app_name   = var.ingress_configurator.app_name
-  channel    = var.ingress_configurator.channel
+  channel    = local.ingress_configurator_channel
   config     = var.ingress_configurator.config
   model_uuid = var.model_uuid
   revision   = var.ingress_configurator.revision

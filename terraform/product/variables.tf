@@ -4,7 +4,6 @@
 variable "gateway_api_integrator" {
   type = object({
     app_name    = optional(string, "gateway-api-integrator")
-    channel     = optional(string, "1/stable")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
@@ -17,7 +16,6 @@ variable "gateway_api_integrator" {
 variable "ingress_configurator" {
   type = object({
     app_name    = optional(string, "ingress-configurator")
-    channel     = optional(string, "latest/stable")
     config      = optional(map(string), {})
     constraints = optional(string, "arch=amd64")
     revision    = optional(number)
@@ -25,6 +23,12 @@ variable "ingress_configurator" {
     units       = optional(number, 1)
   })
   default = {}
+}
+
+variable "logging-config" {
+  description = "The Juju logging configuration to apply to the deployment."
+  type        = string
+  default     = "<root>=INFO"
 }
 
 variable "metadata_version" {
@@ -37,4 +41,25 @@ variable "model_uuid" {
   description = "Reference to a juju model's uuid."
   type        = string
   nullable    = false
+}
+
+variable "proxy" {
+  description = "Proxy configuration for the deployment."
+  type = object({
+    http     = optional(string)
+    https    = optional(string)
+    no_proxy = optional(string)
+  })
+  default = {}
+}
+
+variable "risk" {
+  description = "Risk level controlling the channel risk of the charms in the solution."
+  type        = string
+  default     = "stable"
+
+  validation {
+    condition     = contains(["stable", "edge"], var.risk)
+    error_message = "risk must be one of: stable, edge."
+  }
 }

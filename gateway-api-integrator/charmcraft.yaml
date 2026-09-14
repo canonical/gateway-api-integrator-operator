@@ -89,3 +89,7 @@ actions:
       hostname:
         type: string
         description: Hostname to extract certs from.
+  get-proxied-endpoints:
+    description: |
+      Returns a list of endpoints, including the gateway endpoint and endpoints
+      proxied for applications related through the gateway relation.

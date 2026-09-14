@@ -49,3 +49,24 @@ def test_get_certificate_action(
         == json.loads(mock_certificates_relation_data)[0]["certificate"]
     )
     assert ctx.action_results["ca"] == json.loads(mock_certificates_relation_data)[0]["ca"]
+
+
+def test_get_proxied_endpoints_action(
+    base_state: dict,
+    gateway_relation: testing.Relation,
+) -> None:
+    """The action returns the gateway and published ingress endpoints."""
+    gateway_relation.local_app_data.update(
+        {"ingress": json.dumps({"url": "https://example.com/testing-model-testing-ingress-app"})}
+    )
+    base_state["relations"].append(gateway_relation)
+    base_state["leader"] = True
+
+    ctx = testing.Context(GatewayAPICharm)
+    state = testing.State(**base_state)
+    ctx.run(ctx.on.action("get-proxied-endpoints"), state)
+
+    assert json.loads(ctx.action_results["proxied-endpoints"]) == {
+        "gateway-api-integrator": {"url": "http://example.com"},
+        "remote": {"url": "https://example.com/testing-model-testing-ingress-app"},
+    }

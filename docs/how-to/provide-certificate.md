@@ -61,11 +61,11 @@ gateway-api-integrator/0*    active    idle   Gateway addresses: <gateway-addres
 self-signed-certificates/0*  active    idle
 ```
 
-Retrieve the certificate issued for the gateway hostname:
+Retrieve the certificate issued for the gateway hostname or IP address:
 
 ```bash
 juju run gateway-api-integrator/leader get-certificate \
-  hostname=<hostname> \
+  hostname=<hostname-or-gateway-address> \
   --format=json \
   | jq -r 'to_entries[0].value.results.certificate' \
   > gateway.crt
@@ -82,7 +82,7 @@ openssl x509 \
   -ext subjectAltName
 ```
 
-Confirm that the certificate covers the hostname used to reach the gateway
+Confirm that the certificate covers the hostname or IP address used to reach the gateway
 and that its issuer is the self-signed CA.
 
 ```{caution}
@@ -126,7 +126,7 @@ trusted by this CA. Do not use the demonstration CA for production deployments.
 Deploy and integrate `manual-tls-certificates`:
 
 ```bash
-juju deploy manual-tls-certificates
+juju deploy manual-tls-certificates --channel=1/stable
 juju integrate manual-tls-certificates:certificates gateway-api-integrator:certificates
 ```
 

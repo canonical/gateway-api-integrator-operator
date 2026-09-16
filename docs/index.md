@@ -23,7 +23,7 @@ This operator is built for the **Kubernetes** substrate.
 * - **Deployment**
   - {ref}`Select a gateway class <how_to_select_gateway_class>` | {ref}`Configure HTTPS enforcement <how_to_enforce_https>` | {ref}`Configure the external hostname <how_to_configure_external_hostname>`
 * - **Operations**
-  - {ref}`Configure HSTS <how_to_configure_hsts>`
+  - {ref}`Configure HSTS <how_to_configure_hsts>` | {ref}`Route traffic to multiple workloads <how_to_route_multiple_workloads>`
 * - **Design**
   - {ref}`Charm architecture <reference_charm_architecture>` | {ref}`Charm workflow <explanation_workflow>`
 * - **Security**

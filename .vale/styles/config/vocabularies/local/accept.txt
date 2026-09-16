@@ -2,4 +2,3 @@ AI
 configurator
 HTTPRoute
 workloadless
-proxied

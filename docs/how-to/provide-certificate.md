@@ -29,11 +29,10 @@ Before you begin:
 - Deploy `gateway-api-integrator` and set up either a direct `ingress` integration or
   a `gateway-route` integration. See {ref}`tutorial_getting_started` and
   {ref}`tutorial_using_gateway_route`.
-- Note the hostname used when setting up the integration. Use this same hostname
-  throughout this guide:
-  - For a direct `ingress` integration, use the `external-hostname` configured on
+- Note the hostname used when setting up the relation:
+  - For a direct `ingress` relation, use the `external-hostname` configured on
     `gateway-api-integrator`.
-  - For a `gateway-route` integration, use the `hostname` configured on the relevant
+  - For a `gateway-route` relation, use the `hostname` configured on the relevant
     `ingress-configurator` application.
 
 ## Use the self-signed-certificates charm
@@ -82,7 +81,7 @@ juju run gateway-api-integrator/leader get-certificate \
 ```
 
 ```{caution}
-Because the CA is self-signed, clients do not trust these certificates by default.
+Clients do not trust self-signed certificates by default.
 Install the CA certificate on clients that must validate the gateway certificate,
 or use a publicly trusted certificate provider for production.
 ```
@@ -104,10 +103,10 @@ juju deploy manual-tls-certificates --channel=1/stable
 juju integrate manual-tls-certificates:certificates gateway-api-integrator:certificates
 ```
 
-After the integration creates a certificate request, follow the **Retrieve the CSR**
-and **Sign the certificate** sections in the linked guide. The
+After the relation creates a certificate request, follow the linked guide
+to retrieve the CSR and sign the certificate. The
 `manual-tls-certificates` charm then provides the certificate to
-`gateway-api-integrator` through the `certificates` integration.
+`gateway-api-integrator` through the `certificates` relation.
 
 ## Use the LEGO charm for production deployments
 

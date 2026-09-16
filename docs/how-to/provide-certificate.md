@@ -179,7 +179,9 @@ Verify that the new certificate was signed by the CA:
 openssl verify -CAfile certs/ca.crt certs/gateway.crt
 ```
 
-Provide the signed certificate, CA certificate, and original CSR:
+Provide the signed certificate, CA certificate, and original CSR to the
+`manual-tls-certificates` charm. The charm then provides the certificate to
+`gateway-api-integrator` through the `certificates` integration:
 
 ```bash
 juju run manual-tls-certificates/leader provide-certificate \

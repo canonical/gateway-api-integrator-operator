@@ -26,6 +26,9 @@ For complete deployments, see {ref}`tutorial_getting_started` for direct `ingres
 or {ref}`tutorial_using_gateway_route` for `gateway-route` mode.
 ```
 
+If you intentionally need to serve unencrypted HTTP instead, you can disable HTTPS enforcement.
+See {ref}`how_to_enforce_https` for the security implications and configuration instructions.
+
 ## Use the self-signed-certificates charm
 
 For development, testing, and other non-production environments, use the
@@ -223,6 +226,3 @@ juju integrate lego:certificates gateway-api-integrator:certificates
 
 After the provider issues all requested certificates, `gateway-api-integrator` becomes active
 and serves HTTPS traffic.
-
-If you intentionally need to serve unencrypted HTTP instead, you can disable HTTPS enforcement.
-See {ref}`how_to_enforce_https` for the security implications and configuration instructions.

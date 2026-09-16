@@ -83,20 +83,6 @@ juju run gateway-api-integrator/leader get-certificate \
   > gateway.crt
 ```
 
-Inspect the certificate subject, issuer, and Subject Alternative Names:
-
-```bash
-openssl x509 \
-  -in gateway.crt \
-  -noout \
-  -subject \
-  -issuer \
-  -ext subjectAltName
-```
-
-Confirm that the certificate covers the hostname or IP address used to reach the gateway
-and that its issuer is the self-signed CA.
-
 ```{caution}
 Because the CA is self-signed, clients do not trust these certificates by default.
 Install the CA certificate on clients that must validate the gateway certificate,

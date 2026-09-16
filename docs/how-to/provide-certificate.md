@@ -19,15 +19,24 @@ Without this integration, the charm enters a blocked state:
 gateway-api-integrator/0  blocked  idle  Certificates relation is required when enforce-https is enabled.
 ```
 
-```{note}
-The hostname used for the certificate depends on the routing mode.
-See {ref}`how_to_configure_external_hostname` for configuration details.
-For complete deployments, see {ref}`tutorial_getting_started` for direct `ingress` mode
-or {ref}`tutorial_using_gateway_route` for `gateway-route` mode.
-```
-
 If you intentionally need to serve unencrypted HTTP instead, you can disable HTTPS enforcement.
 See {ref}`how_to_enforce_https` for the security implications and configuration instructions.
+
+## Prerequisites
+
+Before you begin:
+
+- Install [OpenSSL](https://www.openssl.org/) on the machine where you will run the
+  certificate commands.
+- Deploy `gateway-api-integrator` and set up either a direct `ingress` integration or
+  a `gateway-route` integration. See {ref}`tutorial_getting_started` and
+  {ref}`tutorial_using_gateway_route`.
+- Note the hostname used when setting up the integration. Use this same hostname
+  throughout this guide:
+  - For a direct `ingress` integration, use the `external-hostname` configured on
+    `gateway-api-integrator`.
+  - For a `gateway-route` integration, use the `hostname` configured on the relevant
+    `ingress-configurator` application.
 
 ## Use the self-signed-certificates charm
 

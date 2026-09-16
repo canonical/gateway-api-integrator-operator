@@ -9,6 +9,7 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-09-15
 
+- Added `How to provide a certificate` to the how-to guides.
 - Added `How to route traffic to multiple workloads` to the how-to guides.
 
 ## 2026-09-04

@@ -24,6 +24,7 @@ Strategic notes: enforce-https true vs false — competing security postures; hs
 :maxdepth: 1
 Select a gateway class <select-gateway-class.md>
 Configure the external hostname <configure-external-hostname.md>
+Provide a certificate <provide-certificate.md>
 Route traffic to multiple workloads <route-multiple-workloads.md>
 Configure HTTPS enforcement <enforce-https.md>
 Configure HSTS <configure-hsts.md>

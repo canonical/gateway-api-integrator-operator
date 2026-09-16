@@ -280,9 +280,11 @@ class GatewayAPICharm(CharmBase):
         gateway_address = self.config.get("external-hostname") or self._current_gateway_address()
         if gateway_address:
             scheme = "https" if self.model.get_relation(TLS_CERT_RELATION) else "http"
-            endpoints.update({
-                self.app.name: {"url": f"{scheme}://{gateway_address}"},
-            })
+            endpoints.update(
+                {
+                    self.app.name: {"url": f"{scheme}://{gateway_address}"},
+                }
+            )
 
         event.set_results({"proxied-endpoints": json.dumps(endpoints)})
 

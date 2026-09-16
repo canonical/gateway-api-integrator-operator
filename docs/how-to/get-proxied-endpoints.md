@@ -10,7 +10,7 @@ myst:
 
 The `get-proxied-endpoints` action returns the URLs exposed by the
 `gateway-api-integrator` charm. The result includes the gateway endpoint and
-the endpoints for applications related through the `ingress` relation.
+the endpoints for applications integrated through the `ingress` relation.
 
 ```{note}
 When routing through the `gateway-route` relation with the `ingress-configurator`
@@ -27,16 +27,6 @@ juju run gateway-api-integrator/leader get-proxied-endpoints
 The action returns the endpoints in the `proxied-endpoints` result. Use the
 returned URL to send requests to the gateway and the proxied application.
 
-## When the external hostname is not set
-
-```{warning}
-Not setting `external-hostname` requires `enforce-https=false` when backend 
-applications use the direct `ingress` relation.
-
-Only disable enforcement when plain HTTP is acceptable (for example, when TLS 
-is terminated by another component in front of the gateway).
-```
-
 When `external-hostname` is not set, the action returns URLs that use the
 gateway IP address:
 
@@ -47,13 +37,19 @@ proxied-endpoints: '{"gateway-api-integrator": {"url": "http://10.43.45.0"}, "fl
   {"url": "http://10.43.45.0/testing-flask-k8s"}}'
 ```
 
-You can curl these URLs directly:
+Curl these URLs directly:
 
 ```bash
 curl http://10.43.45.0/testing-flask-k8s
 ```
 
-## When the external hostname is set
+```{warning}
+Not setting `external-hostname` requires `enforce-https=false` when backend 
+applications use the direct `ingress` relation.
+
+Only disable enforcement when plain HTTP is acceptable (for example, when TLS 
+is terminated by another component in front of the gateway).
+```
 
 When `external-hostname` is set and the charm has a `certificates` relation,
 the action returns URLs that use the configured hostname:

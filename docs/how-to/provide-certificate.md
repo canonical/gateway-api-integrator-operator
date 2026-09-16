@@ -26,8 +26,6 @@ See {ref}`how_to_enforce_https` for the security implications and configuration 
 
 Before you begin:
 
-- Install [OpenSSL](https://www.openssl.org/) on the machine where you will run the
-  certificate commands.
 - Deploy `gateway-api-integrator` and set up either a direct `ingress` integration or
   a `gateway-route` integration. See {ref}`tutorial_getting_started` and
   {ref}`tutorial_using_gateway_route`.

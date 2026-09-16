@@ -9,8 +9,6 @@ myst:
 # How to route traffic to multiple workloads
 
 A direct integration with the `gateway-api-integrator` charm supports only one backend.
-The charm's `gateway` endpoint has a maximum relation limit of 1, so Juju rejects an
-attempt to integrate a second backend directly.
 
 To route traffic to multiple backends through the same Gateway, use the
 `ingress-configurator` charm. Deploy one `ingress-configurator` application for each

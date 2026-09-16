@@ -25,7 +25,7 @@ This operator is built for the **Kubernetes** substrate.
 * - **Operations**
   - {ref}`Configure HSTS <how_to_configure_hsts>` | {ref}`Route traffic to multiple workloads <how_to_route_multiple_workloads>`
 * - **Design**
-  - {ref}`Charm architecture <reference_charm_architecture>` | {ref}`Charm workflow <explanation_workflow>`
+  - {ref}`Deployment architecture <reference_deployment_architecture>` | {ref}`Charm architecture <reference_charm_architecture>` | {ref}`Charm workflow <explanation_workflow>`
 * - **Security**
   - {ref}`Overview <explanation_security_overview>`
 ```

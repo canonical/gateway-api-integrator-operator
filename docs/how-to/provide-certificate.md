@@ -110,113 +110,20 @@ when you already have a CA and need to control the certificate-signing process.
 This option requires you to retrieve and sign each certificate signing request (CSR),
 then return the signed certificate and CA chain manually.
 
-The following example creates a local CA for demonstration purposes.
-For an existing CA, use its certificate and private key instead.
-
-Create a directory for the certificate files:
-
-```bash
-mkdir -p certs
-```
-
-Create the CA private key and certificate:
-
-```bash
-openssl genrsa -out certs/ca.key 4096
-openssl req -new -x509 \
-  -key certs/ca.key \
-  -out certs/ca.crt \
-  -days 3650 \
-  -subj "/C=US/O=Example/CN=Example Gateway CA"
-```
-
-```{warning}
-Protect `certs/ca.key`. Anyone with access to this private key can issue certificates
-trusted by this CA. Do not use the demonstration CA for production deployments.
-```
-
-Deploy and integrate `manual-tls-certificates`:
+Follow the
+[Manual TLS Certificates getting-started guide](https://charmhub.io/manual-tls-certificates/docs/h-getting-started)
+for the certificate-signing workflow. For this deployment, deploy the compatible
+channel and integrate it with `gateway-api-integrator`:
 
 ```bash
 juju deploy manual-tls-certificates --channel=1/stable
 juju integrate manual-tls-certificates:certificates gateway-api-integrator:certificates
 ```
 
-Wait for `gateway-api-integrator` to submit its certificate request:
-
-```bash
-juju run manual-tls-certificates/leader get-outstanding-certificate-requests
-```
-
-The output contains a JSON list in the `result` field. Save this list to a file:
-
-```bash
-juju run manual-tls-certificates/leader get-outstanding-certificate-requests \
-  --format=json \
-  | jq -r 'to_entries[0].value.results.result' \
-  > certs/requests.json
-```
-
-Extract the first CSR and its relation ID:
-
-```bash
-jq -r '.[0].csr' certs/requests.json > certs/gateway.csr
-RELATION_ID=$(jq -r '.[0].relation_id' certs/requests.json)
-```
-
-Inspect the CSR before signing it:
-
-```bash
-openssl req -in certs/gateway.csr -noout -text
-```
-
-Confirm that its subject and Subject Alternative Names match the addresses through which
-clients reach the gateway. Sign the CSR while preserving its requested extensions:
-
-```bash
-openssl x509 -req \
-  -in certs/gateway.csr \
-  -CA certs/ca.crt \
-  -CAkey certs/ca.key \
-  -CAcreateserial \
-  -out certs/gateway.crt \
-  -days 365 \
-  -sha256 \
-  -copy_extensions copyall
-```
-
-Verify that the new certificate was signed by the CA:
-
-```bash
-openssl verify -CAfile certs/ca.crt certs/gateway.crt
-```
-
-Provide the signed certificate, CA certificate, and original CSR to the
-`manual-tls-certificates` charm. The charm then provides the certificate to
-`gateway-api-integrator` through the `certificates` integration:
-
-```bash
-juju run manual-tls-certificates/leader provide-certificate \
-  relation-id="$RELATION_ID" \
-  certificate="$(base64 -w0 certs/gateway.crt)" \
-  ca-certificate="$(base64 -w0 certs/ca.crt)" \
-  certificate-signing-request="$(base64 -w0 certs/gateway.csr)"
-```
-
-When the certificate is available, both applications report an active status:
-
-```{terminal}
-:scroll:
-juju status
-
-App                      Status  Scale  Charm
-gateway-api-integrator   active      1  gateway-api-integrator
-manual-tls-certificates  active      1  manual-tls-certificates
-
-Unit                        Workload  Agent  Message
-gateway-api-integrator/0*   active    idle   Gateway addresses: <gateway-address>
-manual-tls-certificates/0*  active    idle   No outstanding requests.
-```
+After the integration creates a certificate request, follow the **Retrieve the CSR**
+and **Sign the certificate** sections in the linked guide. The
+`manual-tls-certificates` charm then provides the certificate to
+`gateway-api-integrator` through the `certificates` integration.
 
 ## Use the LEGO charm for production deployments
 

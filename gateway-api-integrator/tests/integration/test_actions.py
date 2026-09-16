@@ -51,10 +51,6 @@ def test_get_proxied_endpoints_action(
     ingress_requirer_application: str,
 ):
     """Assert that get-proxied-endpoints returns gateway and ingress URLs."""
-    juju.integrate(
-        configured_application_with_tls,
-        f"{ingress_requirer_application}:ingress",
-    )
     juju.wait(
         lambda status: jubilant.all_active(
             status, configured_application_with_tls, ingress_requirer_application

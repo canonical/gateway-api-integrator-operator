@@ -92,4 +92,4 @@ actions:
   get-proxied-endpoints:
     description: |
       Returns a list of endpoints, including the gateway endpoint and endpoints
-      proxied for applications related through the ingress relation.
+      proxied for applications integrated through the ingress relation.

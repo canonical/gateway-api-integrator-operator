@@ -7,9 +7,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
-## 2026-09-09
+## 2026-09-17
 
 - Added a CI check that verifies the Terraform modules compliance.
+
+## 2026-09-15
+
+- Added `How to provide a certificate` to the how-to guides.
+- Added `How to route traffic to multiple workloads` to the how-to guides.
 
 ## 2026-09-04
 

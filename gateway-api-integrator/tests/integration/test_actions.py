@@ -6,10 +6,8 @@
 import json
 
 import jubilant
-import lightkube
 import pytest
 from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
-from helper import get_gateway_resource
 
 
 @pytest.mark.abort_on_fail

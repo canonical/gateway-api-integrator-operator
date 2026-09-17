@@ -17,7 +17,7 @@ Flask backend application running on Kubernetes.
 ```{warning}
 The `ingress` interface has limitations in ingress configuration and with supporting
 multiple backend applications. The charm offers another interface, `gateway-route`,
-with advanced routing features and configuration. Follow
+with advanced routing features and configuration options. Follow
 {ref}`ingress-configurator-charm:tutorial_getting_started` to walk through a deployment
 of Gateway API integrator using the `gateway-route` interface. 
 ```
@@ -108,8 +108,11 @@ juju config gateway-api-integrator external-hostname=ingress.internal
 Check the status of our deployment with `juju status`:
 
 ```{terminal}
-:output-only:
+:user: ubuntu
+:host: charm-tutorial-vm
 :scroll:
+
+juju status
 
 Model                            Controller     Cloud/Region  Version  SLA          Timestamp
 gateway-api-integrator-tutorial  concierge-k8s  k8s           3.6.28   unsupported  17:48:45Z
@@ -121,9 +124,9 @@ Unit                       Workload  Agent  Address     Ports  Message
 gateway-api-integrator/0*  blocked   idle   10.1.0.122         Certificates relation is needed if enforce-https is enabled.
 ```
 
-By default, the charm redirects plain HTTP traffic to HTTPS. The deployment is blocked
-because the charm requires an integration with a TLS certificates provider in order to
-successfully redirect traffic.
+By default, the charm redirects plain HTTP traffic to HTTPS, which requires a
+TLS certificate to successfully complete the connection. The deployment is blocked
+because the charm requires an integration with a TLS certificates provider.
 
 ## Establish an integration with a TLS provider charm
 
@@ -133,7 +136,7 @@ a certificate authority (CA) and issue the requested certificates. This charm is
 simplest way to satisfy the certificate requirement, but you shouldn't use self-signed
 certificates in production environments. For more details, see {ref}`how_to_provide_a_certificate`.
 
-Let's deploy the charm and integrate it with Gateway API integrator:
+Let's deploy the charm and integrate it with Gateway API integrator using the `certificates` endpoint:
 
 ```bash
 juju deploy self-signed-certificates
@@ -143,8 +146,12 @@ juju integrate self-signed-certificates:certificates gateway-api-integrator:cert
 Wait a couple of minutes for the deployment to settle, then check with `juju status --relations`:
 
 ```{terminal}
-:output-only:
+:user: ubuntu
+:host: charm-tutorial-vm
 :scroll:
+:copy:
+
+juju status --relations
 
 Model                            Controller     Cloud/Region  Version  SLA          Timestamp
 gateway-api-integrator-tutorial  concierge-k8s  k8s           3.6.28   unsupported  18:47:09Z
@@ -161,14 +168,12 @@ Integration provider                   Requirer                             Inte
 self-signed-certificates:certificates  gateway-api-integrator:certificates  tls-certificates  regular 
 ```
 
-We integrated the charms using the `certificates` relation endpoint, which provides
-the TLS certificate over the `tls-certificates` interface. 
+Both charms are active and idle now that the relation
+has been established. Now we need to provide Gateway API integrator with an application.
 
 ```{seealso}
 [`tls-certificates` interface - Charmhub](https://charmhub.io/integrations/tls-certificates)
 ```
-Both charms are active and idle now that the `certificates` relation endpoint
-has been established. Now we need to provide Gateway API integrator with an application.
 
 ## Deploy the Flask application
 
@@ -193,6 +198,7 @@ Let’s check what’s going on with our deployment using `juju status --relatio
 ```{terminal}
 :user: ubuntu
 :host: charm-tutorial-vm
+:scroll:
 
 juju status --relations
 
@@ -217,9 +223,11 @@ self-signed-certificates:certificates  gateway-api-integrator:certificates  tls-
 
 The key relation here is the one between Gateway API integrator and the Flask application:
 
-```bash
-Integration provider                   Requirer                             Interface         Type     Message  
-gateway-api-integrator:gateway         flask-k8s:ingress                    ingress           regular  
+```{terminal}
+:output-only:
+
+Integration provider                   Requirer                  Interface        Type
+gateway-api-integrator:gateway         flask-k8s:ingress         ingress           regular
 ```
 
 After we ran `juju integrate gateway-api-integrator flask-k8s`, Juju connected the two
@@ -254,17 +262,53 @@ If the deployment is successful, the output should show HTML containing
 `<title>Welcome to flask-k8s Charm</title>`.
 
 Now we can check the external hostname set up by the Gateway API integrator charm to verify
-that traffic is routed through it. We configured the hostname earlier as `ingress.internal`. We'll also
-need the gateway address set up by the charm and listed in `juju status`;
-in the example output, this address is `10.43.45.0`.
+that traffic is routed through it:
+
+```bash
+curl -k --resolve ingress.internal:443:10.43.45.0 \
+   https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s
+```
+
+The cURL command is more complex now. The command contains the following pieces:
+
+* Since we're using a self-signed certificate, we must tell cURL not to verify
+  the certificate by passing the `-k` flag.
+* The hostname must resolve through DNS, so we've passed the `--resolve` flag.
+* We configured the hostname earlier as `ingress.internal`, and we used the gateway
+  address set up by the charm that's listed in `juju status` as `10.43.45.0`.
+* The address contains the hostname (`ingress.internal`), the name of the Juju model
+  (`gateway-api-integrator-tutorial`), and the name of the Flask application (`flask-k8s`).
+
+If the routing is successful, the output should show the same HTML containing
+`<title>Welcome to flask-k8s Charm</title>` like before. We have confirmed that traffic
+is being routed through Gateway API integrator.
 
 ### Visit in a browser
 
 The HTML output from cURL can be difficult to read in a terminal.
 As a final step, let’s visit the Flask application in a browser.
 
-Access the Flask application at `<placeholder>` in your browser. You should see the message
+Access the Flask application at `https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s`
+in your browser. Your browser may display a warning about the connection's security
+because we used a self-signed certificate. You can safely ignore this warning.
+
+You should see the message
 "Congratulations! You’ve successfully deployed the flask-k8s charm."
+
+````{note}
+If you're using Multipass for this tutorial, you will need to route the IP from
+Multipass. To do this, first get the IP of the Multipass VM. Outside of the VM, run:
+
+```
+multipass info charm-tutorial-vm
+```
+
+Then route:
+
+```
+sudo ip route add ingress.internal via <Multipass VM IP>
+```
+````
 
 ## Clean up the environment
 

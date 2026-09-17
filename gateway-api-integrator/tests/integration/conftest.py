@@ -114,6 +114,7 @@ def configured_application_with_tls_fixture(
 def configured_application_without_tls_fixture(
     juju: jubilant.Juju,
     application: str,
+    certificate_provider_application: str,
 ) -> str:
     """The gateway-api-integrator charm configured without a TLS provider."""
     juju.config(
@@ -124,6 +125,7 @@ def configured_application_without_tls_fixture(
             "gateway-class": GATEWAY_CLASS_CONFIG,
         },
     )
+    juju.remove_relation(application, certificate_provider_application)
     juju.wait(
         lambda status: jubilant.all_active(status, application),
         error=jubilant.any_error,

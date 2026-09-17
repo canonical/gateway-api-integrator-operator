@@ -1,1 +1,1 @@
-tutorial/using-gateway-route.html tutorial/index.html
+tutorial/using-gateway-route tutorial/index.html

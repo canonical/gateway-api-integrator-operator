@@ -125,7 +125,6 @@ def configured_application_without_tls_fixture(
             "gateway-class": GATEWAY_CLASS_CONFIG,
         },
     )
-    juju.remove_relation(application, certificate_provider_application)
     juju.wait(
         lambda status: jubilant.all_active(status, application),
         error=jubilant.any_error,

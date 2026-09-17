@@ -10,6 +10,8 @@ Each revision is versioned by the date of the revision.
 ## 2026-09-17
 
 - Added a CI check that verifies the Terraform modules compliance.
+- Removed the `gateway-route` tutorial in favor of the tutorial under `ingress-configurator-operator`.
+- Updated the `ingress` tutorial.
 
 ## 2026-09-15
 

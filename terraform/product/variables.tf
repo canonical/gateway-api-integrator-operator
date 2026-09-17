@@ -25,12 +25,6 @@ variable "ingress_configurator" {
   default = {}
 }
 
-variable "logging-config" {
-  description = "The Juju logging configuration to apply to the deployment."
-  type        = string
-  default     = "<root>=INFO"
-}
-
 variable "metadata_version" {
   description = "Version string reported in the product module 'metadata' output."
   type        = string
@@ -41,16 +35,6 @@ variable "model_uuid" {
   description = "Reference to a juju model's uuid."
   type        = string
   nullable    = false
-}
-
-variable "proxy" {
-  description = "Proxy configuration for the deployment."
-  type = object({
-    http     = optional(string)
-    https    = optional(string)
-    no_proxy = optional(string)
-  })
-  default = {}
 }
 
 variable "risk" {

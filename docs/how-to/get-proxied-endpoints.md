@@ -49,7 +49,7 @@ An unset `external-hostname` requires `enforce-https=false` when your backend
 application uses the direct `ingress` relation.
 
 Only disable enforcement when plain HTTP is acceptable (for example, when TLS 
-is terminated by another component in front of the gateway). See {ref}`how_to_enforce_https`
+is terminated by another component in front of the gateway). See {ref}`how_to_enforce_https`.
 ```
 
 When `external-hostname` is set and the charm has a `certificates` relation,

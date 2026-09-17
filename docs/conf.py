@@ -371,5 +371,6 @@ rst_prolog = """
 # Map only the Sphinx documentation sets that you need to link to from your docs set.
 intersphinx_mapping = {
     "juju": ("https://documentation.ubuntu.com/juju/3.6/", None),
-    'sphinxcontrib-mermaid': ('https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest', None)
+    'sphinxcontrib-mermaid': ('https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest', None),
+    "ingress-configurator-charm": ("https://canonical.com/juju/docs/ingress-configurator-charm/latest/", None),
 }

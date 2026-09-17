@@ -108,3 +108,24 @@ def configured_application_with_tls_fixture(
         error=jubilant.any_error,
     )
     return application
+
+
+@pytest.fixture(scope="module", name="configured_application_without_tls")
+def configured_application_without_tls_fixture(
+    juju: jubilant.Juju,
+    application: str,
+) -> str:
+    """The gateway-api-integrator charm configured without a TLS provider."""
+    juju.config(
+        application,
+        {
+            "external-hostname": "",
+            "enforce-https": False,
+            "gateway-class": GATEWAY_CLASS_CONFIG,
+        },
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(status, application),
+        error=jubilant.any_error,
+    )
+    return application

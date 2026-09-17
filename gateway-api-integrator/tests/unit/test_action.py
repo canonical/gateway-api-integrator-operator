@@ -84,3 +84,29 @@ def test_get_proxied_endpoints_action(
         "gateway-api-integrator": {"url": "https://example.com"},
         "remote": {"url": "https://example.com/testing-model-testing-ingress-app"},
     }
+
+
+def test_get_proxied_endpoints_action_without_hostname(
+    base_state: dict,
+    gateway_relation: testing.Relation,
+) -> None:
+    """The action uses the gateway address when no hostname is configured."""
+    gateway_relation.local_app_data.update(
+        {"ingress": json.dumps({"url": "http://1.2.3.4/testing-model-testing-ingress-app"})}
+    )
+    base_state["relations"].append(gateway_relation)
+    base_state["config"] = {
+        "external-hostname": "",
+        "enforce-https": False,
+        "gateway-class": "cilium",
+    }
+
+    ctx = testing.Context(GatewayAPICharm)
+    state = testing.State(**base_state)
+    state = ctx.run(ctx.on.config_changed(), state)
+    ctx.run(ctx.on.action("get-proxied-endpoints"), state)
+
+    assert json.loads(ctx.action_results["proxied-endpoints"]) == {
+        "gateway-api-integrator": {"url": "http://1.2.3.4"},
+        "remote": {"url": "http://1.2.3.4/testing-model-testing-ingress-app"},
+    }

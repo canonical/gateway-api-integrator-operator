@@ -82,10 +82,6 @@ def test_get_proxied_endpoints_action_without_hostname(
     lightkube_client: lightkube.Client,
 ):
     """Assert that returned URLs use the Gateway address without a hostname."""
-    juju.integrate(
-        configured_application_without_tls,
-        f"{ingress_requirer_application}:ingress",
-    )
     juju.wait(
         lambda status: jubilant.all_active(
             status, configured_application_without_tls, ingress_requirer_application

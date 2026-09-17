@@ -58,8 +58,8 @@ If there’s a particular area of documentation that you’d like to see that’
 ```{toctree}
 :hidden:
 Tutorials <tutorial/index.md>
+How-to guides <how-to/index.md>
 Reference <reference/index.md>
-How-to <how-to/index.md>
 Explanation <explanation/index.md>
 Changelog <../changelog.md>
 ```

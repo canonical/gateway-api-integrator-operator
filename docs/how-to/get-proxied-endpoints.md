@@ -58,8 +58,8 @@ the action returns URLs that use the configured hostname:
 ```{terminal}
 juju run gateway-api-integrator/leader get-proxied-endpoints
 
-proxied-endpoints: '{"gateway-api-integrator": {"url": "http://testing.com"}, "flask-k8s":
-  {"url": "http://testing.com/testing-flask-k8s"}}'
+proxied-endpoints: '{"gateway-api-integrator": {"url": "https://testing.com"}, "flask-k8s":
+  {"url": "https://testing.com/testing-flask-k8s"}}'
 ```
 
 The hostname must resolve through DNS to an IP address that reaches the

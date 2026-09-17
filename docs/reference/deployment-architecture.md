@@ -8,14 +8,12 @@ myst:
 
 # Deployment architecture
 
-The intended deployment uses one `gateway-api-integrator` application to manage a
-shared Kubernetes `Gateway`. Backend applications connect to the Gateway through
-`ingress-configurator`, which translates the standard `ingress` interface into
-Gateway API routes.
-
-Deploy one `ingress-configurator` application for each backend or route. Each instance
-integrates with its backend over the `ingress` interface and with
-`gateway-api-integrator` over the `gateway-route` interface.
+The recommended deployment uses one `gateway-api-integrator` charm to manage a
+shared Kubernetes
+[`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway).
+To connect multiple backends to it, deploy one `ingress-configurator` charm per
+backend or route. See
+[How to route traffic for multiple workloads through a single Gateway](https://canonical.com/juju/docs/ingress-configurator-charm/latest/how-to/gateway-api/route-multiple-workloads/).
 
 ## Deployment diagram
 
@@ -63,35 +61,42 @@ flowchart LR
     style cluster stroke-width:3px
 ```
 
+```{note}
+The [Kubernetes resources](https://kubernetes.io/docs/concepts/services-networking/)
+in the diagram are created and managed automatically by the
+`gateway-api-integrator` and `ingress-configurator` charms. Operators manage the
+charms and their relations; they do not need to create these resources directly.
+```
+
 ## Component responsibilities
 
 `gateway-api-integrator`
-: Creates and manages the shared `Gateway` and TLS `Secret`. It obtains certificates
-through the `certificates` integration and publishes Gateway information to every
-related `ingress-configurator`.
+: Creates and manages the shared [`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway)
+and TLS [`Secret`](https://kubernetes.io/docs/concepts/configuration/secret/). It
+obtains certificates through the `certificates` relation and publishes Gateway
+information to every related `ingress-configurator`.
 
 `ingress-configurator`
-: Receives backend information through the `ingress` integration and creates the
-`HTTPRoute` resources that attach the backend to the shared Gateway. If required,
-it also creates a Kubernetes `Service` for the backend.
-
-Gateway API controller
-: Watches the Gateway API resources and configures the cluster's ingress data plane
-and load-balancer address.
+: Integrates with `gateway-api-integrator` through the `gateway-route` relation to
+receive details about the shared Gateway. It combines these details with backend
+information from the `ingress` relation and creates an
+[`HTTPRoute`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#httproute)
+that attaches the backend to the Gateway. If required, it also creates a Kubernetes
+`Service` for the backend.
 
 Backend application
-: Provides its address and port through the `ingress` integration. Each backend or
-independently configured route uses a dedicated `ingress-configurator` application.
+: Provides its address and port through the `ingress` relation. Each backend
+uses a dedicated `ingress-configurator` charm.
 
 ## Integration layout
 
 The deployment uses these integrations:
 
-| Provider                 | Requirer                 | Integration endpoint | Purpose                                              |
-| ------------------------ | ------------------------ | -------------------- | ---------------------------------------------------- |
-| TLS certificate provider | `gateway-api-integrator` | `certificates`       | Issues certificates for HTTPS listeners              |
-| `gateway-api-integrator` | `ingress-configurator`   | `gateway-route`      | Shares Gateway details and HTTPS mode                |
-| `ingress-configurator`   | Backend application      | `ingress`            | Exchanges backend details and the public ingress URL |
+| Provider                 | Requirer                 | Integration endpoint | Purpose                                                               |
+| ------------------------ | ------------------------ | -------------------- | --------------------------------------------------------------------- |
+| TLS certificate provider | `gateway-api-integrator` | `certificates`       | Issues certificates for HTTPS listeners                               |
+| `gateway-api-integrator` | `ingress-configurator`   | `gateway-route`      | Shares Gateway connection details and HTTP/HTTPS routing requirements |
+| `ingress-configurator`   | Backend application      | `ingress`            | Exchanges backend details and the public ingress URL                  |
 
 The certificates integration is required while HTTPS enforcement is enabled, which is
 the default.

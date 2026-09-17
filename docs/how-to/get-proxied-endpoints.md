@@ -10,11 +10,12 @@ myst:
 
 The `get-proxied-endpoints` action returns the URLs exposed by the
 `gateway-api-integrator` charm. The result includes the gateway endpoint and
-the endpoints for applications integrated through the `ingress` relation.
+the endpoints for applications integrated through the `ingress` relation. 
+The charm `flask-k8s` is used as an example backend application for this guide.
 
 ```{note}
 When routing through the `gateway-route` relation with the `ingress-configurator`
-charm, run the `get-proxied-endpoints` action on the `ingress-configurator` charm
+charm, run the [`get-proxied-endpoints` action](https://charmhub.io/ingress-configurator/actions#get-proxied-endpoints) on the `ingress-configurator` charm
 instead.
 ```
 
@@ -44,11 +45,11 @@ curl http://10.43.45.0/testing-flask-k8s
 ```
 
 ```{warning}
-Not setting `external-hostname` requires `enforce-https=false` when backend 
-applications use the direct `ingress` relation.
+An unset `external-hostname` requires `enforce-https=false` when your backend 
+application uses the direct `ingress` relation.
 
 Only disable enforcement when plain HTTP is acceptable (for example, when TLS 
-is terminated by another component in front of the gateway).
+is terminated by another component in front of the gateway). See {ref}`how_to_enforce_https`
 ```
 
 When `external-hostname` is set and the charm has a `certificates` relation,
@@ -64,10 +65,6 @@ proxied-endpoints: '{"gateway-api-integrator": {"url": "http://testing.com"}, "f
 The hostname must resolve through DNS to an IP address that reaches the
 gateway. For local testing, check the `Gateway addresses` value in
 `juju status`, then use `--resolve` to map the hostname to that address:
-
-```bash
-juju status
-```
 
 ```bash
 curl -k --resolve testing.com:443:10.43.45.0 https://testing.com/testing-flask-k8s

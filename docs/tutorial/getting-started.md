@@ -14,7 +14,7 @@ for applications. The charm supports two different relation interfaces, and the
 HTTP routing. In this tutorial we'll deploy the charm to provide ingress to a simple
 Flask backend application running on Kubernetes.
 
-```{warning}
+```{important}
 The `ingress` interface has limitations in ingress configuration and with supporting
 multiple backend applications. The charm offers another interface, `gateway-route`,
 with advanced routing features and configuration options. Follow

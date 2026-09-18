@@ -4,6 +4,7 @@
 
 """gateway-api-integrator charm file."""
 
+import json
 import logging
 import typing
 import uuid
@@ -123,6 +124,9 @@ class GatewayAPICharm(CharmBase):
         )
 
         self.framework.observe(self.on.get_certificate_action, self._on_get_certificate_action)
+        self.framework.observe(
+            self.on.get_proxied_endpoints_action, self._on_get_proxied_endpoints_action
+        )
 
         self.framework.observe(self._ingress_provider.on.data_provided, self._on_data_provided)
         self.framework.observe(self._ingress_provider.on.data_removed, self._on_data_removed)
@@ -268,6 +272,21 @@ class GatewayAPICharm(CharmBase):
                 )
                 return
         event.fail(f"Missing or incomplete certificate data for {hostname}")
+
+    @validate_config_and_integration(defer=False)
+    def _on_get_proxied_endpoints_action(self, event: ActionEvent) -> None:
+        """Triggered when users run the ``get-proxied-endpoints`` Juju action."""
+        endpoints = self._ingress_provider.proxied_endpoints
+        gateway_address = self.config.get("external-hostname") or self._current_gateway_address()
+        if gateway_address:
+            scheme = "https" if self.model.get_relation(TLS_CERT_RELATION) else "http"
+            endpoints.update(
+                {
+                    self.app.name: {"url": f"{scheme}://{gateway_address}"},
+                }
+            )
+
+        event.set_results({"proxied-endpoints": json.dumps(endpoints)})
 
     @validate_config_and_integration(defer=False)
     def _on_certificate_available(self, _: CertificateAvailableEvent) -> None:

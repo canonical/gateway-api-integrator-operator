@@ -8,14 +8,10 @@ myst:
 
 # Deployment architecture
 
-The recommended deployment uses one `gateway-api-integrator` charm to manage a
-shared Kubernetes
-[`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway).
-To connect multiple backends to the charm, deploy one `ingress-configurator` charm per
-backend or route. See
-[How to route traffic for multiple workloads through a single Gateway](https://canonical.com/juju/docs/ingress-configurator-charm/latest/how-to/gateway-api/route-multiple-workloads/).
-
-## Deployment diagram
+The recommended architecture routes multiple backend applications through a shared
+Kubernetes
+[`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway)
+managed by one `gateway-api-integrator` charm. Each backend requires a separate `ingress-configurator` charm.
 
 ```{mermaid}
 %%{init: {'flowchart': {'subGraphTitleMargin': {'top': -22, 'bottom': 0}}}}%%
@@ -61,14 +57,13 @@ flowchart LR
     style cluster stroke-width:3px
 ```
 
-```{note}
-The [Kubernetes resources](https://kubernetes.io/docs/concepts/services-networking/)
-in the diagram are created and managed automatically by the
-`gateway-api-integrator` and `ingress-configurator` charms. Operators manage the
-charms and their relations; they do not need to create these resources directly.
-```
-
-<Intro sentence to the diagram, stating that it's an example deployment with two backend apps>. The deployment contains these key components:
+In the example deployment shown above, two backend applications share one Gateway
+managed by `gateway-api-integrator`. Each backend has its own
+`ingress-configurator` charm, which connects the backend to the shared Gateway
+using
+[`HTTPRoute`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#httproute)
+resources.
+The deployment contains these key components:
 
 `gateway-api-integrator`
 : Creates and manages the shared [`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway)
@@ -88,6 +83,13 @@ Backend application
 : Provides its address and port through the `ingress` relation. Each backend
 uses a dedicated `ingress-configurator` charm.
 
+```{note}
+The [Kubernetes resources](https://kubernetes.io/docs/concepts/services-networking/)
+in the diagram are created and managed automatically by the
+`gateway-api-integrator` and `ingress-configurator` charms. Operators manage the
+charms and their relations; they do not need to create these resources directly.
+```
+
 ## Integration layout
 
 The deployment uses these integrations:
@@ -101,6 +103,8 @@ The deployment uses these integrations:
 The certificates integration is required while HTTPS enforcement is enabled, which is
 the default.
 
-For the implementation details inside `gateway-api-integrator`, see
-{ref}`reference_charm_architecture`. For deployment instructions, see
-{ref}`tutorial_using_gateway_route`.
+## Read more
+
+- {ref}`Charm architecture <reference_charm_architecture>`
+- {ref}`Deploy gateway-api-integrator with ingress-configurator <tutorial_using_gateway_route>`
+- [How to route traffic for multiple workloads through a single Gateway](https://canonical.com/juju/docs/ingress-configurator-charm/latest/how-to/gateway-api/route-multiple-workloads/)

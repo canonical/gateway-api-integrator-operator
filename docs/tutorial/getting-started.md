@@ -11,7 +11,7 @@ myst:
 The Gateway API integrator charm manages Gateway API resources to provide ingress
 for applications. The charm supports two different relation interfaces, and the
 `ingress` interface offers a straightforward and standard way to configure basic
-HTTP routing. In this tutorial we'll deploy the charm to provide ingress to a simple
+traffic routing. In this tutorial we'll deploy the charm to provide ingress to a simple
 Flask backend application running on Kubernetes.
 
 ```{important}

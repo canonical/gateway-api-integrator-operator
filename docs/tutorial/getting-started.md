@@ -50,13 +50,26 @@ This tutorial requires the following software to be installed on your working st
 
 Use [Concierge](https://github.com/canonical/concierge) to set up Juju and Canonical Kubernetes:
 
-```
+```bash
 sudo snap install --classic concierge
 sudo concierge prepare -p k8s
 ```
 
 This first command installs Concierge, and the second command uses Concierge to install
 and configure Juju and Canonical Kubernetes.
+
+````{tip}
+If you're using Multipass for this tutorial,
+set the Kubernetes load-balancer IP to be the same as your Multipass VM:
+
+```bash
+PREFSRC=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
+sudo k8s set load-balancer.cidrs=$PREFSRC/32
+``` 
+
+This custom configuration means we can avoid
+setting up additional routes later in the tutorial when we visit the Flask application in a browser.
+````
 
 For this tutorial, Juju must be bootstrapped to a Canonical Kubernetes controller. Concierge should
 complete this step for you, and you can verify by checking for `msg="Bootstrapped Juju" provider=k8s`

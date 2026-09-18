@@ -12,7 +12,6 @@ Each revision is versioned by the date of the revision.
 - Added the `Deployment architecture` reference page.
 - Added a CI check that verifies the Terraform modules compliance.
 
-
 ## 2026-09-15
 
 - Added `How to provide a certificate` to the how-to guides.

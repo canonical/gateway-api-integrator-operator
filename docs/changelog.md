@@ -10,6 +10,8 @@ Each revision is versioned by the date of the revision.
 ## 2026-09-17
 
 - Added the `Deployment architecture` reference page.
+- Added a CI check that verifies the Terraform modules compliance.
+
 
 ## 2026-09-15
 

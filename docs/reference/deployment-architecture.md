@@ -16,10 +16,6 @@ managed by one `gateway-api-integrator` charm. Each backend requires a separate 
 ```{mermaid}
 %%{init: {'flowchart': {'subGraphTitleMargin': {'top': -22, 'bottom': 0}}}}%%
 flowchart LR
-    client["Client"]
-
-    subgraph cluster["Kubernetes cluster"]
-        controller["Gateway API controller"]
 
         subgraph model["Juju model"]
             tls["TLS certificate provider"]
@@ -37,7 +33,6 @@ flowchart LR
                 service_b["Service B"]
             end
         end
-    end
 
     tls -. "certificates" .-> gai
     app_a <-. "ingress" .-> ic_a
@@ -48,13 +43,9 @@ flowchart LR
     gai --> gateway
     ic_a --> route_a
     ic_b --> route_b
-    controller --> gateway
 
-    client --> gateway
     gateway --> route_a --> service_a --> app_a
     gateway --> route_b --> service_b --> app_b
-
-    style cluster stroke-width:3px
 ```
 
 In the example deployment shown above, two backend applications share one Gateway

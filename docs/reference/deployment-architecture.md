@@ -81,17 +81,17 @@ in the diagram are created and managed automatically by the
 charms and their relations; they do not need to create these resources directly.
 ```
 
-## Integration layout
+## Relations
 
-The deployment uses these integrations:
+The deployment uses these relations:
 
-| Provider                 | Requirer                 | Integration endpoint | Purpose                                                               |
+| Provider                 | Requirer                 | Relation endpoint | Purpose                                                               |
 | ------------------------ | ------------------------ | -------------------- | --------------------------------------------------------------------- |
 | TLS certificate provider | `gateway-api-integrator` | `certificates`       | Issues certificates for HTTPS listeners                               |
 | `gateway-api-integrator` | `ingress-configurator`   | `gateway-route`      | Shares Gateway connection details and HTTP/HTTPS routing requirements |
 | `ingress-configurator`   | Backend application      | `ingress`            | Exchanges backend details and the public ingress URL                  |
 
-The certificates integration is required while HTTPS enforcement is enabled, which is
+The `certificates` relation is required while HTTPS enforcement is enabled, which is
 the default.
 
 ## Read more

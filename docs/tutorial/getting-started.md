@@ -36,7 +36,7 @@ You will need a working station, e.g., a laptop, with AMD64 architecture. Your w
 should have at least 4 CPU cores, 8 GB of RAM, and 50 GB of disk space.
 
 ````{tip}
-You can use Multipass to create an isolated environment by running:
+You can use [Multipass](https://canonical.com/multipass) to create an isolated environment by running:
 ```
 multipass launch 24.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 ```
@@ -58,16 +58,15 @@ sudo concierge prepare -p k8s
 This first command installs Concierge, and the second command uses Concierge to install
 and configure Juju and Canonical Kubernetes.
 
-````{tip}
-If you're using Multipass for this tutorial,
-set the Kubernetes load-balancer IP to be the same as your Multipass VM:
+Set the Kubernetes load-balancer IP to be the same as your working station or Multipass VM:
 
 ```bash
 PREFSRC=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
 sudo k8s set load-balancer.cidrs=$PREFSRC/32
 ``` 
 
-This custom configuration means we can avoid
+````{tip}
+If you're using Multipass for this tutorial, this custom configuration means we can avoid
 setting up additional routes later in the tutorial when we visit the Flask application in a browser.
 ````
 
@@ -114,7 +113,8 @@ through the `ingress` relation.
 Configure the charm:
 
 ```bash
-juju config gateway-api-integrator gateway-class=ck-gateway external-hostname=ingress.internal
+juju config gateway-api-integrator gateway-class=ck-gateway \
+     external-hostname=ingress.internal
 ```
 
 Check the status of our deployment with `juju status`:
@@ -139,9 +139,9 @@ gateway-api-integrator/0*  blocked   idle   10.1.0.122         Certificates rela
 
 By default, the charm redirects plain HTTP traffic to HTTPS, which requires a
 TLS certificate to successfully complete the connection. The deployment is blocked
-because the charm requires an integration with a TLS certificates provider.
+because the charm must be integrated with a TLS certificates provider.
 
-## Establish an integration with a TLS provider charm
+## Integrate with a TLS provider charm
 
 For this tutorial, we'll use the
 [self-signed certificates charm](https://charmhub.io/self-signed-certificates) to create
@@ -167,15 +167,15 @@ Wait a couple of minutes for the deployment to settle, then check with `juju sta
 juju status --relations
 
 Model                            Controller     Cloud/Region  Version  SLA          Timestamp
-gateway-api-integrator-tutorial  concierge-k8s  k8s           3.6.28   unsupported  18:47:09Z
+gateway-api-integrator-tutorial  concierge-k8s  k8s           3.6.28   unsupported  14:48:53Z
 
-App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
-gateway-api-integrator             active      1  gateway-api-integrator    1/stable  165  10.152.183.155  no       Gateway addresses: 10.43.45.0
-self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.214  no       
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address        Exposed  Message
+gateway-api-integrator             active      1  gateway-api-integrator    1/stable  165  10.152.183.51  no       Gateway addresses: 10.114.45.196
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.50  no       
 
 Unit                         Workload  Agent  Address     Ports  Message
-gateway-api-integrator/0*    active    idle   10.1.0.122         Gateway addresses: 10.43.45.0
-self-signed-certificates/0*  active    idle   10.1.0.102         
+gateway-api-integrator/0*    active    idle   10.1.0.148         Gateway addresses: 10.114.45.196
+self-signed-certificates/0*  active    idle   10.1.0.96          
 
 Integration provider                   Requirer                             Interface         Type     Message
 self-signed-certificates:certificates  gateway-api-integrator:certificates  tls-certificates  regular 
@@ -217,22 +217,22 @@ Let’s check what’s going on with our deployment using `juju status --relatio
 juju status --relations
 
 Model                            Controller     Cloud/Region  Version  SLA          Timestamp
-gateway-api-integrator-tutorial  concierge-k8s  k8s           3.6.28   unsupported  18:54:53Z
+gateway-api-integrator-tutorial  concierge-k8s  k8s           3.6.28   unsupported  14:50:08Z
 
 App                       Version  Status  Scale  Charm                     Channel      Rev  Address         Exposed  Message
-flask-k8s                          active      1  flask-k8s                 latest/edge   19  10.152.183.170  no       
-gateway-api-integrator             active      1  gateway-api-integrator    1/stable     165  10.152.183.155  no       Gateway addresses: 10.43.45.0
-self-signed-certificates           active      1  self-signed-certificates  1/stable     586  10.152.183.214  no       
+flask-k8s                          active      1  flask-k8s                 latest/edge   19  10.152.183.208  no       
+gateway-api-integrator             active      1  gateway-api-integrator    1/stable     165  10.152.183.51   no       Gateway addresses: 10.114.45.196
+self-signed-certificates           active      1  self-signed-certificates  1/stable     586  10.152.183.50   no       
 
 Unit                         Workload  Agent  Address     Ports  Message
-flask-k8s/0*                 active    idle   10.1.0.12          
-gateway-api-integrator/0*    active    idle   10.1.0.122         Gateway addresses: 10.43.45.0
-self-signed-certificates/0*  active    idle   10.1.0.102         
+flask-k8s/0*                 active    idle   10.1.0.92          
+gateway-api-integrator/0*    active    idle   10.1.0.148         Gateway addresses: 10.114.45.196
+self-signed-certificates/0*  active    idle   10.1.0.96          
 
 Integration provider                   Requirer                             Interface         Type     Message
 flask-k8s:secret-storage               flask-k8s:secret-storage             secret-storage    peer     
 gateway-api-integrator:gateway         flask-k8s:ingress                    ingress           regular  
-self-signed-certificates:certificates  gateway-api-integrator:certificates  tls-certificates  regular 
+self-signed-certificates:certificates  gateway-api-integrator:certificates  tls-certificates  regular  
 ```
 
 The key relation here is the one between Gateway API integrator and the Flask application:
@@ -279,7 +279,7 @@ Now we can check the external hostname set up by the Gateway API integrator char
 that traffic is routed through it:
 
 ```bash
-curl -k --resolve ingress.internal:443:10.43.45.0 \
+curl -k --resolve ingress.internal:443:$PREFSRC \
    https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s
 ```
 
@@ -288,8 +288,9 @@ The cURL command is more complex now. The command contains the following pieces:
 * Since we're using a self-signed certificate, we must tell cURL not to verify
   the certificate by passing the `-k` flag.
 * The hostname must resolve through DNS, so we've passed the `--resolve` flag.
-* We configured the hostname earlier as `ingress.internal`, and we used the gateway
-  address set up by the charm that's listed in `juju status` as `10.43.45.0`.
+* We configured the hostname earlier as `ingress.internal`, and we used the load-balancer
+  IP that we set during the environment setup section. Note that this IP is also listed
+  under `Gateway addresses` in the output of `juju status`.
 * The address contains the hostname (`ingress.internal`), the name of the Juju model
   (`gateway-api-integrator-tutorial`), and the name of the Flask application (`flask-k8s`).
 
@@ -302,27 +303,30 @@ is being routed through Gateway API integrator.
 The HTML output from cURL can be difficult to read in a terminal.
 As a final step, let’s visit the Flask application in a browser.
 
-Access the Flask application at `https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s`
+````{tip}
+If you're using a Multipass VM for this tutorial, you'll need to replicate the
+DNS resolve behavior by adding the `ingress.internal` domain to your local `hosts` file.
+
+First, get the IP of your Multipass VM. Outside of the VM, run:
+
+```bash
+multipass info charm-tutorial-vm
+```
+
+Save the VM IP to an environment variable `VM_IP`. Then, update your `hosts` file:
+
+```bash
+echo "$VM_IP ingress.internal" | sudo tee -a /etc/hosts
+```
+
+````
+
+Access the Flask application at https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s
 in your browser. Your browser may display a warning about the connection's security
 because we used a self-signed certificate. You can safely ignore this warning.
 
 You should see the message
 "Congratulations! You’ve successfully deployed the flask-k8s charm."
-
-````{note}
-If you're using Multipass for this tutorial, you will need to route the IP from
-Multipass. To do this, first get the IP of the Multipass VM. Outside of the VM, run:
-
-```
-multipass info charm-tutorial-vm
-```
-
-Then route:
-
-```
-sudo ip route add ingress.internal via <Multipass VM IP>
-```
-````
 
 ## Clean up the environment
 
@@ -331,6 +335,9 @@ with a basic Flask application, and verified that the routing works by accessing
 
 You can clean up your environment by following this guide:
 {ref}`Tear down your deployment <juju:tear-things-down>`
+
+If you used a Multipass VM for this tutorial, remove the `ingress.internal` domain from
+your local `/etc/hosts` file.
 
 ## Next steps
 

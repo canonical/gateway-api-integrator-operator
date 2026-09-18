@@ -248,6 +248,7 @@ linkcheck_ignore = [
     r"https://.*\.sourceforge\.(net|io)/.*",
     # gateway-api.sigs.k8s.io is often unreachable in CI environments
     r"https://gateway-api\.sigs\.k8s\.io/.*",
+    "https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s",
     ]
 
 

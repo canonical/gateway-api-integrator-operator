@@ -1,7 +1,7 @@
-# Copyright 2025 Canonical Ltd.
+# Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Integration test for actions when external-hostname is not configured."""
+"""Integration test for actions when there is no TLS relation."""
 
 import json
 

@@ -65,7 +65,7 @@ PREFSRC=$(ip -4 -j route get 2.2.2.2 | jq -r '.[] | .prefsrc')
 sudo k8s set load-balancer.cidrs=$PREFSRC/32
 ``` 
 
-````{tip}
+````{note}
 If you're using Multipass for this tutorial, this custom configuration means we can avoid
 setting up additional routes later in the tutorial when we visit the Flask application in a browser.
 ````
@@ -260,7 +260,7 @@ We’ll now test whether the routing works.
 
 First, let’s verify that the Flask application serves traffic. We’ll need the IP address of the
 Flask unit listed in the output of `juju status`. In the example terminal output above, the IP
-address is `10.1.0.12`. We can also grab this information generically using `jq`:
+address is `10.1.0.92`. We can also grab this information generically using `jq`:
 
 ```bash
 FLASK_IP=$(juju status --format json | jq -r '.applications."flask-k8s".units."flask-k8s/0".address')

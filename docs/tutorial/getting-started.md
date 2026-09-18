@@ -101,8 +101,7 @@ through the `ingress` relation.
 Configure the charm:
 
 ```bash
-juju config gateway-api-integrator gateway-class=ck-gateway
-juju config gateway-api-integrator external-hostname=ingress.internal
+juju config gateway-api-integrator gateway-class=ck-gateway external-hostname=ingress.internal
 ```
 
 Check the status of our deployment with `juju status`:
@@ -111,6 +110,7 @@ Check the status of our deployment with `juju status`:
 :user: ubuntu
 :host: charm-tutorial-vm
 :scroll:
+:copy:
 
 juju status
 
@@ -199,6 +199,7 @@ Let’s check what’s going on with our deployment using `juju status --relatio
 :user: ubuntu
 :host: charm-tutorial-vm
 :scroll:
+:copy:
 
 juju status --relations
 

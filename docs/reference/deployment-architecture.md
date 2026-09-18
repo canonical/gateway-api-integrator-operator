@@ -11,7 +11,7 @@ myst:
 The recommended deployment uses one `gateway-api-integrator` charm to manage a
 shared Kubernetes
 [`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway).
-To connect multiple backends to it, deploy one `ingress-configurator` charm per
+To connect multiple backends to the charm, deploy one `ingress-configurator` charm per
 backend or route. See
 [How to route traffic for multiple workloads through a single Gateway](https://canonical.com/juju/docs/ingress-configurator-charm/latest/how-to/gateway-api/route-multiple-workloads/).
 
@@ -68,7 +68,7 @@ in the diagram are created and managed automatically by the
 charms and their relations; they do not need to create these resources directly.
 ```
 
-## Component responsibilities
+<Intro sentence to the diagram, stating that it's an example deployment with two backend apps>. The deployment contains these key components:
 
 `gateway-api-integrator`
 : Creates and manages the shared [`Gateway`](https://gateway-api.sigs.k8s.io/docs/concepts/api-overview/#gateway)

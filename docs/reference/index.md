@@ -12,6 +12,7 @@ The pages in this section contain technical information for topics relevant to t
 
 ```{toctree}
 :maxdepth: 1
+deployment-architecture.md
 charm-architecture.md
 actions.md
 ```

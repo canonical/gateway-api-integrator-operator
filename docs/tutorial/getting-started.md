@@ -276,23 +276,42 @@ If the deployment is successful, the output should show HTML containing
 `<title>Welcome to flask-k8s Charm</title>`.
 
 Now we can check the external hostname set up by the Gateway API integrator charm to verify
-that traffic is routed through it:
+that traffic is routed through it. To determine the external URL, let's use the charm's
+`get-proxied-endpoints` action:
 
 ```bash
-curl -k --resolve ingress.internal:443:$PREFSRC \
-   https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s
+juju run gateway-api-integrator/0 get-proxied-endpoints
 ```
 
-The cURL command is more complex now. The command contains the following pieces:
+The action lists all endpoints proxied by Gateway API integrator. The command should output
+something similar to:
 
-* Since we're using a self-signed certificate, we must tell cURL not to verify
-  the certificate by passing the `-k` flag.
-* The hostname must resolve through DNS, so we've passed the `--resolve` flag.
-* We configured the hostname earlier as `ingress.internal`, and we used the load-balancer
-  IP that we set during the environment setup section. Note that this IP is also listed
-  under `Gateway addresses` in the output of `juju status`.
-* The address contains the hostname (`ingress.internal`), the name of the Juju model
-  (`gateway-api-integrator-tutorial`), and the name of the Flask application (`flask-k8s`).
+```{terminal}
+:user: ubuntu
+:host: charm-tutorial-vm
+:scroll:
+:copy:
+
+juju run gateway-api-integrator/0 get-proxied-endpoints
+
+
+Running operation 1 with 1 task
+  - task 2 on unit-gateway-api-integrator-0
+
+REPLACE WITH ACTUAL OUTPUT
+```
+
+Notice that Gateway API integrator has set up the URL
+`REPLACE WITH ACTUAL OUTPUT` for our Flask application
+in this example output. 
+
+TODO: Notice that Gateway API integrator has set up the URL
+`REPLACE WITH ACTUAL OUTPUT` for our Flask application in this example output.
+Once again we’ll test with cURL:
+
+```bash
+REPLACE WITH ACTUAL COMMAND
+```
 
 If the routing is successful, the output should show the same HTML containing
 `<title>Welcome to flask-k8s Charm</title>` like before. We have confirmed that traffic

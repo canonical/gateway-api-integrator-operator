@@ -3,4 +3,5 @@ configurator
 databag
 hostnames
 HTTPRoute
+proxied
 workloadless

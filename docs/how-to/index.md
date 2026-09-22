@@ -28,6 +28,7 @@ Provide a certificate <provide-certificate.md>
 Route traffic to multiple workloads <route-multiple-workloads.md>
 Configure HTTPS enforcement <enforce-https.md>
 Configure HSTS <configure-hsts.md>
+Get proxied endpoints <get-proxied-endpoints.md>
 ```
 
 ## Maintenance and development

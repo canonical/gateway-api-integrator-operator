@@ -3,6 +3,8 @@
 
 """Integration test for actions."""
 
+import json
+
 import jubilant
 import pytest
 from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
@@ -40,3 +42,31 @@ def test_get_certificate_action(
     assert result.results["certificate"].startswith("-----BEGIN CERTIFICATE-----")
     assert result.results["ca"].startswith("-----BEGIN CERTIFICATE-----")
     assert result.results["chain"].startswith("-----BEGIN CERTIFICATE-----")
+
+
+@pytest.mark.abort_on_fail
+def test_get_proxied_endpoints_action(
+    juju: jubilant.Juju,
+    configured_application_with_tls: str,
+    ingress_requirer_application: str,
+):
+    """Assert that get-proxied-endpoints returns gateway and ingress URLs."""
+    juju.wait(
+        lambda status: jubilant.all_active(
+            status, configured_application_with_tls, ingress_requirer_application
+        ),
+        error=jubilant.any_error,
+    )
+
+    result = juju.run(
+        f"{configured_application_with_tls}/leader",
+        "get-proxied-endpoints",
+    )
+    endpoints = json.loads(result.results["proxied-endpoints"])
+    assert (
+        endpoints[configured_application_with_tls]["url"]
+        == f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}"
+    )
+    assert endpoints[ingress_requirer_application]["url"].startswith(
+        f"https://{TEST_EXTERNAL_HOSTNAME_CONFIG}/"
+    )

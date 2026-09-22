@@ -7,6 +7,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-09-22
+
+- Modified behavior to block all units when multiple unit deployment used (instead of only non-leaders)
+
 ## 2026-09-18
 
 - Added `get-proxied-endpoints` action to retrieve the gateway and proxied application endpoints.

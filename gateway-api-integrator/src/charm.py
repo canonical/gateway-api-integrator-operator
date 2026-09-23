@@ -341,7 +341,7 @@ class GatewayAPICharm(CharmBase):
             5. Update the DNS record relation with the DNS record data.
             6. Set the gateway LB address in the charm's status message.
         """
-        if self.app.planned_units() != 1:
+        if self.app.planned_units() > 1:
             self.unit.status = BlockedStatus("Deploying more than one unit is not supported.")
             return
 

@@ -21,6 +21,19 @@ from state.tls import TLSInformationNotReadyError
 from .conftest import GATEWAY_CLASS_CONFIG, TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
+def test_blocks_when_multiple_units_are_planned(base_state: dict) -> None:
+    """Charm should block when more than one unit is planned."""
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["planned_units"] = 2
+    state = testing.State(**base_state)
+
+    state = ctx.run(ctx.on.start(), state)
+
+    assert state.unit_status == testing.BlockedStatus(
+        "Deploying more than one unit is not supported."
+    )
+
+
 def test_dns_record(
     base_state: dict, gateway_relation: testing.Relation, certificates_relation: testing.Relation
 ) -> None:

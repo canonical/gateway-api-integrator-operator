@@ -55,6 +55,7 @@ class HTTPRouteResourceInformation:
             application_name = integration_data.app.name
             service_port = integration_data.app.port
             service_name = f"{ingress_provider.charm.app.name}-{application_name}-service"
+            path = f"/{integration_data.app.model}-{application_name}"
             return cls(
                 application_name=application_name,
                 requirer_model_name=integration_data.app.model,
@@ -73,10 +74,21 @@ class HTTPRouteResourceInformation:
                                     "replacePrefixMatch": "/",
                                 }
                             },
-                        }
+                        },
+                        {
+                            "type": "RequestHeaderModifier",
+                            "requestHeaderModifier": {
+                                "set": [
+                                    {
+                                        "name": "X-Forwarded-Prefix",
+                                        "value": path,
+                                    }
+                                ],
+                            },
+                        },
                     ]
                 ),
-                paths=[f"/{integration_data.app.model}-{application_name}"],
+                paths=[path],
                 hostname=hostname,
             )
         except DataValidationError as exc:

@@ -40,6 +40,11 @@ You can use [Multipass](https://canonical.com/multipass) to create an isolated e
 ```
 multipass launch 24.04 --name charm-tutorial-vm --cpus 4 --memory 8G --disk 50G
 ```
+
+To be able to work inside the Multipass VM, log in with the following command:
+```
+multipass shell charm-tutorial-vm
+```
 ````
 
 This tutorial requires the following software to be installed on your working station
@@ -94,10 +99,10 @@ juju add-model gateway-api-integrator-tutorial
 Let's deploy the Gateway API integrator charm:
 
 ```bash
-juju deploy gateway-api-integrator --trust --channel=1/stable
+juju deploy gateway-api-integrator --trust --channel=1/edge
 ```
 
-We'll use the `1/stable` channel for this tutorial as that's the actively maintained
+We'll use the `1/edge` channel for this tutorial as that's the actively maintained
 channel for the charm. We must also use the `--trust` flag to provide Gateway API with
 elevated permissions to interact with the Kubernetes environment (the charm uses these
 permissions to create the [`Gateway`](https://gateway-api.sigs.k8s.io/reference/api-types/gateway/)
@@ -241,7 +246,7 @@ The key relation here is the one between Gateway API integrator and the Flask ap
 :output-only:
 
 Integration provider                   Requirer                  Interface        Type
-gateway-api-integrator:gateway         flask-k8s:ingress         ingress           regular
+gateway-api-integrator:gateway         flask-k8s:ingress         ingress          regular
 ```
 
 After we ran `juju integrate gateway-api-integrator flask-k8s`, Juju connected the two
@@ -294,24 +299,33 @@ something similar to:
 
 juju run gateway-api-integrator/0 get-proxied-endpoints
 
+Running operation 3 with 1 task
+  - task 4 on unit-gateway-api-integrator-0
 
-Running operation 1 with 1 task
-  - task 2 on unit-gateway-api-integrator-0
-
-REPLACE WITH ACTUAL OUTPUT
+Waiting for task 4...
+proxied-endpoints: '{"flask-k8s": {"url": "https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s"},
+  "gateway-api-integrator": {"url": "https://ingress.internal"}}'
 ```
 
 Notice that Gateway API integrator has set up the URL
-`REPLACE WITH ACTUAL OUTPUT` for our Flask application
-in this example output. 
+https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s
+for our Flask application in this example output. 
+The URL contains the hostname we configured earlier (`ingress.internal`),
+the name of the Juju model (`gateway-api-integrator-tutorial`), 
+and the name of the Flask application (`flask-k8s`).
 
-TODO: Notice that Gateway API integrator has set up the URL
-`REPLACE WITH ACTUAL OUTPUT` for our Flask application in this example output.
 Once again we’ll test with cURL:
 
 ```bash
-REPLACE WITH ACTUAL COMMAND
+curl -k --resolve ingress.internal:443:$PREFSRC \
+   https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s
 ```
+
+The cURL command is more complex now:
+
+* Since we're using a self-signed certificate, we must tell cURL not to verify
+  the certificate by passing the `-k` flag.
+* The hostname must resolve through DNS, so we've passed the `--resolve` flag.
 
 If the routing is successful, the output should show the same HTML containing
 `<title>Welcome to flask-k8s Charm</title>` like before. We have confirmed that traffic

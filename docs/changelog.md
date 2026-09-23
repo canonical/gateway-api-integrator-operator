@@ -9,6 +9,10 @@ Each revision is versioned by the date of the revision.
 
 ## 2026-09-18
 
+- Added a `requestHeaderModifier` to the `HttpRoute` to set the `X-Forwarded-Prefix` when strip-prefix is requested.
+
+## 2026-09-18
+
 - Added `get-proxied-endpoints` action to retrieve the gateway and proxied application endpoints.
 
 ## 2026-09-17

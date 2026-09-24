@@ -47,7 +47,9 @@
     "config:recommended",
     "group:allNonMajor"
   ],
-  "ignorePaths": [],
+  "ignorePaths": [
+    "docs/**"
+  ],
   "packageRules": [
     {
       "enabled": true,

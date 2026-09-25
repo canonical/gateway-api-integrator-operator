@@ -28,6 +28,7 @@ header:
     - '**/uv.lock'
     - '.readthedocs.yaml'
     - 'docs/**'
+    - '.copier-answers.yml'
     - 'terraform/MAJOR_VERSION'
     
   comment: on-failure

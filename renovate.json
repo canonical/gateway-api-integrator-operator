@@ -47,10 +47,12 @@
     "config:recommended",
     "group:allNonMajor"
   ],
-  "ignorePaths": [
-    "docs/**"
-  ],
+  "ignorePaths": [],
   "packageRules": [
+    {
+      "enabled": false,
+      "matchFileNames": ["docs/**"]
+    },
     {
       "enabled": true,
       "matchDatasources": [

@@ -13,7 +13,7 @@ myst:
 When routing through the `gateway-route` relation (with the `ingress-configurator` charm),
 hostnames come from the relation data, and setting `external-hostname` leaves the charm in a blocked state.
 Leave it unset in that case.
-See {ref}`tutorial_using_gateway_route`.
+See {ref}`ingress-configurator-charm:tutorial_getting_started`.
 ```
 
 The `external-hostname` configuration option sets the fully qualified domain name (FQDN) that the

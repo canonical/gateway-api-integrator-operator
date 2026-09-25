@@ -176,7 +176,8 @@ linkcheck_ignore = [
     r"https://.*\.sourceforge\.(net|io)/.*",
     # gateway-api.sigs.k8s.io is often unreachable in CI environments
     r"https://gateway-api\.sigs\.k8s\.io/.*",
-]
+    "https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s",
+    ]
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
 linkcheck_anchors_ignore_for_url = [r"https://github\.com/.*"]
@@ -256,5 +257,6 @@ rst_prolog = """
 # Intersphinx mappings for cross-referencing external documentation.
 intersphinx_mapping = {
     "juju": ("https://canonical.com/juju/docs/juju-cli/3.6/", None),
-    "sphinxcontrib-mermaid": ("https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest", None),
+    "sphinxcontrib-mermaid": ("https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest", None),,
+    "ingress-configurator-charm": ("https://canonical.com/juju/docs/ingress-configurator-charm/latest/", None),
 }

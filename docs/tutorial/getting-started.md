@@ -358,8 +358,7 @@ Access the Flask application at https://ingress.internal/gateway-api-integrator-
 in your browser. Your browser may display a warning about the connection's security
 because we used a self-signed certificate. You can safely ignore this warning.
 
-You should see the message
-"Congratulations! You’ve successfully deployed the flask-k8s charm."
+You should see the message, "Welcome to flask-k8s Charm".
 
 ## Clean up the environment
 

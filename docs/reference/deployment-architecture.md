@@ -97,5 +97,5 @@ the default.
 ## Read more
 
 - {ref}`Charm architecture <reference_charm_architecture>`
-- {ref}`Deploy gateway-api-integrator with ingress-configurator <tutorial_using_gateway_route>`
-- [How to route traffic for multiple workloads through a single Gateway](https://canonical.com/juju/docs/ingress-configurator-charm/latest/how-to/gateway-api/route-multiple-workloads/)
+- {ref}`Deploy gateway-api-integrator with ingress-configurator <ingress-configurator-charm:tutorial_getting_started>`
+- {ref}`How to route traffic for multiple workloads through a single Gateway <ingress-configurator-charm:how_to_gateway_api_route_multiple_workloads>`

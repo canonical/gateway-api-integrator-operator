@@ -28,7 +28,7 @@ Before you begin:
 
 - Deploy `gateway-api-integrator` and set up either a direct `ingress` integration or
   a `gateway-route` integration. See {ref}`tutorial_getting_started` and
-  {ref}`tutorial_using_gateway_route`.
+  {ref}`ingress-configurator-charm:tutorial_getting_started`.
 - Note the hostname used when setting up the relation:
   - For a direct `ingress` relation, use the `external-hostname` configured on
     `gateway-api-integrator`.

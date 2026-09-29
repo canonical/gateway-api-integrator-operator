@@ -3,5 +3,6 @@ configurator
 databag
 hostnames
 HTTPRoute
+Onboarded
 proxied
 workloadless

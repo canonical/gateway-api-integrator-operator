@@ -29,3 +29,7 @@ __pycache__/
 .spread-reuse.*
 .spread-run-*/
 artifacts.build.yaml
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl

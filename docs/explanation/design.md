@@ -10,7 +10,7 @@ By default, TLS termination is enabled on the `gateway-api-integrator` charm, wh
 
 ## Ingress-configurator
 
-In most cases, we recommend pairing the `gateway-api-integrator` charm with the [`ingress-configurator` charm](https://charmhub.io/ingress-configurator) which will give you the most features and flexibility. See the section on [how to manage multiple workloads](../how-to/route-multiple-workloads.md) to learn more on how to deploy and configure the `ingress-configurator` charm.
+In most cases, we recommend pairing the `gateway-api-integrator` charm with the [`ingress-configurator` charm](https://charmhub.io/ingress-configurator), which gives you the most features and flexibility. See the section on {ref}`how to manage multiple workloads <how_to_route_multiple_workloads>` to learn more on how to deploy and configure the `ingress-configurator` charm.
 
 While it is possible to provide ingress to your application using only the `gateway-api-integrator` charm, it's usually not recommended since it has a few restrictions:
 

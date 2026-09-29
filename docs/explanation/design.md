@@ -14,7 +14,7 @@ In most cases, we recommend pairing the `gateway-api-integrator` charm with the 
 
 While it is possible to provide ingress to your application using only the `gateway-api-integrator` charm, it's usually not recommended since it has a few restrictions:
 
-1. You are limited to 1 relation per `gateway-api-integrator` charm.
+1. You are limited to one relation per `gateway-api-integrator` charm.
 2. You are required to expose your application under a path prefix ( e.g., `https://example.com/<juju-model-name>-<juju-application-name>`)
 
 Therefore, we only recommend using only the `gateway-api-integrator` charm if you have a very basic requirement and can accommodate the restrictions mentioned above.

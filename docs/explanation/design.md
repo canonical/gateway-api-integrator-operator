@@ -6,7 +6,7 @@ At its core, the `gateway-api-integrator` charm deploys and manages a `Gateway` 
 
 ## TLS termination
 
-By default, TLS termination is enabled on the `gateway-api-integrator` charm which means that a TLS provider charm ( like `self-signed-certificates` or `lego` ) will be needed to provide a certificate to the `gateway-api-integrator` charm. We recommend enabling TLS for most of the cases as it provides better security and is considered a best practice in general.
+By default, TLS termination is enabled on the `gateway-api-integrator` charm, which means that a TLS provider charm ( like `self-signed-certificates` or `lego` ) is needed to provide a certificate to the `gateway-api-integrator` charm. We recommend enabling TLS for most of the cases as it provides better security and is considered a best practice in general.
 
 ## Ingress-configurator
 

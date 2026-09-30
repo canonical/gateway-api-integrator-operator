@@ -412,7 +412,6 @@ class GatewayAPICharm(CharmBase):
             )
         elif charm_state.proxy_mode == ProxyMode.GATEWAY_ROUTE:
             self._reconcile_gateway_route(
-                client,
                 charm_state,
                 has_tls_relation,
                 gateway_resource_information,
@@ -437,7 +436,6 @@ class GatewayAPICharm(CharmBase):
 
     def _reconcile_gateway_route(
         self,
-        client: Client,
         charm_state: CharmState,
         has_tls_relation: bool,
         gateway_resource_information: GatewayResourceInformation,

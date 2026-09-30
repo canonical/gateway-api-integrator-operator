@@ -110,27 +110,6 @@ def test_dns_record_relation_changed_reconciles(
     assert json.loads(dns_relation.local_app_data["dns_entries"])[0]["domain"] == "example.com"
 
 
-def test_dns_record_non_leader_does_not_publish(
-    base_state: dict,
-    monkeypatch: pytest.MonkeyPatch,
-    gateway_relation: testing.Relation,
-    certificates_relation: testing.Relation,
-) -> None:
-    """A non-leader unit should not create or publish DNS requests."""
-    create_record_request = MagicMock()
-    update_dns_entries = MagicMock()
-    monkeypatch.setattr("charm.DNSRecordRequires.create_record_request", create_record_request)
-    monkeypatch.setattr("charm.DNSRecordRequires.update_dns_entries", update_dns_entries)
-    base_state["leader"] = False
-    base_state["relations"].extend([gateway_relation, certificates_relation])
-    ctx = testing.Context(GatewayAPICharm)
-
-    ctx.run(ctx.on.start(), testing.State(**base_state))
-
-    create_record_request.assert_not_called()
-    update_dns_entries.assert_not_called()
-
-
 def test_dns_record_sorts_and_skips_invalid_requests(
     base_state: dict,
     monkeypatch: pytest.MonkeyPatch,

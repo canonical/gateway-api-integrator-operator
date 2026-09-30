@@ -11,7 +11,7 @@ import tenacity
 from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 from jubilant.statustypes import UnitStatus
 
-from tests.integration.helper import get_gateway_resource
+from tests.integration.k8s.helper import get_gateway_resource
 
 
 def _unit_address(unit: UnitStatus) -> str:

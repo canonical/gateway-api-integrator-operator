@@ -8,10 +8,10 @@ import subprocess  # nosec: B404
 import jubilant
 import lightkube
 import tenacity
-from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 from jubilant.statustypes import UnitStatus
 
-from tests.integration.k8s.helper import get_gateway_resource
+from tests.integration.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+from tests.integration.helper import get_gateway_resource
 
 
 def _unit_address(unit: UnitStatus) -> str:

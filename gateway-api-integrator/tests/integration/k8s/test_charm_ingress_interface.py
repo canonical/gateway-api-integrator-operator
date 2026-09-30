@@ -9,7 +9,8 @@ import jubilant
 import lightkube
 import pytest
 import requests
-from helper import (
+
+from tests.integration.helper import (
     get_gateway_resource,
     get_ingress_url_for_application,
     wait_for_response,

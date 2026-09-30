@@ -26,10 +26,10 @@ integration-suites:
       - integration-test
     environment:
       CONCIERGE: concierge-juju4.yaml
-  gateway-api-integrator/tests/integration-dns-juju3/:
+  gateway-api-integrator/tests/integration-lxd-juju3/:
     summary: gateway-api-integrator DNS integration tests (Juju 3)
     working-dir: gateway-api-integrator/
-    discover-path: gateway-api-integrator/tests/integration_dns/
+    discover-path: gateway-api-integrator/tests/integration-lxd/
     backends:
       - integration-test
     environment:

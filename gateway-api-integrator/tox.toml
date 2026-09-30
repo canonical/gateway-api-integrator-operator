@@ -88,7 +88,7 @@ commands = [
     "-m",
     "pytest",
     "--ignore={[vars]tst_path}integration",
-    "--ignore={[vars]tst_path}integration_dns",
+    "--ignore={[vars]tst_path}integration-lxd",
     "-v",
     "--tb",
     "native",

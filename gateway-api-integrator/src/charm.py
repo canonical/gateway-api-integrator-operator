@@ -480,9 +480,6 @@ class GatewayAPICharm(CharmBase):
             gateway_resource_information: Information needed to create the gateway resource.
             hostnames: Hostnames to publish as DNS records.
         """
-        if not self.unit.is_leader():
-            return
-
         relation = self.model.get_relation(self.dns_record_requirer.relation_name)
         if not relation:
             return

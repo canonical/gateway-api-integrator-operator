@@ -93,3 +93,7 @@ actions:
     description: |
       Returns a list of endpoints, including the gateway endpoint and endpoints
       proxied for applications integrated through the ingress relation.
+
+charm-libs:
+  - lib: traefik_k8s.ingress
+    version: "2"

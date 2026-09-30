@@ -33,7 +33,7 @@ integration-suites:
     backends:
       - integration-test
     environment:
-      CONCIERGE: concierge-dns-juju3.yaml
+      CONCIERGE: concierge-lxd-juju3.yaml
   tests/e2e-juju3/:
     summary: cross-charm e2e tests (Juju 3)
     working-dir: ./

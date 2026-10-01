@@ -15,6 +15,11 @@ from charmlibs.interfaces.tls_certificates import (
     Mode,
     TLSCertificatesRequiresV4,
 )
+from charms.dns_integrator.v0.dns_record import (
+    CreateRecordRequestError,
+    DNSRecordRequires,
+    RecordRequest,
+)
 from charms.gateway_api_integrator.v1.gateway_route import (
     GatewayRouteProvider,
     HttpsMode,
@@ -38,11 +43,6 @@ from ops.charm import (
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
-from charms.dns_integrator.v0.dns_record import (
-    CreateRecordRequestError,
-    DNSRecordRequires,
-    RecordRequest,
-)
 from client import LightKubeInitializationError, get_client
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (

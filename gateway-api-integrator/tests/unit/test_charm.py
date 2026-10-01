@@ -9,13 +9,13 @@ from unittest.mock import MagicMock, call
 import ops
 import pytest
 from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
+from charms.dns_integrator.v0.dns_record import CreateRecordRequestError
 from httpx2 import Response
 from lightkube.core.exceptions import ApiError
 from lightkube.models.meta_v1 import Status
 from ops import testing
 
 from charm import GatewayAPICharm
-from charms.dns_integrator.v0.dns_record import CreateRecordRequestError
 from resource_manager.permission import InsufficientPermissionError
 from state.charm_state import CharmState, ProxyMode
 from state.tls import TLSInformationNotReadyError

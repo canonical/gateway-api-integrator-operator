@@ -1,3 +1,9 @@
+---
+myst:
+  html_meta:
+    "description lang=en": "Explanation of the design principles behind the gateway-api-integrator charm"
+---
+
 (explanation_charm_design)=
 
 # Charm design

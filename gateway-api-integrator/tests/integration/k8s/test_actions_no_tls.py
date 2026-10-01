@@ -8,7 +8,8 @@ import json
 import jubilant
 import lightkube
 import pytest
-from helper import get_gateway_resource
+
+from tests.integration.helper import get_gateway_resource
 
 
 @pytest.mark.abort_on_fail

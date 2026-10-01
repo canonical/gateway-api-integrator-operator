@@ -8,41 +8,49 @@ myst:
 
 # How-to guides
 
-Task-oriented procedures for configuring, securing, and maintaining the `gateway-api-integrator` charm.
+Manage the full operations lifecycle of the Gateway API integrator charm, from binding a
+`GatewayClass` and publishing routes through TLS hardening and ongoing maintenance.
+Each guide assumes that you have already deployed the charm with Juju.
 
-## Traffic and TLS configuration
+## Traffic routing and endpoints
 
-<!--
-Themes: gateway class selection, HTTPS enforcement, HTTP-to-HTTPS redirect, HSTS headers, transport security
-Justification: shared configuration surface — how the gateway binds to a controller and how inbound traffic is routed and secured
-User journey context: initial setup, configuration phase
-Juju ecosystem scope: charm-specific (config options), cross-charm (certificates relation, ingress and gateway-route relations)
-Strategic notes: enforce-https true vs false — competing security postures; hsts-max-age effective only when enforce-https=true; gateway-class value must match a GatewayClass present on the cluster
--->
+The charm programs `Gateway` and `HTTPRoute` resources to expose workloads through a gateway
+controller. These guides cover selecting the controller to bind to, controlling the hostname
+clients use, sharing one Gateway across several backends, and inspecting the URLs that result.
 
-```{toctree}
-:maxdepth: 1
-Select a gateway class <select-gateway-class.md>
-Configure the external hostname <configure-external-hostname.md>
-Provide a certificate <provide-certificate.md>
-Route traffic to multiple workloads <route-multiple-workloads.md>
-Configure HTTPS enforcement <enforce-https.md>
-Configure HSTS <configure-hsts.md>
-Get proxied endpoints <get-proxied-endpoints.md>
-```
+* [Select a gateway class](select-gateway-class.md): Bind the `Gateway` resource to a `GatewayClass` supplied by a controller installed on the cluster.
+* [Configure the external hostname](configure-external-hostname.md): Set the FQDN served through the `ingress` relation and used for the listener, certificate, published URL, and DNS records.
+* [Route traffic to multiple workloads](route-multiple-workloads.md): Share a single Gateway across several backends by deploying one `ingress-configurator` application per route.
+* [Get proxied endpoints](get-proxied-endpoints.md): Run the `get-proxied-endpoints` action to retrieve the gateway and application URLs.
+
+## TLS and transport security
+
+The charm enforces HTTPS by default, so it requires a certificate provider and redirects plain
+HTTP to HTTPS. These guides cover supplying certificates, adjusting HTTPS enforcement, and tuning
+the policy that browsers apply after reaching the hostname over HTTPS.
+
+* [Provide a certificate](provide-certificate.md): Integrate a TLS provider such as `self-signed-certificates`, `manual-tls-certificates`, or LEGO to satisfy the `certificates` relation.
+* [Configure HTTPS enforcement](enforce-https.md): Keep or turn off the default HTTP-to-HTTPS redirect, and control whether an HTTPS listener is created.
+* [Configure HSTS](configure-hsts.md): Set the `Strict-Transport-Security` `max-age` that browsers apply to the hostname.
 
 ## Maintenance and development
 
-<!--
-Themes: charm upgrade, documentation contribution
-Justification: single-page topics without a shared peer domain — merged into fallback
-User journey context: maintenance phase, post-deployment
-Juju ecosystem scope: charm-specific (juju refresh)
-Fallback: weaker thematic connection; narrative can be framed by the specific guides in the section
--->
+Upgrades and community contributions ensure the Gateway API integrator charm stays current
+and benefits from ongoing improvements.
+
+* [Upgrade](upgrade.md): Refresh the charm to a newer revision or channel with `juju refresh`.
+* [Contribute](contribute.rst): Set up a development and documentation workflow to build the charm, run tests, and submit improvements.
 
 ```{toctree}
-:maxdepth: 1
+:hidden:
+
+Select a gateway class <select-gateway-class.md>
+Configure the external hostname <configure-external-hostname.md>
+Route traffic to multiple workloads <route-multiple-workloads.md>
+Get proxied endpoints <get-proxied-endpoints.md>
+Provide a certificate <provide-certificate.md>
+Configure HTTPS enforcement <enforce-https.md>
+Configure HSTS <configure-hsts.md>
 Upgrade <upgrade.md>
-Contribute <contribute>
+Contribute <contribute.rst>
 ```

@@ -93,7 +93,6 @@ per-file-ignores = { "tests/*, gateway-api-integrator/tests/*" = [
     "D103",
     "D104",
 ] }
-lint.per-file-ignores."src/charms/dns_integrator/v0/dns_record.py" = [ "ALL" ]
 
 [tool.ruff.mccabe]
 max-complexity = 10

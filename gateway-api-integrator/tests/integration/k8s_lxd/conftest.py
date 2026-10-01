@@ -19,8 +19,8 @@ K8S_CONTROLLER = "concierge-k8s"
 LXD_CONTROLLER = "concierge-lxd"
 
 
-@pytest.fixture(scope="module", name="juju")
-def juju_model_fixture(request: pytest.FixtureRequest):
+@pytest.fixture(scope="module", name="juju_k8s")
+def juju_k8s_fixture(request: pytest.FixtureRequest):
     """Create a temporary model on the Concierge Kubernetes controller."""
     keep_models = bool(request.config.getoption("--keep-models"))
     with jubilant.temp_model(keep=keep_models, controller=K8S_CONTROLLER) as juju:
@@ -29,12 +29,6 @@ def juju_model_fixture(request: pytest.FixtureRequest):
 
         if request.session.testsfailed:
             logger.error(juju.debug_log(limit=1000))
-
-
-@pytest.fixture(scope="module", name="juju_k8s")
-def juju_k8s_fixture(juju: jubilant.Juju) -> jubilant.Juju:
-    """Return the Kubernetes model client with an explicit substrate name."""
-    return juju
 
 
 @pytest.fixture(scope="module", name="juju_lxd")

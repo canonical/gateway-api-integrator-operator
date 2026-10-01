@@ -23,7 +23,7 @@ header:
     - 'trivy.yaml'
     - 'pyproject.toml'
     - 'zap_rules.tsv'
-    - 'gateway-api-integrator/src/charms/dns_integrator'
+    - 'gateway-api-integrator/lib/charms/dns_integrator'
     - '**/uv.lock'
     - '.readthedocs.yaml'
     - 'docs/**'

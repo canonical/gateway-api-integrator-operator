@@ -31,6 +31,12 @@ def juju_k8s_fixture(request: pytest.FixtureRequest):
             logger.error(juju.debug_log(limit=1000))
 
 
+@pytest.fixture(scope="module", name="juju")
+def juju_fixture(juju_k8s: jubilant.Juju) -> jubilant.Juju:
+    """Return the Kubernetes model for shared integration fixtures."""
+    return juju_k8s
+
+
 @pytest.fixture(scope="module", name="juju_lxd")
 def juju_lxd_fixture(request: pytest.FixtureRequest):
     """Create a temporary model on the Concierge LXD controller."""

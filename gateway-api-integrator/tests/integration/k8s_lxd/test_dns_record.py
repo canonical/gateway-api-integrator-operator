@@ -3,8 +3,7 @@
 
 """Integration tests for the cross-model DNS record relation."""
 
-import subprocess  # nosec: B404
-
+import dns.resolver
 import jubilant
 import lightkube
 import tenacity
@@ -13,21 +12,19 @@ from jubilant.statustypes import UnitStatus
 from tests.integration.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 from tests.integration.helper import get_gateway_resource
 
+UPDATED_HOSTNAME = "gateway-new.internal"
+
 
 def _unit_address(unit: UnitStatus) -> str:
     """Return a reachable unit address from Juju status."""
     return unit.address or unit.public_address
 
 
-def _dig(nameserver: str, hostname: str) -> str:
+def _resolve_a_record(nameserver: str, hostname: str) -> list[str]:
     """Resolve an A record through a specific nameserver from the test host."""
-    result = subprocess.run(  # nosec: B603 B607
-        ["dig", "+short", f"@{nameserver}", hostname, "A"],
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout
+    resolver = dns.resolver.Resolver(configure=False)
+    resolver.nameservers = [nameserver]
+    return [str(answer) for answer in resolver.resolve(hostname, "A")]
 
 
 def _assert_resolves(
@@ -44,8 +41,31 @@ def _assert_resolves(
     ):
         with attempt:
             bind_units = juju_lxd.status().apps[bind_operator].units
-            answers = (_dig(_unit_address(unit), hostname) for unit in bind_units.values())
-            assert any(expected_address in answer.splitlines() for answer in answers)
+            answers = (
+                _resolve_a_record(_unit_address(unit), hostname) for unit in bind_units.values()
+            )
+            assert any(expected_address in answer for answer in answers)
+
+
+def _assert_does_not_resolve(
+    juju_lxd: jubilant.Juju,
+    bind_operator: str,
+    hostname: str,
+) -> None:
+    """Retry until Bind no longer resolves a hostname."""
+    for attempt in tenacity.Retrying(
+        stop=tenacity.stop_after_delay(120),
+        wait=tenacity.wait_fixed(5),
+        reraise=True,
+    ):
+        with attempt:
+            bind_units = juju_lxd.status().apps[bind_operator].units
+            for unit in bind_units.values():
+                try:
+                    _resolve_a_record(_unit_address(unit), hostname)
+                except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
+                    continue
+                raise AssertionError(f"{hostname} still resolves through Bind")
 
 
 def test_dns_record_resolves_via_bind(
@@ -69,8 +89,7 @@ def test_dns_record_updates_on_hostname_change(
     lightkube_client: lightkube.Client,
 ) -> None:
     """Bind should resolve a replacement external hostname."""
-    new_hostname = "gateway-new.internal"
-    juju_k8s.config(configured_application_with_tls, {"external-hostname": new_hostname})
+    juju_k8s.config(configured_application_with_tls, {"external-hostname": UPDATED_HOSTNAME})
     juju_k8s.wait(
         lambda status: jubilant.all_active(status, configured_application_with_tls),
         error=jubilant.any_error,
@@ -78,15 +97,16 @@ def test_dns_record_updates_on_hostname_change(
     gateway = get_gateway_resource(lightkube_client, configured_application_with_tls)
     gateway_address = gateway.status["addresses"][0]["value"]  # type: ignore
 
-    _assert_resolves(juju_lxd, bind_operator, new_hostname, gateway_address)
+    _assert_resolves(juju_lxd, bind_operator, UPDATED_HOSTNAME, gateway_address)
 
 
-def test_dns_record_relation_removal_keeps_charm_active(
+def test_dns_record_relation_removal_removes_record_and_keeps_charm_active(
     juju_k8s: jubilant.Juju,
+    juju_lxd: jubilant.Juju,
     configured_application_with_tls: str,
     bind_operator: str,
 ) -> None:
-    """Removing the optional DNS relation should leave the charm active."""
+    """Removing the optional DNS relation should remove its record and leave the charm active."""
     juju_k8s.remove_relation(
         f"{configured_application_with_tls}:dns-record",
         f"{bind_operator}:dns-record",
@@ -96,6 +116,7 @@ def test_dns_record_relation_removal_keeps_charm_active(
         error=jubilant.any_error,
     )
     juju_k8s.wait(
-        lambda status: status.apps[configured_application_with_tls].is_active,
+        lambda status: jubilant.all_active(status, configured_application_with_tls),
         error=jubilant.any_error,
     )
+    _assert_does_not_resolve(juju_lxd, bind_operator, UPDATED_HOSTNAME)

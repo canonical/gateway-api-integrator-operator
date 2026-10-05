@@ -3,7 +3,9 @@
 
 """General configuration module for integration tests."""
 
+import json
 import logging
+from pathlib import Path
 
 import jubilant
 import lightkube
@@ -13,10 +15,10 @@ logger = logging.getLogger(__name__)
 
 GATEWAY_APP_NAME = "gateway-api-integrator"
 CERTIFICATE_PROVIDER_APP_NAME = "self-signed-certificates"
-INGRESS_REQUIRER_APP_NAME = "flask-k8s"
+INGRESS_REQUIRER_APP_NAME = "ingress-requirer"
 GATEWAY_BASE = "ubuntu@24.04"
 CERTIFICATE_PROVIDER_CHANNEL = "1/edge"
-INGRESS_REQUIRER_CHANNEL = "latest/edge"
+INGRESS_REQUIRER_CHANNEL = "latest/beta"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "ck-gateway"
 JUJU_WAIT_TIMEOUT = 10 * 60
@@ -65,8 +67,28 @@ def certificate_provider_application_fixture(juju: jubilant.Juju) -> str:
 
 @pytest.fixture(scope="module", name="ingress_requirer_application")
 def ingress_requirer_application_fixture(juju: jubilant.Juju) -> str:
-    """Deploy flask-k8s."""
-    juju.deploy(INGRESS_REQUIRER_APP_NAME, channel=INGRESS_REQUIRER_CHANNEL)
+    """Deploy any-charm as an ingress requirer with a unit-local HTTP server."""
+    tests_dir = Path(__file__).parent
+    ingress_lib_path = tests_dir.parent.parent / "lib/charms/traefik_k8s/v2/ingress.py"
+    src_overwrite = {
+        "any_charm.py": (tests_dir / "ingress_requirer.py").read_text(encoding="utf-8"),
+        "ingress.py": ingress_lib_path.read_text(encoding="utf-8"),
+    }
+    juju.deploy(
+        "any-charm",
+        app=INGRESS_REQUIRER_APP_NAME,
+        channel=INGRESS_REQUIRER_CHANNEL,
+        base=GATEWAY_BASE,
+        config={
+            "python-packages": "pydantic<2.0",
+            "src-overwrite": json.dumps(src_overwrite),
+        },
+    )
+    juju.wait(
+        lambda status: jubilant.all_active(status, INGRESS_REQUIRER_APP_NAME),
+        error=jubilant.any_error,
+    )
+    juju.run(f"{INGRESS_REQUIRER_APP_NAME}/0", "rpc", {"method": "start_server"})
     return INGRESS_REQUIRER_APP_NAME
 
 
@@ -114,7 +136,6 @@ def configured_application_with_tls_fixture(
 def configured_application_without_tls_fixture(
     juju: jubilant.Juju,
     application: str,
-    certificate_provider_application: str,
 ) -> str:
     """The gateway-api-integrator charm configured without a TLS provider."""
     juju.config(

@@ -71,7 +71,7 @@ def test_ingress_enforced_mode(
         hostname=ingress_url.netloc,
         ip=gateway_lb_ip,
         expected_status=200,
-        body_contains="Welcome to flask-k8s Charm",
+        body_contains="Hello from any-charm",
         verify=False,  # nosec - calling charm ingress URL
         timeout=10,
     )
@@ -110,7 +110,7 @@ def test_ingress_enabled_mode(
         hostname=ingress_url.netloc,
         ip=gateway_lb_ip,
         expected_status=200,
-        body_contains="Welcome to flask-k8s Charm",
+        body_contains="Hello from any-charm",
         allow_redirects=False,
         timeout=10,
     )
@@ -119,7 +119,7 @@ def test_ingress_enabled_mode(
         hostname=ingress_url.netloc,
         ip=gateway_lb_ip,
         expected_status=200,
-        body_contains="Welcome to flask-k8s Charm",
+        body_contains="Hello from any-charm",
         verify=False,  # nosec - self-signed certificate
         timeout=10,
     )
@@ -162,7 +162,7 @@ def test_ingress_disabled_mode(
         hostname=ingress_url.netloc,
         ip=gateway_lb_ip,
         expected_status=200,
-        body_contains="Welcome to flask-k8s Charm",
+        body_contains="Hello from any-charm",
         timeout=10,
     )
     with pytest.raises(requests.exceptions.ConnectionError):

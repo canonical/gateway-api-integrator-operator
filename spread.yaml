@@ -10,6 +10,9 @@ backends:
     type: integration-test
     systems:
       - ubuntu-24.04
+      - ubuntu-24.04-arm64:
+          runner: [ubuntu-24.04-arm]
+          arch: arm64
 environment:
   OPCLI_GIT_REF: '$(HOST: echo "${OPCLI_GIT_REF:-main}")'
 exclude:
@@ -24,14 +27,29 @@ integration-suites:
     discover-path: gateway-api-integrator/tests/integration/
     backends:
       - integration-test
+    systems:
+      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-juju4.yaml
+  gateway-api-integrator/tests/integration-arm64/:
+    summary: gateway-api-integrator charm arm64 smoke test (Juju 4)
+    working-dir: gateway-api-integrator/
+    backends:
+      - integration-test
+    systems:
+      - ubuntu-24.04-arm64
+    auto-discover: false
+    environment:
+      CONCIERGE: concierge-juju4.yaml
+      MODULE/test_actions_no_tls: tests/integration/test_actions_no_tls.py
   tests/e2e-juju3/:
     summary: cross-charm e2e tests (Juju 3)
     working-dir: ./
     discover-path: tests/e2e/
     backends:
       - integration-test
+    systems:
+      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-juju3.yaml
   tests/e2e-juju4/:
@@ -40,5 +58,7 @@ integration-suites:
     discover-path: tests/e2e/
     backends:
       - integration-test
+    systems:
+      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-juju4.yaml

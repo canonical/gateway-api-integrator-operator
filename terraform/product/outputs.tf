@@ -14,7 +14,9 @@ output "ingress_configurator_app_name" {
 output "metadata" {
   description = "Deployment metadata."
   value = {
-    version = var.metadata_version
+    version     = var.metadata_version
+    deployed_at = terraform_data.deployed_at.output
+    updated_at  = timestamp()
   }
 }
 
@@ -44,24 +46,6 @@ output "provides" {
       kind       = "endpoint"
       name       = module.ingress_configurator.application.name
       endpoint   = "ingress"
-      controller = null
-    }
-  }
-}
-
-output "requires" {
-  description = "Map of required endpoints."
-  value = {
-    certificates = {
-      kind       = "endpoint"
-      name       = module.gateway_api_integrator.app_name
-      endpoint   = "certificates"
-      controller = null
-    }
-    dns_record = {
-      kind       = "endpoint"
-      name       = module.gateway_api_integrator.app_name
-      endpoint   = "dns-record"
       controller = null
     }
   }

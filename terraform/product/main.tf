@@ -1,6 +1,16 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+# Captures the initial deployment timestamp once and keeps it stable across
+# subsequent applies, for the "metadata.deployed_at" output.
+resource "terraform_data" "deployed_at" {
+  input = timestamp()
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}
+
 module "gateway_api_integrator" {
   source = "../modules/gateway-api-integrator"
 

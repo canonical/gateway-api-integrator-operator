@@ -2,6 +2,8 @@ venv/
 .venv/
 build/
 *.charm
+**/.terraform/
+**/.terraform.lock.hcl
 *.swp
 .tox/
 .coverage

@@ -8,10 +8,11 @@ on:
   pull_request:
     paths:
       - 'terraform/**'
+      - '.github/workflows/test_terraform_modules.yaml'
 
 jobs:
   terraform-tests:
-    uses: canonical/operator-workflows/.github/workflows/terraform_modules_test.yaml@main
+    uses: canonical/operator-workflows/.github/workflows/terraform_modules_test.yaml@5f7c5ae8edce88c84ce33ac9674995fa551e3e75 # main
     secrets: inherit
     with:
       k8s-controller: true

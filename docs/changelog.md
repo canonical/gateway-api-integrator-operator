@@ -7,6 +7,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-10-05
+
+- Completed the CC008 Terraform module migration: the `gateway-api-integrator`
+  and `product` Terraform modules now follow the full charm/product module
+  contracts, the product module's `metadata` output now also carries
+  `deployed_at` and `updated_at`, and the deprecated product `requires` output
+  (superseded by caller-side wiring via the existing `*_app_name` outputs) was
+  removed. Added a Terraform docs generation workflow and pinned/aligned all
+  Terraform CI workflows to a commit SHA with self-referencing `paths` filters.
+
 ## 2026-09-25
 
 - Onboarded documentation into [platform-engineering-documentation-files](https://github.com/canonical/platform-engineering-documentation-files).

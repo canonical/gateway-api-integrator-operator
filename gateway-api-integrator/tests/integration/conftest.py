@@ -4,15 +4,12 @@
 """Shared fixtures for gateway-api-integrator integration tests."""
 
 import json
-import logging
 from pathlib import Path
 
 import jubilant
 import lightkube
 import pytest
 from opcli.core.env import current_arch
-
-logger = logging.getLogger(__name__)
 
 GATEWAY_APP_NAME = "gateway-api-integrator"
 CERTIFICATE_PROVIDER_APP_NAME = "self-signed-certificates"
@@ -23,19 +20,6 @@ INGRESS_REQUIRER_CHANNEL = "latest/beta"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "ck-gateway"
 JUJU_WAIT_TIMEOUT = 10 * 60
-
-
-@pytest.fixture(scope="module", name="juju")
-def juju_model_fixture(request: pytest.FixtureRequest):
-    """Create a temporary Juju model for testing."""
-    keep_models = bool(request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju_model:
-        juju_model.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju_model
-
-        if request.session.testsfailed:
-            log = juju_model.debug_log(limit=1000)
-            logger.debug(log)
 
 
 @pytest.fixture(scope="module", name="charm")
@@ -67,7 +51,6 @@ def certificate_provider_application_fixture(juju: jubilant.Juju) -> str:
     juju.deploy(
         CERTIFICATE_PROVIDER_APP_NAME,
         channel=CERTIFICATE_PROVIDER_CHANNEL,
-        base=GATEWAY_BASE,
         constraints={"arch": current_arch()},
     )
     juju.wait(
@@ -90,7 +73,6 @@ def ingress_requirer_application_fixture(juju: jubilant.Juju) -> str:
         "any-charm",
         app=INGRESS_REQUIRER_APP_NAME,
         channel=INGRESS_REQUIRER_CHANNEL,
-        base=GATEWAY_BASE,
         constraints={"arch": current_arch()},
         config={
             "python-packages": "pydantic<2.0",

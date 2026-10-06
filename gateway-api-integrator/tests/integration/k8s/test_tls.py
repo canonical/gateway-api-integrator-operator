@@ -102,7 +102,7 @@ def test_tls_certificate_rotates_after_csr_subject_attributes_change(
             hostname=ingress_url.netloc,
             ip=gateway_lb_ip,
             expected_status=200,
-            body_contains="Welcome to flask-k8s Charm",
+            body_contains="Hello from any-charm",
             verify=ca_bundle.name,
             timeout=10,
         )

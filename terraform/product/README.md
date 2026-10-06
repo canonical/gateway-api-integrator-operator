@@ -9,12 +9,6 @@ The product consists of:
 - **gateway-api-integrator**: Main charm that manages Gateway API resources
 - **ingress-configurator**: Charm that bridges the `ingress` relation from workload charms to the `gateway-route` relation, allowing users to configure custom hostnames and paths.
 
-## Prerequisites
-
-- Terraform >= 1.6
-- Juju provider for Terraform >= 1.1
-- A Juju model where you want to deploy the charms
-
 ## Usage
 
 1. Edit `main.tf` to add the module:
@@ -44,24 +38,23 @@ The product consists of:
     }
    ```
 
-2. Edit `main.tf` to integrate Gateway API Integrator with tls provider charm:
+2. Integrate Gateway API Integrator with a TLS certificates provider charm by
+   setting the `certificates_integration` variable:
 
    ```hcl
+    module "gateway" {
+      # ...
 
-    resource "juju_integration" "gai_lego" {
-      model_uuid = local.juju_model_uuid
-
-      application {
-        name     = module.gateway.gateway_api_integrator_app_name
-        endpoint = "certificates"
-      }
-
-      application {
+      certificates_integration = {
         name     = juju_application.lego.name
         endpoint = "certificates"
       }
     }
    ```
+
+   Use `offer_url` instead of `name`/`endpoint` to integrate with a
+   cross-model offer. The `dns_record_integration` variable follows the same
+   shape and can be used to integrate with an external DNS record provider.
 
 3. Edit `main.tf` to integrate Ingress Configurator with ingress requirer charm:
 
@@ -89,32 +82,6 @@ The product consists of:
    terraform plan
    terraform apply
    ```
-
-## Variables
-
-### Required
-
-- `model_uuid`: UUID of the Juju model where charms will be deployed
-
-### Gateway API Integrator
-
-- `gateway_api_integrator.app_name`: Application name (default: "gateway-api-integrator")
-- `gateway_api_integrator.config`: Application configuration map
-- `gateway_api_integrator.units`: Number of units (default: 1)
-
-### Ingress Configurator
-
-- `ingress_configurator.app_name`: Application name (default: "ingress-configurator")
-- `ingress_configurator.config`: Application configuration map
-- `ingress_configurator.units`: Number of units (default: 1)
-
-## Outputs
-
-- `gateway_api_integrator_app_name`: Name of the deployed gateway-api-integrator application
-- `ingress_configurator_app_name`: Name of the deployed ingress-configurator application
-- `metadata`: Deployment metadata object (`{ version, deployed_at, updated_at }`)
-- `models`: Map of model key to its `model_uuid` and deployed `components`
-- `provides`: Map of provided integration endpoints (`kind`, `name`, `endpoint`, `controller`)
 
 ## Relations
 

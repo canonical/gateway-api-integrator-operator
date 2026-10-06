@@ -50,3 +50,39 @@ resource "juju_integration" "gateway_api_integrator_ingress_configurator" {
     endpoint = "gateway-route"
   }
 }
+
+# Create integration between gateway-api-integrator and an external TLS
+# certificates provider, when one is supplied.
+resource "juju_integration" "gateway_api_integrator_certificates" {
+  count      = var.certificates_integration == null ? 0 : 1
+  model_uuid = var.model_uuid
+
+  application {
+    name     = module.gateway_api_integrator.app_name
+    endpoint = "certificates"
+  }
+
+  application {
+    offer_url = var.certificates_integration.offer_url
+    name      = var.certificates_integration.name
+    endpoint  = var.certificates_integration.endpoint
+  }
+}
+
+# Create integration between gateway-api-integrator and an external DNS
+# record provider, when one is supplied.
+resource "juju_integration" "gateway_api_integrator_dns_record" {
+  count      = var.dns_record_integration == null ? 0 : 1
+  model_uuid = var.model_uuid
+
+  application {
+    name     = module.gateway_api_integrator.app_name
+    endpoint = "dns-record"
+  }
+
+  application {
+    offer_url = var.dns_record_integration.offer_url
+    name      = var.dns_record_integration.name
+    endpoint  = var.dns_record_integration.endpoint
+  }
+}

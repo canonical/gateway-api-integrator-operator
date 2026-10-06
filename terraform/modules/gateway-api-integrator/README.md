@@ -8,11 +8,6 @@ The module is a Charm module as defined by CC008 (Terraform module standards): i
 deploys a single charm and is intended to be consumed by higher-level component,
 product, or deployment modules.
 
-## Requirements
-
-- Terraform `~> 1.12`
-- Juju provider `>= 1.0, < 3.0`
-
 ## Usage
 
 ```hcl

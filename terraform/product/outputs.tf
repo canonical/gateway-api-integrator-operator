@@ -33,20 +33,10 @@ output "models" {
   }
 }
 
-output "provides" {
-  description = "Map of provided endpoints."
+output "offers" {
+  description = "Map of the offers exposed by the solution."
   value = {
-    gateway = {
-      kind       = "endpoint"
-      name       = module.gateway_api_integrator.app_name
-      endpoint   = "gateway"
-      controller = null
-    }
-    ingress = {
-      kind       = "endpoint"
-      name       = module.ingress_configurator.application.name
-      endpoint   = "ingress"
-      controller = null
-    }
+    gateway = juju_offer.gateway.url
+    ingress = juju_offer.ingress.url
   }
 }

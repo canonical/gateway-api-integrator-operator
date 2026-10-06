@@ -86,6 +86,7 @@ def ingress_requirer_application_fixture(juju: jubilant.Juju) -> str:
         app=INGRESS_REQUIRER_APP_NAME,
         channel=INGRESS_REQUIRER_CHANNEL,
         base=GATEWAY_BASE,
+        constraints={"arch": current_arch()},
         config={
             "python-packages": "pydantic<2.0",
             "src-overwrite": json.dumps(src_overwrite),

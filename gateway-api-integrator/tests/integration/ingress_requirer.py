@@ -7,7 +7,7 @@ import contextlib
 import os
 import pathlib
 import signal
-import subprocess
+import subprocess  # nosec B404
 import sys
 
 import ops
@@ -16,6 +16,7 @@ from ingress import IngressPerAppRequirer
 
 HTTP_PORT = 8080
 RESPONSE_BODY = "Hello from any-charm"
+STATE_DIR = pathlib.Path.home() / ".local/state/any-charm-http"
 
 
 class AnyCharm(AnyCharmBase):
@@ -35,19 +36,20 @@ class AnyCharm(AnyCharmBase):
         """Start a detached HTTP server and return its port."""
         self.unit.open_port("tcp", HTTP_PORT)
 
-        www_dir = pathlib.Path("/tmp/www")
-        www_dir.mkdir(exist_ok=True)
+        www_dir = STATE_DIR / "www"
+        www_dir.mkdir(parents=True, exist_ok=True)
         response_path = www_dir / f"{self.model.name}-{self.app.name}"
         response_path.write_text(RESPONSE_BODY, encoding="utf-8")
 
-        pid_file = pathlib.Path("/tmp/any-charm-http.pid")
+        pid_file = STATE_DIR / "server.pid"
         if pid_file.exists():
             with contextlib.suppress(ProcessLookupError):
                 os.kill(int(pid_file.read_text(encoding="utf-8")), signal.SIGKILL)
             pid_file.unlink()
 
-        with pathlib.Path("/tmp/any-charm-http.log").open("wb+") as log_file:
-            process = subprocess.Popen(
+        with (STATE_DIR / "server.log").open("wb+") as log_file:
+            # The command contains no external input.
+            process = subprocess.Popen(  # nosec B603
                 [sys.executable, "-m", "http.server", "-d", str(www_dir), str(HTTP_PORT)],
                 start_new_session=True,
                 stdout=log_file,

@@ -10,6 +10,7 @@ from pathlib import Path
 import jubilant
 import lightkube
 import pytest
+from opcli.core.env import current_arch
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,13 @@ def charm_fixture(charm_paths) -> str:
 @pytest.fixture(scope="module", name="application")
 def application_fixture(juju: jubilant.Juju, charm: str) -> str:
     """Deploy the charm and wait for blocked status."""
-    juju.deploy(charm, app=GATEWAY_APP_NAME, base=GATEWAY_BASE, trust=True)
+    juju.deploy(
+        charm,
+        app=GATEWAY_APP_NAME,
+        base=GATEWAY_BASE,
+        constraints={"arch": current_arch()},
+        trust=True,
+    )
     juju.wait(
         lambda status: status.apps[GATEWAY_APP_NAME].app_status.current == "blocked",
         error=jubilant.any_error,

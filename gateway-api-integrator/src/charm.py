@@ -7,9 +7,7 @@
 import json
 import logging
 import typing
-import uuid
 from collections.abc import Collection
-from ipaddress import ip_address
 
 from charmlibs.interfaces.tls_certificates import (
     CertificateAvailableEvent,
@@ -17,12 +15,10 @@ from charmlibs.interfaces.tls_certificates import (
     Mode,
     TLSCertificatesRequiresV4,
 )
-from charms.bind.v0.dns_record import (
-    DNSRecordRequirerData,
+from charms.dns_integrator.v0.dns_record import (
+    CreateRecordRequestError,
     DNSRecordRequires,
-    RecordClass,
-    RecordType,
-    RequirerEntry,
+    RecordRequest,
 )
 from charms.gateway_api_integrator.v1.gateway_route import (
     GatewayRouteProvider,
@@ -74,8 +70,6 @@ from state.validation import validate_config_and_integration
 logger = logging.getLogger(__name__)
 CREATED_BY_LABEL = "gateway-api-integrator.charm.juju.is/managed-by"
 TLS_CERT_RELATION = "certificates"
-# Randomly selected UUID namespace for generating UUID for DNS records.
-UUID_NAMESPACE = uuid.UUID("f8f206da-a7f8-4206-b044-30be3724a09d")
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
@@ -142,6 +136,9 @@ class GatewayAPICharm(CharmBase):
         )
         self.framework.observe(
             self.on.dns_record_relation_joined, self._on_dns_record_relation_joined
+        )
+        self.framework.observe(
+            self.on.dns_record_relation_changed, self._on_dns_record_relation_changed
         )
 
     def _get_certificate_requests(self) -> list[CertificateRequestAttributes]:
@@ -324,6 +321,11 @@ class GatewayAPICharm(CharmBase):
         """Handle the DNS record relation joined event."""
         self._reconcile()
 
+    @validate_config_and_integration(defer=False)
+    def _on_dns_record_relation_changed(self, _: RelationChangedEvent) -> None:
+        """Handle the DNS record relation changed event."""
+        self._reconcile()
+
     def _determine_https_mode(self, enforce_https: bool, has_tls_relation: bool) -> HttpsMode:
         """Determine the HTTPS mode based on config and TLS relation presence."""
         if enforce_https:
@@ -410,19 +412,11 @@ class GatewayAPICharm(CharmBase):
             )
         elif charm_state.proxy_mode == ProxyMode.GATEWAY_ROUTE:
             self._reconcile_gateway_route(
-                client,
                 charm_state,
                 has_tls_relation,
                 gateway_resource_information,
                 gateway_resource_manager,
             )
-
-        # Update DNS record relation with the gateway address for all hostnames.
-        self._update_dns_record_relation(
-            gateway_resource_manager,
-            gateway_resource_information,
-            charm_state.hostnames,
-        )
 
         self._set_status_gateway_address(
             gateway_resource_manager,
@@ -433,9 +427,15 @@ class GatewayAPICharm(CharmBase):
         if tls_not_ready:
             self.unit.status = WaitingStatus("Waiting for TLS certificates to be issued.")
 
+        # Update DNS record relation with the gateway address for all hostnames.
+        self._update_dns_record_relation(
+            gateway_resource_manager,
+            gateway_resource_information,
+            charm_state.hostnames,
+        )
+
     def _reconcile_gateway_route(
         self,
-        client: Client,
         charm_state: CharmState,
         has_tls_relation: bool,
         gateway_resource_information: GatewayResourceInformation,
@@ -477,14 +477,13 @@ class GatewayAPICharm(CharmBase):
             resource_manager: The Gateway resource manager to get the gateway address.
             gateway_resource_information: Information needed to create the gateway resource.
             hostnames: Hostnames to publish as DNS records.
+
+        Raises:
+            CreateRecordRequestError: If a DNS record request cannot be created.
         """
         relation = self.model.get_relation(self.dns_record_requirer.relation_name)
         if not relation:
             return
-
-        if not hostnames:
-            return
-        sorted_hostnames = sorted(hostnames)
 
         if not resource_manager.current_gateway_resource():
             logger.warning(
@@ -500,22 +499,19 @@ class GatewayAPICharm(CharmBase):
             )
             return
 
-        # Create DNS entries for each hostname
-        entries = []
-        for hostname in sorted_hostnames:
-            entry = RequirerEntry(
-                domain=hostname,
-                host_label="@",
-                ttl=600,
-                record_class=RecordClass.IN,
-                record_type=RecordType.A,
-                record_data=ip_address(gateway_address),
-                uuid=uuid.uuid5(UUID_NAMESPACE, str(hostname) + " " + str(gateway_address)),
-            )
-            entries.append(entry)
+        entries: list[RecordRequest] = []
+        for hostname in sorted(hostnames):
+            try:
+                entries.append(
+                    self.dns_record_requirer.create_record_request(
+                        f"@ {hostname} 600 IN A {gateway_address}"
+                    )
+                )
+            except CreateRecordRequestError:
+                logger.exception("Unable to create DNS record request for %s", hostname)
+                raise
 
-        dns_record_requirer_data = DNSRecordRequirerData(dns_entries=entries)
-        self.dns_record_requirer.update_relation_data(relation, dns_record_requirer_data)
+        self.dns_record_requirer.update_dns_entries(entries, relation)
 
     def _define_gateway_resource(
         self,

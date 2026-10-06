@@ -1,15 +1,11 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""General configuration module for integration tests."""
-
-import logging
+"""Shared fixtures for gateway-api-integrator integration tests."""
 
 import jubilant
 import lightkube
 import pytest
-
-logger = logging.getLogger(__name__)
 
 GATEWAY_APP_NAME = "gateway-api-integrator"
 CERTIFICATE_PROVIDER_APP_NAME = "self-signed-certificates"
@@ -20,19 +16,6 @@ INGRESS_REQUIRER_CHANNEL = "latest/edge"
 TEST_EXTERNAL_HOSTNAME_CONFIG = "gateway.internal"
 GATEWAY_CLASS_CONFIG = "ck-gateway"
 JUJU_WAIT_TIMEOUT = 10 * 60
-
-
-@pytest.fixture(scope="module", name="juju")
-def juju_model_fixture(request: pytest.FixtureRequest):
-    """Create a temporary Juju model for testing."""
-    keep_models = bool(request.config.getoption("--keep-models"))
-    with jubilant.temp_model(keep=keep_models) as juju_model:
-        juju_model.wait_timeout = JUJU_WAIT_TIMEOUT
-        yield juju_model
-
-        if request.session.testsfailed:
-            log = juju_model.debug_log(limit=1000)
-            logger.debug(log)
 
 
 @pytest.fixture(scope="module", name="charm")

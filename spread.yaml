@@ -49,6 +49,8 @@ integration-suites:
     discover-path: gateway-api-integrator/tests/integration/k8s_lxd/
     backends:
       - integration-test
+    systems:
+      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-k8s-lxd-juju3.yaml
   tests/e2e-juju3/:

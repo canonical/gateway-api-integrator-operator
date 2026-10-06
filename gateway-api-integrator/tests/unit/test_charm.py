@@ -304,6 +304,45 @@ def test_gateway_route(
     assert "https_mode" in gw_route_rel.local_app_data
 
 
+def test_gateway_route_multiple_relations_publish_multiple_dns_records(
+    base_state: dict,
+    gateway_route_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Charm is initialized with two gateway-route relations using distinct hostnames.
+    act: Run reconcile via a gateway-route relation-changed event.
+    assert: The charm publishes both DNS records and provider data to both relations.
+    """
+    base_state["config"]["external-hostname"] = ""
+    base_state["config"]["enforce-https"] = False
+    second_gateway_route_relation = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway-route",
+        remote_app_data={
+            "hostname": json.dumps("second.example.com"),
+            "additional_hostnames": json.dumps([]),
+        },
+    )
+    base_state["relations"].extend([gateway_route_relation, second_gateway_route_relation])
+    ctx = testing.Context(GatewayAPICharm)
+
+    state = ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
+
+    dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
+    dns_entries = json.loads(dns_relation.local_app_data["dns_entries"])
+    assert {entry["domain"] for entry in dns_entries} == {
+        "example.com",
+        "second.example.com",
+    }
+    assert all(entry["record_data"] == "1.2.3.4" for entry in dns_entries)
+
+    gateway_route_relations = [rel for rel in state.relations if rel.endpoint == "gateway-route"]
+    for relation in gateway_route_relations:
+        assert "gateway_name" in relation.local_app_data
+        assert "gateway_model" in relation.local_app_data
+        assert json.loads(relation.local_app_data["https_mode"]) == "disabled"
+
+
 def test_blocked_when_relation_integrated_without_hostname(
     base_state: dict,
     gateway_relation: testing.Relation,

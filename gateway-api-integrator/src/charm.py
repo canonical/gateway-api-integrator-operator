@@ -32,7 +32,7 @@ from charms.traefik_k8s.v2.ingress import (
 from lightkube import Client
 from lightkube.core.client import LabelSelector
 from lightkube.generic_resource import create_global_resource
-from ops import BlockedStatus, SecretNotFoundError
+from ops import BlockedStatus
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -44,7 +44,6 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 from client import LightKubeInitializationError, get_client
-from exception import DNSRecordRequestsInvalidError, DNSRecordRequestsNotReadyError
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
@@ -429,31 +428,11 @@ class GatewayAPICharm(CharmBase):
             self.unit.status = WaitingStatus("Waiting for TLS certificates to be issued.")
 
         # Update DNS record relation with the gateway address for all hostnames.
-        self._reconcile_dns_record_relation(
+        self._update_dns_record_relation(
             gateway_resource_manager,
             gateway_resource_information,
             charm_state.hostnames,
         )
-
-    def _reconcile_dns_record_relation(
-        self,
-        resource_manager: GatewayResourceManager,
-        gateway_resource_information: GatewayResourceInformation,
-        hostnames: Collection[str],
-    ) -> None:
-        """Update DNS record requests and map failures to workload status."""
-        try:
-            self._update_dns_record_relation(
-                resource_manager,
-                gateway_resource_information,
-                hostnames,
-            )
-        except DNSRecordRequestsInvalidError as exc:
-            logger.error("Unable to create DNS records for: %s", str(exc))
-            self.unit.status = BlockedStatus(f"Unable to create DNS records for: {exc}")
-        except DNSRecordRequestsNotReadyError as exc:
-            logger.warning("Waiting for DNS record request namespace for: %s", str(exc))
-            self.unit.status = WaitingStatus("Waiting for DNS record request namespace")
 
     def _reconcile_gateway_route(
         self,
@@ -500,8 +479,7 @@ class GatewayAPICharm(CharmBase):
             hostnames: Hostnames to publish as DNS records.
 
         Raises:
-            DNSRecordRequestsInvalidError: If any DNS record request is invalid.
-            DNSRecordRequestsNotReadyError: If requests depend on transient state.
+            CreateRecordRequestError: If a DNS record request cannot be created.
         """
         relation = self.model.get_relation(self.dns_record_requirer.relation_name)
         if not relation:
@@ -522,8 +500,6 @@ class GatewayAPICharm(CharmBase):
             return
 
         entries: list[RecordRequest] = []
-        failed_hostnames = []
-        invalid_request_found = False
         for hostname in sorted(hostnames):
             try:
                 entries.append(
@@ -531,15 +507,9 @@ class GatewayAPICharm(CharmBase):
                         f"@ {hostname} 600 IN A {gateway_address}"
                     )
                 )
-            except CreateRecordRequestError as exc:
-                failed_hostnames.append(hostname)
-                if not isinstance(exc.__cause__, SecretNotFoundError):
-                    invalid_request_found = True
-
-        if invalid_request_found:
-            raise DNSRecordRequestsInvalidError(", ".join(failed_hostnames))
-        if failed_hostnames:
-            raise DNSRecordRequestsNotReadyError(", ".join(failed_hostnames))
+            except CreateRecordRequestError:
+                logger.exception("Unable to create DNS record request for %s", hostname)
+                raise
 
         self.dns_record_requirer.update_dns_entries(entries, relation)
 

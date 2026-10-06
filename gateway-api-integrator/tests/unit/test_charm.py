@@ -4,7 +4,7 @@
 """Unit tests for the charm."""
 
 import json
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 import ops
 import pytest
@@ -14,6 +14,7 @@ from httpx2 import Response
 from lightkube.core.exceptions import ApiError
 from lightkube.models.meta_v1 import Status
 from ops import testing
+from scenario.errors import UncaughtCharmError
 
 from charm import GatewayAPICharm
 from resource_manager.permission import InsufficientPermissionError
@@ -118,20 +119,17 @@ def test_dns_record_relation_changed_reconciles(
     assert json.loads(dns_relation.local_app_data["dns_entries"])[0]["domain"] == "example.com"
 
 
-def test_dns_record_blocks_without_publishing_partial_requests(
+def test_dns_record_fails_hook_for_invalid_request(
     base_state: dict,
     monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """
-    arrange: A gateway-route relation provides hostnames and one request is rejected as invalid.
+    arrange: The DNS library rejects a record request built from validated charm state.
     act: Run reconcile via the gateway-route relation-changed event.
-    assert: The charm tries all requests, publishes none, and blocks with the failed hostname.
+    assert: The charm publishes no records and propagates the library error.
     """
-    namespace_error = CreateRecordRequestError("Namespace not found !")
-    namespace_error.__cause__ = ops.SecretNotFoundError("dns-record")
-    create_record_request = MagicMock(
-        side_effect=[namespace_error, CreateRecordRequestError("invalid record")]
-    )
+    create_record_request = MagicMock(side_effect=CreateRecordRequestError("invalid record"))
     update_dns_entries = MagicMock()
     monkeypatch.setattr("charm.DNSRecordRequires.create_record_request", create_record_request)
     monkeypatch.setattr("charm.DNSRecordRequires.update_dns_entries", update_dns_entries)
@@ -148,26 +146,22 @@ def test_dns_record_blocks_without_publishing_partial_requests(
     base_state["relations"].append(gateway_route_relation)
     ctx = testing.Context(GatewayAPICharm)
 
-    state = ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
+    with pytest.raises(UncaughtCharmError, match=r"CreateRecordRequestError.*invalid record"):
+        ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
 
-    assert create_record_request.call_args_list == [
-        call("@ alpha.example.com 600 IN A 1.2.3.4"),
-        call("@ zulu.example.com 600 IN A 1.2.3.4"),
-    ]
+    create_record_request.assert_called_once_with("@ alpha.example.com 600 IN A 1.2.3.4")
     update_dns_entries.assert_not_called()
-    assert state.unit_status == ops.BlockedStatus(
-        "Unable to create DNS records for: alpha.example.com, zulu.example.com"
-    )
+    assert "Unable to create DNS record request for alpha.example.com" in caplog.messages
 
 
-def test_dns_record_waits_for_missing_namespace(
+def test_dns_record_fails_hook_for_missing_namespace(
     base_state: dict,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """
     arrange: The DNS library cannot find its local record-request namespace secret.
     act: Run reconcile via the gateway-route relation-changed event.
-    assert: The charm publishes no records and waits for the namespace to become available.
+    assert: The charm publishes no records and propagates the retryable library error.
     """
     namespace_error = CreateRecordRequestError("Namespace not found !")
     namespace_error.__cause__ = ops.SecretNotFoundError("dns-record")
@@ -188,11 +182,11 @@ def test_dns_record_waits_for_missing_namespace(
     base_state["relations"].append(gateway_route_relation)
     ctx = testing.Context(GatewayAPICharm)
 
-    state = ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
+    with pytest.raises(UncaughtCharmError, match=r"CreateRecordRequestError.*Namespace not found"):
+        ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
 
     create_record_request.assert_called_once_with("@ example.com 600 IN A 1.2.3.4")
     update_dns_entries.assert_not_called()
-    assert state.unit_status == ops.WaitingStatus("Waiting for DNS record request namespace")
 
 
 def test_dns_record_clears_entries_without_hostnames(

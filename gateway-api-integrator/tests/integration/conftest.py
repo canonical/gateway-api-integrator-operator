@@ -64,7 +64,12 @@ def application_fixture(juju: jubilant.Juju, charm: str) -> str:
 @pytest.fixture(scope="module", name="certificate_provider_application")
 def certificate_provider_application_fixture(juju: jubilant.Juju) -> str:
     """Deploy self-signed-certificates."""
-    juju.deploy(CERTIFICATE_PROVIDER_APP_NAME, channel=CERTIFICATE_PROVIDER_CHANNEL)
+    juju.deploy(
+        CERTIFICATE_PROVIDER_APP_NAME,
+        channel=CERTIFICATE_PROVIDER_CHANNEL,
+        base=GATEWAY_BASE,
+        constraints={"arch": current_arch()},
+    )
     juju.wait(
         lambda status: jubilant.all_active(status, CERTIFICATE_PROVIDER_APP_NAME),
         error=jubilant.any_error,

@@ -39,6 +39,7 @@ integration-suites:
     auto-discover: false
     environment:
       CONCIERGE: concierge-juju4.yaml
+      MODULE/test_actions: tests/integration/test_actions.py
       MODULE/test_actions_no_tls: tests/integration/test_actions_no_tls.py
   tests/e2e-juju3/:
     summary: cross-charm e2e tests (Juju 3)

@@ -27,12 +27,10 @@ integration-suites:
     discover-path: gateway-api-integrator/tests/integration/
     backends:
       - integration-test
-    systems:
-      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-juju4.yaml
   gateway-api-integrator/tests/integration-arm64/:
-    summary: gateway-api-integrator charm arm64 smoke test (Juju 4)
+    summary: gateway-api-integrator charm arm64 integration test (Juju 4)
     working-dir: gateway-api-integrator/
     backends:
       - integration-test
@@ -48,8 +46,6 @@ integration-suites:
     discover-path: tests/e2e/
     backends:
       - integration-test
-    systems:
-      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-juju3.yaml
   tests/e2e-juju4/:
@@ -58,7 +54,5 @@ integration-suites:
     discover-path: tests/e2e/
     backends:
       - integration-test
-    systems:
-      - ubuntu-24.04
     environment:
       CONCIERGE: concierge-juju4.yaml

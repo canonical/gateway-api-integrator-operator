@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""General configuration module for integration tests."""
+"""Shared fixtures for gateway-api-integrator integration tests."""
 
 import json
 import logging
@@ -149,6 +149,7 @@ def configured_application_with_tls_fixture(
 def configured_application_without_tls_fixture(
     juju: jubilant.Juju,
     application: str,
+    certificate_provider_application: str,
 ) -> str:
     """The gateway-api-integrator charm configured without a TLS provider."""
     juju.config(

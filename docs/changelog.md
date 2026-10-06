@@ -11,6 +11,10 @@ Each revision is versioned by the date of the revision.
 
 - Added builds for arm64 architecture.
 
+## 2026-10-01
+
+- Migrated the `dns-record` integration to the `dns_integrator.v0.dns_record` library and added end-to-end DNS resolution tests using Bind.
+
 ## 2026-09-25
 
 - Onboarded documentation into [platform-engineering-documentation-files](https://github.com/canonical/platform-engineering-documentation-files).

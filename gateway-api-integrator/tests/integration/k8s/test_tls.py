@@ -9,7 +9,12 @@ import jubilant
 import lightkube
 import pytest
 import tenacity
-from helper import get_gateway_resource, get_ingress_url_for_application, wait_for_response
+
+from tests.integration.helper import (
+    get_gateway_resource,
+    get_ingress_url_for_application,
+    wait_for_response,
+)
 
 
 def _get_certificate_action_result(

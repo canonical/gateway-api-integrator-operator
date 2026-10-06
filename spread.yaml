@@ -21,16 +21,16 @@ exclude:
   - .venv
   - .*_cache
 integration-suites:
-  gateway-api-integrator/tests/integration-juju4/:
+  gateway-api-integrator/tests/integration-k8s-juju4/:
     summary: gateway-api-integrator charm integration tests (Juju 4)
     working-dir: gateway-api-integrator/
-    discover-path: gateway-api-integrator/tests/integration/
+    discover-path: gateway-api-integrator/tests/integration/k8s/
     backends:
       - integration-test
     systems:
       - ubuntu-24.04
     environment:
-      CONCIERGE: concierge-juju4.yaml
+      CONCIERGE: concierge-k8s-juju4.yaml
   gateway-api-integrator/tests/integration-arm64/:
     summary: gateway-api-integrator charm arm64 integration test (Juju 4)
     working-dir: gateway-api-integrator/
@@ -40,9 +40,17 @@ integration-suites:
       - ubuntu-24.04-arm64
     auto-discover: false
     environment:
-      CONCIERGE: concierge-juju4.yaml
-      MODULE/test_actions: tests/integration/test_actions.py
-      MODULE/test_actions_no_tls: tests/integration/test_actions_no_tls.py
+      CONCIERGE: concierge-k8s-juju4.yaml
+      MODULE/test_actions: tests/integration/k8s/test_actions.py
+      MODULE/test_actions_no_tls: tests/integration/k8s/test_actions_no_tls.py
+  gateway-api-integrator/tests/integration-k8s-lxd-juju3/:
+    summary: gateway-api-integrator DNS integration tests (Juju 3)
+    working-dir: gateway-api-integrator/
+    discover-path: gateway-api-integrator/tests/integration/k8s_lxd/
+    backends:
+      - integration-test
+    environment:
+      CONCIERGE: concierge-k8s-lxd-juju3.yaml
   tests/e2e-juju3/:
     summary: cross-charm e2e tests (Juju 3)
     working-dir: ./
@@ -52,7 +60,7 @@ integration-suites:
     systems:
       - ubuntu-24.04
     environment:
-      CONCIERGE: concierge-juju3.yaml
+      CONCIERGE: concierge-k8s-juju3.yaml
   tests/e2e-juju4/:
     summary: cross-charm e2e tests (Juju 4)
     working-dir: ./
@@ -62,4 +70,4 @@ integration-suites:
     systems:
       - ubuntu-24.04
     environment:
-      CONCIERGE: concierge-juju4.yaml
+      CONCIERGE: concierge-k8s-juju4.yaml

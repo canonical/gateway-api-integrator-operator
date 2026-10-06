@@ -16,7 +16,7 @@ run "basic_deploy" {
     }
     ingress_configurator = {
       # renovate: charm="ingress-configurator" track="latest" risk="stable" base="24.04" arch="amd64"
-      revision = 95
+      revision = 111
     }
   }
 

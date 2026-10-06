@@ -7,7 +7,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
-## 2026-10-05
+## 2026-10-07
 
 - Completed the CC008 Terraform module migration: the `gateway-api-integrator`
   and `product` Terraform modules now follow the full charm/product module
@@ -16,6 +16,14 @@ Each revision is versioned by the date of the revision.
   (superseded by caller-side wiring via the existing `*_app_name` outputs) was
   removed. Added a Terraform docs generation workflow and pinned/aligned all
   Terraform CI workflows to a commit SHA with self-referencing `paths` filters.
+
+## 2026-10-06
+
+- Added builds for arm64 architecture.
+
+## 2026-10-01
+
+- Migrated the `dns-record` integration to the `dns_integrator.v0.dns_record` library and added end-to-end DNS resolution tests using Bind.
 
 ## 2026-09-25
 

@@ -11,6 +11,6 @@ on:
 
 jobs:
   compliance-check:
-    uses: canonical/operator-workflows/.github/workflows/terraform_modules_compliance.yaml@efdd72c768efaca41f992322fa51a830e90f4990 # main
+    uses: canonical/operator-workflows/.github/workflows/terraform_modules_compliance.yaml@030c5b20a0bb880dcf1ed326bff0fc16b6eb6ac1 # main
     with:
       terraform-directories: '["terraform/modules/gateway-api-integrator", "terraform/product"]'

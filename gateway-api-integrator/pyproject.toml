@@ -18,9 +18,9 @@ dependencies = [
   "jsonschema==4.26.0",
   "lightkube==1.0.1",
   "ops==3.9.0",
-  "pydantic==2.14.0",
+  "pydantic==2.14.1",
   "rpds-py==0.30.0",
-  "validators==0.35.0",
+  "validators==0.36.0",
   "charmlibs-interfaces-tls-certificates==1.12.0",
 ]
 

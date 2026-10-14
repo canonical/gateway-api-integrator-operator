@@ -1,8 +1,11 @@
+# template-version: 1
+# This file is synced from canonical/platform-engineering-charm-template.
+# Remove this comment block to opt this file out of automatic template propagation.
+# See https://github.com/canonical/gh-jira-sync-bot for config
 settings:
   add_gh_comment: true
   components:
-  - Kubernetes ingress
-  epic_key: ISD-3981
+  - Gateway API
   jira_project_key: ISD
   label_mapping:
     bug: Bug
@@ -11,3 +14,6 @@ settings:
     closed: done
     not_planned: rejected
     opened: Untriaged
+  labels:
+  - bug
+  - enhancement

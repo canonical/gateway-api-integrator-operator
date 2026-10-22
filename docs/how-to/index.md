@@ -29,7 +29,7 @@ The charm enforces HTTPS by default, so it requires a certificate provider and r
 
 ## Maintenance and development
 
-Upgrades and community contributions.
+Upgrades and community contributions ensure the Gateway API Integrator charm stays current and benefits from ongoing improvements.
 
 * {ref}`Upgrade <how_to_upgrade>`: Refresh the charm to a newer revision or channel with `juju refresh`.
 * {ref}`Contribute <how_to_contribute>`: Set up a development and documentation workflow to build the charm, run tests, and submit improvements.

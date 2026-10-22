@@ -14,4 +14,5 @@ The pages in this section provide additional context and deeper understanding of
 :maxdepth: 1
 security-overview.md
 workflow.md
+design.md
 ```

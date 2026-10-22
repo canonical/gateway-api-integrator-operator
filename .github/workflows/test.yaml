@@ -20,3 +20,4 @@ jobs:
     with:
       working-directory: ${{ matrix.charm.working-directory }}
       with-uv: true
+      require-check-lib: false

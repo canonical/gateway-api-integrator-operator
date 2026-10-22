@@ -29,4 +29,9 @@ run "basic_deploy" {
     condition     = output.ingress_configurator_app_name == "ingress-configurator"
     error_message = "ingress-configurator app_name did not match expected"
   }
+
+  assert {
+    condition     = output.offers.gateway != "" && output.offers.ingress != ""
+    error_message = "offers did not contain the expected gateway and ingress offer URLs"
+  }
 }

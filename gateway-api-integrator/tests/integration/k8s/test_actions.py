@@ -7,7 +7,8 @@ import json
 
 import jubilant
 import pytest
-from conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
+
+from tests.integration.conftest import TEST_EXTERNAL_HOSTNAME_CONFIG
 
 
 @pytest.mark.abort_on_fail

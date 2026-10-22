@@ -3,15 +3,18 @@
 
 """Unit tests for the charm."""
 
+import json
 from unittest.mock import MagicMock
 
 import ops
 import pytest
 from charmlibs.interfaces.tls_certificates import CertificateRequestAttributes
+from charms.dns_integrator.v0.dns_record import CreateRecordRequestError
 from httpx2 import Response
 from lightkube.core.exceptions import ApiError
 from lightkube.models.meta_v1 import Status
 from ops import testing
+from scenario.errors import UncaughtCharmError
 
 from charm import GatewayAPICharm
 from resource_manager.permission import InsufficientPermissionError
@@ -35,7 +38,9 @@ def test_blocks_when_multiple_units_are_planned(base_state: dict) -> None:
 
 
 def test_dns_record(
-    base_state: dict, gateway_relation: testing.Relation, certificates_relation: testing.Relation
+    base_state: dict,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
 ) -> None:
     """
     arrange: Charm is initialized with a mock state.
@@ -43,22 +48,170 @@ def test_dns_record(
     assert: The charm updates the dns-record relation with the expected DNS entries.
     """
     ctx = testing.Context(GatewayAPICharm)
-    base_state["relations"].append(gateway_relation)
-    base_state["relations"].append(certificates_relation)
-    state = testing.State(**base_state)
-    state = ctx.run(ctx.on.start(), state)
-    mock_dns_entry_str = (
-        '[{"domain": "example.com", '
-        '"host_label": "@", '
-        '"ttl": 600, '
-        '"record_class": "IN", '
-        '"record_type": "A", '
-        '"record_data": "1.2.3.4", '
-        '"uuid": "f6cb0ca1-3d64-5afc-9690-af437ff74415"}]'
-    )
-    # Find the dns-record relation and check its dns_entries
+    base_state["relations"].extend([gateway_relation, certificates_relation])
+    state = ctx.run(ctx.on.start(), testing.State(**base_state))
+
     dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
-    assert dns_relation.local_app_data["dns_entries"] == mock_dns_entry_str
+    dns_entry = json.loads(dns_relation.local_app_data["dns_entries"])[0]
+    dns_entry.pop("uuid")
+    assert dns_entry == {
+        "domain": "example.com",
+        "host_label": "@",
+        "ttl": "600",
+        "record_class": "IN",
+        "record_type": "A",
+        "record_data": "1.2.3.4",
+    }
+
+
+def test_dns_record_uses_dns_integrator_request_api(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
+    """
+    arrange: The charm has a DNS relation and the DNS Integrator request API is mocked.
+    act: Run reconcile via the start event.
+    assert: The charm creates and publishes the expected DNS record request.
+    """
+    record_request = MagicMock()
+    create_record_request = MagicMock(return_value=record_request)
+    update_dns_entries = MagicMock()
+    monkeypatch.setattr(
+        "charm.DNSRecordRequires.create_record_request", create_record_request, raising=False
+    )
+    monkeypatch.setattr(
+        "charm.DNSRecordRequires.update_dns_entries", update_dns_entries, raising=False
+    )
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].extend([gateway_relation, certificates_relation])
+
+    ctx.run(ctx.on.start(), testing.State(**base_state))
+
+    create_record_request.assert_called_once_with("@ example.com 600 IN A 1.2.3.4")
+    update_dns_entries.assert_called_once()
+    record_requests, relation = update_dns_entries.call_args.args
+    assert record_requests == [record_request]
+    assert relation.id == next(
+        rel.id for rel in base_state["relations"] if rel.endpoint == "dns-record"
+    )
+
+
+def test_dns_record_relation_changed_reconciles(
+    base_state: dict,
+    gateway_relation: testing.Relation,
+    certificates_relation: testing.Relation,
+) -> None:
+    """
+    arrange: The charm has a DNS relation representing a cross-model integration.
+    act: Run reconcile via the DNS relation-changed event.
+    assert: The charm publishes the expected DNS record.
+    """
+    ctx = testing.Context(GatewayAPICharm)
+    base_state["relations"].extend([gateway_relation, certificates_relation])
+    state = testing.State(**base_state)
+    dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
+
+    state = ctx.run(ctx.on.relation_changed(dns_relation), state)
+
+    dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
+    assert json.loads(dns_relation.local_app_data["dns_entries"])[0]["domain"] == "example.com"
+
+
+def test_dns_record_fails_hook_for_invalid_request(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """
+    arrange: The DNS library rejects a record request built from validated charm state.
+    act: Run reconcile via the gateway-route relation-changed event.
+    assert: The charm publishes no records and propagates the library error.
+    """
+    create_record_request = MagicMock(side_effect=CreateRecordRequestError("invalid record"))
+    update_dns_entries = MagicMock()
+    monkeypatch.setattr("charm.DNSRecordRequires.create_record_request", create_record_request)
+    monkeypatch.setattr("charm.DNSRecordRequires.update_dns_entries", update_dns_entries)
+    base_state["config"]["external-hostname"] = ""
+    base_state["config"]["enforce-https"] = False
+    gateway_route_relation = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway-route",
+        remote_app_data={
+            "hostname": json.dumps("alpha.example.com"),
+            "additional_hostnames": json.dumps(["zulu.example.com"]),
+        },
+    )
+    base_state["relations"].append(gateway_route_relation)
+    ctx = testing.Context(GatewayAPICharm)
+
+    with pytest.raises(UncaughtCharmError, match=r"CreateRecordRequestError.*invalid record"):
+        ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
+
+    create_record_request.assert_called_once_with("@ alpha.example.com 600 IN A 1.2.3.4")
+    update_dns_entries.assert_not_called()
+    assert "Unable to create DNS record request for alpha.example.com" in caplog.messages
+
+
+def test_dns_record_fails_hook_for_missing_namespace(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """
+    arrange: The DNS library cannot find its local record-request namespace secret.
+    act: Run reconcile via the gateway-route relation-changed event.
+    assert: The charm publishes no records and propagates the retryable library error.
+    """
+    namespace_error = CreateRecordRequestError("Namespace not found !")
+    namespace_error.__cause__ = ops.SecretNotFoundError("dns-record")
+    create_record_request = MagicMock(side_effect=namespace_error)
+    update_dns_entries = MagicMock()
+    monkeypatch.setattr("charm.DNSRecordRequires.create_record_request", create_record_request)
+    monkeypatch.setattr("charm.DNSRecordRequires.update_dns_entries", update_dns_entries)
+    base_state["config"]["external-hostname"] = ""
+    base_state["config"]["enforce-https"] = False
+    gateway_route_relation = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway-route",
+        remote_app_data={
+            "hostname": json.dumps("example.com"),
+            "additional_hostnames": json.dumps([]),
+        },
+    )
+    base_state["relations"].append(gateway_route_relation)
+    ctx = testing.Context(GatewayAPICharm)
+
+    with pytest.raises(UncaughtCharmError, match=r"CreateRecordRequestError.*Namespace not found"):
+        ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
+
+    create_record_request.assert_called_once_with("@ example.com 600 IN A 1.2.3.4")
+    update_dns_entries.assert_not_called()
+
+
+def test_dns_record_clears_entries_without_hostnames(
+    base_state: dict,
+    monkeypatch: pytest.MonkeyPatch,
+    certificates_relation: testing.Relation,
+) -> None:
+    """
+    arrange: The charm has a DNS relation but no managed hostnames.
+    act: Run reconcile via the start event.
+    assert: The charm publishes an empty request list to clear stale DNS entries.
+    """
+    create_record_request = MagicMock()
+    update_dns_entries = MagicMock()
+    monkeypatch.setattr("charm.DNSRecordRequires.create_record_request", create_record_request)
+    monkeypatch.setattr("charm.DNSRecordRequires.update_dns_entries", update_dns_entries)
+    base_state["config"]["external-hostname"] = ""
+    base_state["relations"].append(certificates_relation)
+    ctx = testing.Context(GatewayAPICharm)
+
+    ctx.run(ctx.on.start(), testing.State(**base_state))
+
+    create_record_request.assert_not_called()
+    update_dns_entries.assert_called_once()
+    assert update_dns_entries.call_args.args[0] == []
 
 
 def test_dns_record_no_gateway_resource(
@@ -126,24 +279,62 @@ def test_gateway_route(
         rel for rel in state.relations if rel.endpoint == "gateway-route"
     )
     state = ctx.run(ctx.on.relation_changed(gateway_route_relation), state)
-    mock_dns_entry_str = (
-        '[{"domain": "example.com", '
-        '"host_label": "@", '
-        '"ttl": 600, '
-        '"record_class": "IN", '
-        '"record_type": "A", '
-        '"record_data": "1.2.3.4", '
-        '"uuid": "f6cb0ca1-3d64-5afc-9690-af437ff74415"}]'
-    )
-    # Find the dns-record relation and check its dns_entries
     dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
-    assert dns_relation.local_app_data["dns_entries"] == mock_dns_entry_str
+    dns_entry = json.loads(dns_relation.local_app_data["dns_entries"])[0]
+    dns_entry.pop("uuid")
+    assert dns_entry == {
+        "domain": "example.com",
+        "host_label": "@",
+        "ttl": "600",
+        "record_class": "IN",
+        "record_type": "A",
+        "record_data": "1.2.3.4",
+    }
 
     # Verify provider data is published to gateway-route relation
     gw_route_rel = next(rel for rel in state.relations if rel.endpoint == "gateway-route")
     assert "gateway_name" in gw_route_rel.local_app_data
     assert "gateway_model" in gw_route_rel.local_app_data
     assert "https_mode" in gw_route_rel.local_app_data
+
+
+def test_gateway_route_multiple_relations_publish_multiple_dns_records(
+    base_state: dict,
+    gateway_route_relation: testing.Relation,
+) -> None:
+    """
+    arrange: Charm is initialized with two gateway-route relations using distinct hostnames.
+    act: Run reconcile via a gateway-route relation-changed event.
+    assert: The charm publishes both DNS records and provider data to both relations.
+    """
+    base_state["config"]["external-hostname"] = ""
+    base_state["config"]["enforce-https"] = False
+    second_gateway_route_relation = testing.Relation(
+        endpoint="gateway-route",
+        interface="gateway-route",
+        remote_app_data={
+            "hostname": json.dumps("second.example.com"),
+            "additional_hostnames": json.dumps([]),
+        },
+    )
+    base_state["relations"].extend([gateway_route_relation, second_gateway_route_relation])
+    ctx = testing.Context(GatewayAPICharm)
+
+    state = ctx.run(ctx.on.relation_changed(gateway_route_relation), testing.State(**base_state))
+
+    dns_relation = next(rel for rel in state.relations if rel.endpoint == "dns-record")
+    dns_entries = json.loads(dns_relation.local_app_data["dns_entries"])
+    assert {entry["domain"] for entry in dns_entries} == {
+        "example.com",
+        "second.example.com",
+    }
+    assert all(entry["record_data"] == "1.2.3.4" for entry in dns_entries)
+
+    gateway_route_relations = [rel for rel in state.relations if rel.endpoint == "gateway-route"]
+    for relation in gateway_route_relations:
+        assert "gateway_name" in relation.local_app_data
+        assert "gateway_model" in relation.local_app_data
+        assert json.loads(relation.local_app_data["https_mode"]) == "disabled"
 
 
 def test_blocked_when_relation_integrated_without_hostname(

@@ -9,7 +9,12 @@ import jubilant
 import lightkube
 import pytest
 import tenacity
-from helper import get_gateway_resource, get_ingress_url_for_application, wait_for_response
+
+from tests.integration.helper import (
+    get_gateway_resource,
+    get_ingress_url_for_application,
+    wait_for_response,
+)
 
 
 def _get_certificate_action_result(
@@ -97,7 +102,7 @@ def test_tls_certificate_rotates_after_csr_subject_attributes_change(
             hostname=ingress_url.netloc,
             ip=gateway_lb_ip,
             expected_status=200,
-            body_contains="Welcome to flask-k8s Charm",
+            body_contains="Hello from any-charm",
             verify=ca_bundle.name,
             timeout=10,
         )

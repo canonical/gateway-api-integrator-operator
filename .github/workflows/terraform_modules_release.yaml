@@ -7,11 +7,13 @@ on:
   pull_request:
     paths:
       - "terraform/**"
+      - ".github/workflows/terraform_modules_release.yaml"
   push:
     branches:
       - main
     paths:
       - "terraform/**"
+      - ".github/workflows/terraform_modules_release.yaml"
 
 jobs:
   terraform:

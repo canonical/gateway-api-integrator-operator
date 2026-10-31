@@ -16,9 +16,9 @@ classifiers = [
 dependencies = [
   "cryptography==50.0.2",
   "jsonschema==4.26.0",
-  "lightkube==1.0.1",
+  "lightkube==1.0.2",
   "ops==3.9.0",
-  "pydantic==2.14.1",
+  "pydantic==2.14.2",
   "rpds-py==0.30.0",
   "validators==0.36.0",
   "charmlibs-interfaces-tls-certificates==1.12.0",

@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - "terraform/**"
+      - ".github/workflows/terraform_modules_compliance.yaml"
 
 jobs:
   compliance-check:

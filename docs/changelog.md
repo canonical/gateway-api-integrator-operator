@@ -7,6 +7,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-10-07
+
+- Completed the CC008 Terraform module migration: the `gateway-api-integrator`
+  and `product` Terraform modules now follow the full charm/product module
+  contracts, the product module's `metadata` output now also carries
+  `deployed_at` and `updated_at`. The product module's `provides` output was
+  replaced with an `offers` output (`gateway`, `ingress`) backed by
+  `juju_offer` resources, and the deprecated `requires` output was removed in
+  favor of the new `certificates_integration` and `dns_record_integration`
+  input variables, which let callers wire the `gateway-api-integrator`
+  `certificates`/`dns-record` relations to an external endpoint or offer.
+  Added a Terraform docs generation workflow and pinned/aligned all Terraform
+  CI workflows to a commit SHA with self-referencing `paths` filters.
+
 ## 2026-10-06
 
 - Added builds for arm64 architecture.

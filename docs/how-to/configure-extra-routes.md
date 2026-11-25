@@ -53,6 +53,6 @@ published to the `dns-record` relation.
 
 ## Requirements
 
-- The Gateway API `TCPRoute` and `UDPRoute` CRDs, served as `v1` or `v1alpha2`, when `tcp`,
+- The Gateway API `TCPRoute` and `UDPRoute` custom resource definitions, served as `v1` or `v1alpha2`, when `tcp`,
   `tls-terminate` or `udp` routes are configured. The unit is blocked if they are missing.
 - Services in the same namespace as the charm.

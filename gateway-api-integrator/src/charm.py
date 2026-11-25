@@ -4,6 +4,7 @@
 
 """gateway-api-integrator charm file."""
 
+import ipaddress
 import json
 import logging
 import typing
@@ -74,6 +75,15 @@ TLS_CERT_RELATION = "certificates"
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
+
+
+def _is_ip_address(value: str) -> bool:
+    """Check whether a string is an IP address."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
 
 
 class GatewayAPICharm(CharmBase):
@@ -333,6 +343,34 @@ class GatewayAPICharm(CharmBase):
             return HttpsMode.ENFORCED
         return HttpsMode.ENABLED if has_tls_relation else HttpsMode.DISABLED
 
+    def _get_tls_information(
+        self,
+        charm_state: CharmState,
+        has_tls_relation: bool,
+        byo_secret_name: str,
+        gateway_address: str | None,
+    ) -> tuple[TLSInformation | None, bool]:
+        """Get the TLS information from the pre-existing secret or the certificates relation.
+
+        Returns:
+            The TLS information, None when unavailable, and whether certificates are pending.
+        """
+        if byo_secret_name:
+            hostnames = {host for host in charm_state.hostnames if not _is_ip_address(host)}
+            return TLSInformation.from_byo_secret(self, hostnames, byo_secret_name), False
+        if not has_tls_relation:
+            return None, False
+        try:
+            return (
+                TLSInformation.from_charm(
+                    self, charm_state.hostnames, self.certificates, gateway_address
+                ),
+                False,
+            )
+        except TLSInformationNotReadyError as exc:
+            logger.info("TLS certificates not ready yet: %s", str(exc))
+            return None, True
+
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -359,7 +397,10 @@ class GatewayAPICharm(CharmBase):
             self._gateway_route_provider,
         )
 
-        has_tls_relation = self.model.get_relation(TLS_CERT_RELATION) is not None
+        byo_secret_name = str(self.config.get("tls-secret-name") or "").strip()
+        has_tls_relation = self.model.get_relation(TLS_CERT_RELATION) is not None or bool(
+            byo_secret_name
+        )
 
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         gateway_resource_manager = GatewayResourceManager(
@@ -376,16 +417,9 @@ class GatewayAPICharm(CharmBase):
                 gateway_resource_information.gateway_name
             )
 
-        tls_information = None
-        tls_not_ready = False
-        if has_tls_relation:
-            try:
-                tls_information = TLSInformation.from_charm(
-                    self, charm_state.hostnames, self.certificates, gateway_address
-                )
-            except TLSInformationNotReadyError as exc:
-                logger.info("TLS certificates not ready yet: %s", str(exc))
-                tls_not_ready = True
+        tls_information, tls_not_ready = self._get_tls_information(
+            charm_state, has_tls_relation, byo_secret_name, gateway_address
+        )
 
         self._define_secret_resources(client, tls_information)
 
@@ -588,8 +622,9 @@ class GatewayAPICharm(CharmBase):
             client=client,
         )
 
-        if tls_information is None:
-            # Clean up any existing secrets if we're not rendering the HTTPS listener.
+        if tls_information is None or tls_information.byo_secret_name:
+            # Clean up any existing secrets if we're not rendering the HTTPS listener or
+            # if the certificate comes from a secret managed outside of the charm.
             resource_manager.cleanup_resources(exclude=[])
             return
 

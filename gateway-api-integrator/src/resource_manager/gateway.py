@@ -104,7 +104,7 @@ class GatewayResourceDefinition(ResourceDefinition):
         super().__init__(gateway_resource_information, charm_state)
         tls_hostname_secrets = (
             [
-                (hostname, f"{tls_information.secret_resource_name_prefix}-{hostname}")
+                (hostname, tls_information.secret_name(hostname))
                 for hostname in tls_information.hostnames
             ]
             if tls_information

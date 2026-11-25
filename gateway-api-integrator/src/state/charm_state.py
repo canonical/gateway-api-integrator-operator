@@ -175,7 +175,8 @@ class CharmState:
             )
 
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
-        has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
+        has_tls_relation = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
+        has_tls = has_tls_relation or bool(str(charm.config.get("tls-secret-name") or "").strip())
         if enforce_https and not has_tls:
             raise InvalidCharmConfigError(
                 "Certificates relation is required when enforce-https is enabled."
@@ -193,7 +194,7 @@ class CharmState:
             raise InvalidCharmConfigError('invalid "csr-subject-attributes" value; see logs.')
 
         requires_ip_certificate = cls._requires_ip_certificate(
-            proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls, gateway_route_provider
+            proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls_relation, gateway_route_provider
         )
 
         if proxy_mode == ProxyMode.INGRESS:

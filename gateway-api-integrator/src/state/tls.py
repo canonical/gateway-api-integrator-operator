@@ -35,15 +35,21 @@ class TLSInformation:
         secret_resource_name_prefix: Prefix of the secret resource name.
         tls_certs: A dict of hostname: certificate obtained from the relation.
         tls_keys: A dict of hostname: private_key stored in juju secrets.
+        byo_secret_name: Name of a pre-existing Kubernetes TLS secret shared by all hostnames.
+        byo_hostnames: Hostnames served with the pre-existing secret.
     """
 
     secret_resource_name_prefix: str
     tls_certs: dict[str, str]
     tls_keys: dict[str, str]
+    byo_secret_name: str | None = None
+    byo_hostnames: tuple[str, ...] = ()
 
     @model_validator(mode="after")
     def validate_tls_certs_and_tls_keys(self) -> Self:
         """Validate tls_certs and tls_keys."""
+        if self.byo_secret_name:
+            return self
         if len(self.tls_certs) < 1 or len(self.tls_keys) < 1:
             raise ValueError("At least 1 pair of cert/key is required.")
         if set(self.tls_certs.keys()) != set(self.tls_keys.keys()):
@@ -53,7 +59,33 @@ class TLSInformation:
     @property
     def hostnames(self) -> list[str]:
         """Get the list of hostnames for the TLS information."""
+        if self.byo_secret_name:
+            return sorted(self.byo_hostnames)
         return sorted(self.tls_certs.keys())
+
+    def secret_name(self, hostname: str) -> str:
+        """Get the name of the Kubernetes TLS secret serving a hostname."""
+        return self.byo_secret_name or f"{self.secret_resource_name_prefix}-{hostname}"
+
+    @classmethod
+    def from_byo_secret(cls, charm: ops.CharmBase, hostnames: set[str], secret_name: str) -> Self:
+        """Get TLS information backed by a pre-existing Kubernetes TLS secret.
+
+        Args:
+            charm: The gateway-api-integrator charm.
+            hostnames: Hostnames served with the secret.
+            secret_name: Name of the pre-existing Kubernetes TLS secret.
+
+        Returns:
+            TLSInformation referencing the secret.
+        """
+        return cls(
+            secret_resource_name_prefix=f"{charm.app.name}-secret",
+            tls_certs={},
+            tls_keys={},
+            byo_secret_name=secret_name,
+            byo_hostnames=tuple(sorted(hostnames)),
+        )
 
     @classmethod
     def from_charm(

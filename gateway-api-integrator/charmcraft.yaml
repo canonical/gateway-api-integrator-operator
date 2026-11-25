@@ -81,6 +81,14 @@ config:
         `CN` overrides the CSR common name that would otherwise be derived from
         `external-hostname` or the gateway address.
       type: string
+    tls-secret-name:
+      description: |
+        Optional name of an existing Kubernetes TLS secret (type `kubernetes.io/tls`) in the
+        charm's model, used by every HTTPS and `tls-terminate` listener instead of certificates
+        obtained from the `certificates` relation. The secret must cover all managed hostnames
+        and is maintained outside of the charm, for example by a certbot deploy hook.
+        When set, the `certificates` relation is not required and its certificates are ignored.
+      type: string
     extra-routes:
       description: |
         Optional JSON list of statically configured routes to Services in the charm's model,

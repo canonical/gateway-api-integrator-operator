@@ -51,6 +51,21 @@ HTTP hostnames are served on the shared HTTP and HTTPS listeners. They follow th
 `enforce-https` and `hsts-max-age` options like the hostnames of related applications, and are
 published to the `dns-record` relation.
 
+## Use an existing TLS secret
+
+To serve the certificates from a source other than the `certificates` relation, for example
+Let's Encrypt certificates issued by certbot, create a `kubernetes.io/tls` secret in the model
+and reference it with the `tls-secret-name` option:
+
+```bash
+kubectl -n <model> create secret tls telemetry-le --cert=fullchain.pem --key=privkey.pem
+juju config gateway-api-integrator tls-secret-name=telemetry-le
+```
+
+The secret must cover all hostnames and is not modified by the charm. Refresh it from the
+certbot deploy hook after each renewal. When the option is set, the `certificates` relation is
+not required and its certificates are ignored.
+
 ## Requirements
 
 - The Gateway API `TCPRoute` and `UDPRoute` custom resource definitions, served as `v1` or `v1alpha2`, when `tcp`,

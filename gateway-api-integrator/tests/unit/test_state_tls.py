@@ -107,3 +107,19 @@ def test_mismatched_cert_and_key_hostnames_rejected():
             tls_certs={"gateway.internal": "cert-data"},
             tls_keys={"other.internal": "key-data"},
         )
+
+
+def test_byo_secret_tls_information():
+    """
+    arrange: Provide a pre-existing secret name and hostnames without certificates.
+    act: Instantiate TLSInformation for the secret.
+    assert: All hostnames are served by the secret.
+    """
+    charm = type("Charm", (), {"app": type("App", (), {"name": "gateway"})()})()
+    info = TLSInformation.from_byo_secret(
+        charm,  # type: ignore[arg-type]
+        {"b.example.com", "a.example.com"},
+        "telemetry-le",
+    )
+    assert info.hostnames == ["a.example.com", "b.example.com"]
+    assert info.secret_name("a.example.com") == "telemetry-le"

@@ -229,6 +229,8 @@ def _make_gw_def(
     obj.gateway_class_name = gateway_class
     obj.hostnames = {hostname for hostname, _ in tls_pairs} if hostnames is None else hostnames
     obj.tls_hostname_secrets = tls_pairs
+    obj.extra_routes = ()
+    obj.external_ips = ()
     return obj
 
 

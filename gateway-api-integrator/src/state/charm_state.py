@@ -20,6 +20,7 @@ from pydantic.dataclasses import dataclass
 from resource_manager.permission import map_k8s_auth_exception
 
 from .exception import CharmStateValidationBaseError
+from .extra_routes import ExtraRoute, parse_external_ips, parse_extra_routes
 
 TLS_CERTIFICATES_INTEGRATION = "certificates"
 
@@ -83,8 +84,11 @@ class CharmState:
         requires_ip_certificate: Whether an IP SAN certificate is required. This
             is true only when certificates are integrated, proxy mode is
             gateway-route, and at least one relation provides no hostname.
-        hostnames: Set of hostnames managed in the active mode. In ingress mode,
-            at most one hostname is allowed.
+        extra_routes: Routes statically configured with the extra-routes option.
+        external_ips: Addresses requested for the Gateway with the external-ips option.
+        hostnames: Set of hostnames managed in the active mode, including the hostnames
+            of extra routes. In ingress mode, at most one hostname is allowed besides
+            those of extra routes.
         csr_subject_attributes: Parsed optional CSR subject attributes from config.
     """
 
@@ -93,6 +97,8 @@ class CharmState:
     proxy_mode: ProxyMode = Field()
     requires_ip_certificate: bool = Field()
     hsts_max_age: int = Field(ge=0)
+    extra_routes: tuple[ExtraRoute, ...] = Field(default_factory=tuple)
+    external_ips: tuple[str, ...] = Field(default_factory=tuple)
     hostnames: set[
         typing.Annotated[
             str,
@@ -106,8 +112,14 @@ class CharmState:
     def validate_ingress_hostnames_count(
         cls, hostnames: set[str], info: ValidationInfo
     ) -> set[str]:
-        """Ingress mode supports at most one hostname."""
-        if info.data.get("proxy_mode") == ProxyMode.INGRESS and len(hostnames) > 1:
+        """Ingress mode supports at most one hostname besides those of extra routes."""
+        extra_hostnames = {
+            hostname for route in info.data.get("extra_routes", ()) for hostname in route.hostnames
+        }
+        if (
+            info.data.get("proxy_mode") == ProxyMode.INGRESS
+            and len(hostnames - extra_hostnames) > 1
+        ):
             raise ValueError("The charm supports at most one hostname when related via ingress.")
         return hostnames
 
@@ -163,7 +175,8 @@ class CharmState:
             )
 
         enforce_https = typing.cast(bool, charm.config.get("enforce-https", True))
-        has_tls = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
+        has_tls_relation = charm.model.get_relation(TLS_CERTIFICATES_INTEGRATION) is not None
+        has_tls = has_tls_relation or bool(str(charm.config.get("tls-secret-name") or "").strip())
         if enforce_https and not has_tls:
             raise InvalidCharmConfigError(
                 "Certificates relation is required when enforce-https is enabled."
@@ -181,7 +194,7 @@ class CharmState:
             raise InvalidCharmConfigError('invalid "csr-subject-attributes" value; see logs.')
 
         requires_ip_certificate = cls._requires_ip_certificate(
-            proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls, gateway_route_provider
+            proxy_mode == ProxyMode.GATEWAY_ROUTE, has_tls_relation, gateway_route_provider
         )
 
         if proxy_mode == ProxyMode.INGRESS:
@@ -191,6 +204,14 @@ class CharmState:
         else:
             hostnames = set()
 
+        extra_routes = parse_extra_routes(
+            typing.cast(str | None, charm.config.get("extra-routes"))
+        )
+        external_ips = parse_external_ips(
+            typing.cast(str | None, charm.config.get("external-ips"))
+        )
+        hostnames |= {hostname for route in extra_routes for hostname in route.hostnames}
+
         try:
             return CharmState(
                 gateway_class_name=gateway_class_name,
@@ -198,6 +219,8 @@ class CharmState:
                 hsts_max_age=typing.cast(int, charm.config.get("hsts-max-age")),
                 proxy_mode=proxy_mode,
                 requires_ip_certificate=requires_ip_certificate,
+                extra_routes=extra_routes,
+                external_ips=external_ips,
                 hostnames=hostnames,
                 csr_subject_attributes=csr_subject_attributes,
             )

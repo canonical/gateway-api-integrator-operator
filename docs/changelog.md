@@ -7,6 +7,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Each revision is versioned by the date of the revision.
 
+## 2026-11-25
+
+- Added the `tls-secret-name` option to serve every HTTPS and TLS listener from an existing Kubernetes TLS secret instead of the `certificates` relation.
+- Added the `extra-routes` and `external-ips` options to expose Services with static HTTP, TCP, TLS-terminated and UDP routes, and to request Gateway addresses. Added `envoy` to the tested gateway classes.
+
 ## 2026-10-06
 
 - Added builds for arm64 architecture.

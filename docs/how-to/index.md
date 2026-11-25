@@ -17,6 +17,7 @@ The charm manages `Gateway` and `HTTPRoute` resources to expose workloads throug
 * {ref}`Select a gateway class <how_to_select_gateway_class>`: Bind the `Gateway` resource to a `GatewayClass` supplied by a controller installed on the cluster.
 * {ref}`Configure the external hostname <how_to_configure_external_hostname>`: Set the FQDN served through the `ingress` relation and used for the listener, certificate, published URL, and DNS records.
 * {ref}`Route traffic to multiple workloads <how_to_route_multiple_workloads>`: Share a single Gateway across several backends by deploying one `ingress-configurator` application per route.
+* {ref}`Expose services with static routes <how_to_configure_extra_routes>`: Publish HTTP, TCP, TLS and UDP routes to Services with the `extra-routes` option, without a relation.
 * {ref}`Get proxied endpoints <how_to_get_proxied_endpoints>`: Run the `get-proxied-endpoints` action to retrieve the gateway and application URLs.
 
 ## TLS and transport security
@@ -40,6 +41,7 @@ Upgrades and community contributions ensure the Gateway API Integrator charm sta
 Select a gateway class <select-gateway-class.md>
 Configure the external hostname <configure-external-hostname.md>
 Route traffic to multiple workloads <route-multiple-workloads.md>
+Expose services with static routes <configure-extra-routes.md>
 Get proxied endpoints <get-proxied-endpoints.md>
 Provide a certificate <provide-certificate.md>
 Configure HTTPS enforcement <enforce-https.md>

@@ -4,6 +4,7 @@
 
 """gateway-api-integrator charm file."""
 
+import ipaddress
 import json
 import logging
 import typing
@@ -44,6 +45,7 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 from client import LightKubeInitializationError, get_client
+from resource_manager.extra_route import ExtraRouteResourceManager, L4RouteCRDMissingError
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
@@ -73,6 +75,15 @@ TLS_CERT_RELATION = "certificates"
 CUSTOM_RESOURCE_GROUP_NAME = "gateway.networking.k8s.io"
 GATEWAY_CLASS_RESOURCE_NAME = "GatewayClass"
 GATEWAY_CLASS_PLURAL = "gatewayclasses"
+
+
+def _is_ip_address(value: str) -> bool:
+    """Check whether a string is an IP address."""
+    try:
+        ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return True
 
 
 class GatewayAPICharm(CharmBase):
@@ -332,6 +343,34 @@ class GatewayAPICharm(CharmBase):
             return HttpsMode.ENFORCED
         return HttpsMode.ENABLED if has_tls_relation else HttpsMode.DISABLED
 
+    def _get_tls_information(
+        self,
+        charm_state: CharmState,
+        has_tls_relation: bool,
+        byo_secret_name: str,
+        gateway_address: str | None,
+    ) -> tuple[TLSInformation | None, bool]:
+        """Get the TLS information from the pre-existing secret or the certificates relation.
+
+        Returns:
+            The TLS information, None when unavailable, and whether certificates are pending.
+        """
+        if byo_secret_name:
+            hostnames = {host for host in charm_state.hostnames if not _is_ip_address(host)}
+            return TLSInformation.from_byo_secret(self, hostnames, byo_secret_name), False
+        if not has_tls_relation:
+            return None, False
+        try:
+            return (
+                TLSInformation.from_charm(
+                    self, charm_state.hostnames, self.certificates, gateway_address
+                ),
+                False,
+            )
+        except TLSInformationNotReadyError as exc:
+            logger.info("TLS certificates not ready yet: %s", str(exc))
+            return None, True
+
     def _reconcile(self) -> None:
         """Reconcile charm status based on configuration and integrations.
 
@@ -358,7 +397,10 @@ class GatewayAPICharm(CharmBase):
             self._gateway_route_provider,
         )
 
-        has_tls_relation = self.model.get_relation(TLS_CERT_RELATION) is not None
+        byo_secret_name = str(self.config.get("tls-secret-name") or "").strip()
+        has_tls_relation = self.model.get_relation(TLS_CERT_RELATION) is not None or bool(
+            byo_secret_name
+        )
 
         gateway_resource_information = GatewayResourceInformation.from_charm(self)
         gateway_resource_manager = GatewayResourceManager(
@@ -375,16 +417,9 @@ class GatewayAPICharm(CharmBase):
                 gateway_resource_information.gateway_name
             )
 
-        tls_information = None
-        tls_not_ready = False
-        if has_tls_relation:
-            try:
-                tls_information = TLSInformation.from_charm(
-                    self, charm_state.hostnames, self.certificates, gateway_address
-                )
-            except TLSInformationNotReadyError as exc:
-                logger.info("TLS certificates not ready yet: %s", str(exc))
-                tls_not_ready = True
+        tls_information, tls_not_ready = self._get_tls_information(
+            charm_state, has_tls_relation, byo_secret_name, gateway_address
+        )
 
         self._define_secret_resources(client, tls_information)
 
@@ -418,13 +453,19 @@ class GatewayAPICharm(CharmBase):
                 gateway_resource_manager,
             )
 
+        extra_routes_error = self._reconcile_extra_routes(
+            client, charm_state, gateway_resource_information, tls_information
+        )
+
         self._set_status_gateway_address(
             gateway_resource_manager,
             gateway_resource_information,
             charm_state.enforce_https,
         )
 
-        if tls_not_ready:
+        if extra_routes_error:
+            self.unit.status = BlockedStatus(extra_routes_error)
+        elif tls_not_ready:
             self.unit.status = WaitingStatus("Waiting for TLS certificates to be issued.")
 
         # Update DNS record relation with the gateway address for all hostnames.
@@ -433,6 +474,37 @@ class GatewayAPICharm(CharmBase):
             gateway_resource_information,
             charm_state.hostnames,
         )
+
+    def _reconcile_extra_routes(
+        self,
+        client: Client,
+        charm_state: CharmState,
+        gateway_resource_information: GatewayResourceInformation,
+        tls_information: TLSInformation | None,
+    ) -> str | None:
+        """Reconcile the routes configured with the extra-routes option.
+
+        Args:
+            client: Initialized lightkube client.
+            charm_state: Charm state.
+            gateway_resource_information: Information needed to create the gateway resource.
+            tls_information: TLS information, None when certificates are not available.
+
+        Returns:
+            An error message when the routes cannot be served by the cluster, None otherwise.
+        """
+        manager = ExtraRouteResourceManager(gateway_resource_information.gateway_name, client)
+        try:
+            manager.reconcile(
+                charm_state.extra_routes,
+                https=tls_information is not None,
+                enforce_https=charm_state.enforce_https,
+                hsts_max_age=charm_state.hsts_max_age if charm_state.enforce_https else None,
+            )
+        except L4RouteCRDMissingError as exc:
+            logger.error("Extra routes cannot be served: %s", exc)
+            return str(exc)
+        return None
 
     def _reconcile_gateway_route(
         self,
@@ -550,8 +622,9 @@ class GatewayAPICharm(CharmBase):
             client=client,
         )
 
-        if tls_information is None:
-            # Clean up any existing secrets if we're not rendering the HTTPS listener.
+        if tls_information is None or tls_information.byo_secret_name:
+            # Clean up any existing secrets if we're not rendering the HTTPS listener or
+            # if the certificate comes from a secret managed outside of the charm.
             resource_manager.cleanup_resources(exclude=[])
             return
 

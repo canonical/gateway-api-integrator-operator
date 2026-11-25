@@ -81,6 +81,26 @@ config:
         `CN` overrides the CSR common name that would otherwise be derived from
         `external-hostname` or the gateway address.
       type: string
+    extra-routes:
+      description: |
+        Optional JSON list of statically configured routes to Services in the charm's model,
+        served by the Gateway independently of the `gateway` and `gateway-route` relations.
+        Each entry has the keys `name` (DNS label), `protocol` (`http`, `tcp`, `tls-terminate`
+        or `udp`), `service`, `service_port` and, depending on the protocol, `hostnames`
+        (required for `http` and `tls-terminate`), `path_prefix` and `strip_prefix` (`http`),
+        and `port` (the Gateway listener port, required for `tcp`, `tls-terminate` and `udp`).
+        HTTP route hostnames are added to the certificate requests and Gateway listeners;
+        `tls-terminate` routes use the certificate of their first hostname.
+        TCP and UDP routes require a gateway class that serves TCPRoute and UDPRoute.
+        Example:
+        `[{"name": "ui", "protocol": "http", "hostnames": ["ui.example.com"], "service": "ui", "service_port": 8080},
+        {"name": "mqtts", "protocol": "tls-terminate", "hostnames": ["ui.example.com"], "port": 8883, "service": "emqx", "service_port": 1883}]`
+      type: string
+    external-ips:
+      description: |
+        Optional comma separated list of IP addresses requested for the Gateway
+        (`Gateway.spec.addresses`), for example a floating IP on bare metal.
+      type: string
 
 
 actions:

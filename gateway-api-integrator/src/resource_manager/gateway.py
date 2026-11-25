@@ -17,6 +17,7 @@ from lightkube.types import PatchType
 from state.base import ResourceDefinition
 from state.charm_state import CharmState
 from state.exception import InvalidGatewayAddressError
+from state.extra_routes import ExtraRoute, ExtraRouteProtocol
 from state.gateway import GatewayResourceInformation
 from state.tls import TLSInformation
 
@@ -76,12 +77,16 @@ class GatewayResourceDefinition(ResourceDefinition):
         gateway_class_name: The configured gateway class.
         hostnames: Set of hostnames managed in the active mode.
         tls_hostname_secrets: List of (hostname, secret_name) pairs for HTTPS listeners.
+        extra_routes: Routes configured with the extra-routes option.
+        external_ips: Addresses requested for the Gateway.
     """
 
     gateway_name: str
     gateway_class_name: str
     hostnames: set[str]
     tls_hostname_secrets: list[tuple[str, str]]
+    extra_routes: tuple[ExtraRoute, ...]
+    external_ips: tuple[str, ...]
 
     def __init__(
         self,
@@ -146,6 +151,39 @@ class GatewayResourceDefinition(ResourceDefinition):
         return listeners
 
     @property
+    def gateway_resource_l4_listener_specs(self) -> list[dict[str, typing.Any]]:
+        """Return the dedicated listeners of the L4 extra routes.
+
+        A tls-terminate listener is skipped until a certificate secret is available for the
+        hostname of its route.
+        """
+        secrets = dict(self.tls_hostname_secrets)
+        listeners: list[dict[str, typing.Any]] = []
+        for route in self.extra_routes:
+            if not route.is_l4:
+                continue
+            listener: dict[str, typing.Any] = {
+                "name": route.listener_name,
+                "port": route.port,
+                "allowedRoutes": {"namespaces": {"from": "All"}},
+            }
+            if route.protocol == ExtraRouteProtocol.TCP:
+                listener["protocol"] = "TCP"
+            elif route.protocol == ExtraRouteProtocol.UDP:
+                listener["protocol"] = "UDP"
+            else:
+                secret_name = secrets.get(route.hostnames[0])
+                if secret_name is None:
+                    continue
+                listener["protocol"] = "TLS"
+                listener["tls"] = {
+                    "mode": "Terminate",
+                    "certificateRefs": [{"kind": "Secret", "name": secret_name}],
+                }
+            listeners.append(listener)
+        return listeners
+
+    @property
     def gateway_resource_spec(self) -> dict:
         """Return the gateway resource spec with HTTP and per-hostname HTTPS listeners.
 
@@ -167,10 +205,14 @@ class GatewayResourceDefinition(ResourceDefinition):
                 # hostname is a DNS name
                 listener["hostname"] = hostname
             listeners.append(listener)
-        return {
+        listeners.extend(self.gateway_resource_l4_listener_specs)
+        spec: dict[str, typing.Any] = {
             "gatewayClassName": self.gateway_class_name,
             "listeners": listeners,
         }
+        if self.external_ips:
+            spec["addresses"] = [{"type": "IPAddress", "value": ip} for ip in self.external_ips]
+        return spec
 
 
 class GatewayResourceManager(ResourceManager[GenericNamespacedResource]):

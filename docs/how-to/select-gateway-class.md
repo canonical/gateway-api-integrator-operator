@@ -16,8 +16,9 @@ running on the Kubernetes cluster, so the value you choose must match a class th
 the cluster.
 
 ```{caution}
-The `gateway-api-integrator` charm is currently tested against the `cilium` and `ck-gateway`
-gateway classes. Other gateway classes may work but are not verified.
+The `gateway-api-integrator` charm is currently tested against the `cilium`, `ck-gateway` and
+`envoy` gateway classes. Other gateway classes may work but are not verified. The `envoy` class is
+provided by the Envoy Gateway controller, for example deployed with `envoy-controller-k8s`.
 ```
 
 ## List the available gateway classes

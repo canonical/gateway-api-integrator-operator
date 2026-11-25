@@ -44,6 +44,7 @@ from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus, WaitingStatus
 
 from client import LightKubeInitializationError, get_client
+from resource_manager.extra_route import ExtraRouteResourceManager, L4RouteCRDMissingError
 from resource_manager.gateway import GatewayResourceDefinition, GatewayResourceManager
 from resource_manager.http_route import (
     HTTPRouteResourceDefinition,
@@ -418,13 +419,19 @@ class GatewayAPICharm(CharmBase):
                 gateway_resource_manager,
             )
 
+        extra_routes_error = self._reconcile_extra_routes(
+            client, charm_state, gateway_resource_information, tls_information
+        )
+
         self._set_status_gateway_address(
             gateway_resource_manager,
             gateway_resource_information,
             charm_state.enforce_https,
         )
 
-        if tls_not_ready:
+        if extra_routes_error:
+            self.unit.status = BlockedStatus(extra_routes_error)
+        elif tls_not_ready:
             self.unit.status = WaitingStatus("Waiting for TLS certificates to be issued.")
 
         # Update DNS record relation with the gateway address for all hostnames.
@@ -433,6 +440,37 @@ class GatewayAPICharm(CharmBase):
             gateway_resource_information,
             charm_state.hostnames,
         )
+
+    def _reconcile_extra_routes(
+        self,
+        client: Client,
+        charm_state: CharmState,
+        gateway_resource_information: GatewayResourceInformation,
+        tls_information: TLSInformation | None,
+    ) -> str | None:
+        """Reconcile the routes configured with the extra-routes option.
+
+        Args:
+            client: Initialized lightkube client.
+            charm_state: Charm state.
+            gateway_resource_information: Information needed to create the gateway resource.
+            tls_information: TLS information, None when certificates are not available.
+
+        Returns:
+            An error message when the routes cannot be served by the cluster, None otherwise.
+        """
+        manager = ExtraRouteResourceManager(gateway_resource_information.gateway_name, client)
+        try:
+            manager.reconcile(
+                charm_state.extra_routes,
+                https=tls_information is not None,
+                enforce_https=charm_state.enforce_https,
+                hsts_max_age=charm_state.hsts_max_age if charm_state.enforce_https else None,
+            )
+        except L4RouteCRDMissingError as exc:
+            logger.error("Extra routes cannot be served: %s", exc)
+            return str(exc)
+        return None
 
     def _reconcile_gateway_route(
         self,

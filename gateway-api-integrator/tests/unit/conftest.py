@@ -77,6 +77,7 @@ def base_state_fixture(monkeypatch: pytest.MonkeyPatch):
     )
     monkeypatch.setattr("charm.HTTPRouteResourceManager.cleanup_resources", MagicMock())
     monkeypatch.setattr("charm.ServiceResourceManager.cleanup_resources", MagicMock())
+    monkeypatch.setattr("charm.ExtraRouteResourceManager.reconcile", MagicMock())
 
     dns_relation = testing.Relation(
         endpoint="dns-record",

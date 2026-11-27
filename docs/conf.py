@@ -184,6 +184,9 @@ linkcheck_ignore = [
     # gateway-api.sigs.k8s.io is often unreachable in CI environments
     r"https://gateway-api\.sigs\.k8s\.io/.*",
     "https://ingress.internal/gateway-api-integrator-tutorial-flask-k8s",
+    # discourse.charmhub.io and charmhub.io intermittently return 500 errors in CI
+    r"https://discourse\.charmhub\.io(/.*)?",
+    r"https://charmhub\.io/manual-tls-certificates/docs/h-getting-started",
     ]
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
